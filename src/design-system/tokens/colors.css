@@ -1,0 +1,47 @@
+:root{
+/* Brand palette — from "Paleta de cores" */
+--vinho-900:#2e0610;--vinho-800:#490b1a;--vinho-700:#621a2b;--vinho-600:#7c2c3d;--vinho-400:#a86672;--vinho-200:#d9b8bc;--vinho-100:#efe0df;
+--noite-950:#0b1726;--noite-900:#142841;--noite-800:#1f3655;--noite-700:#2e4868;
+--ardosia-700:#4f627b;--ardosia-600:#62768f;--ardosia-500:#798da6;--ardosia-300:#aab8c9;--ardosia-200:#c9d2dd;--ardosia-100:#e4e9ef;
+--linho-50:#f7f3ed;--linho-100:#efe9df;--linho-200:#e5ded2;--linho-300:#d6ccbc;--linho-400:#bdb09b;--linho-600:#8c806c;
+/* Materials */
+--latao-500:#a88a5a;--latao-300:#cdb68f;
+--oliva-600:#5c6a45;--oliva-200:#d3d8c3;
+--terracota-600:#9c4a2f;--terracota-200:#ecd2c6;
+--ocre-600:#a8762a;--ocre-200:#f0dfbf;
+
+/* Semantic — surfaces */
+--surface-page:var(--linho-50);
+--surface-sunken:var(--linho-100);
+--surface-card:#fbf8f3;
+--surface-stone:var(--linho-200);
+--surface-inverse:var(--noite-900);
+--surface-brand:var(--vinho-800);
+--surface-overlay:rgba(11,23,38,.55);
+/* Semantic — text */
+--text-primary:var(--noite-900);
+--text-secondary:var(--ardosia-700);
+--text-muted:var(--linho-600);
+--text-brand:var(--vinho-800);
+--text-on-dark:var(--linho-50);
+--text-on-dark-muted:var(--ardosia-300);
+--text-link:var(--vinho-800);
+--text-link-hover:var(--vinho-600);
+/* Semantic — borders */
+--border-hairline:rgba(20,40,65,.14);
+--border-default:rgba(20,40,65,.24);
+--border-strong:var(--noite-900);
+--border-on-dark:rgba(247,243,237,.22);
+--focus-ring:var(--ardosia-500);
+/* Semantic — actions */
+--action-primary:var(--vinho-800);
+--action-primary-hover:var(--vinho-700);
+--action-primary-press:var(--vinho-900);
+--action-secondary:var(--noite-900);
+--action-secondary-hover:var(--noite-800);
+/* Semantic — feedback */
+--feedback-success:var(--oliva-600);--feedback-success-bg:var(--oliva-200);
+--feedback-warning:var(--ocre-600);--feedback-warning-bg:var(--ocre-200);
+--feedback-danger:var(--terracota-600);--feedback-danger-bg:var(--terracota-200);
+--feedback-info:var(--ardosia-700);--feedback-info-bg:var(--ardosia-100);
+}

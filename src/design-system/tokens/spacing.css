@@ -1,0 +1,8 @@
+:root{
+--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;--space-8:64px;--space-9:96px;--space-10:128px;--space-11:192px;
+--container-max:1320px;--container-narrow:760px;--gutter:clamp(20px,4vw,56px); /* @kind spacing */
+--radius-none:0;--radius-xs:2px;--radius-sm:4px;--radius-md:8px;--radius-lg:16px;--radius-pill:999px;
+--radius-arch:999px 999px 0 0; /* Mediterranean arch — image frames */
+--radius-arch-soft:48px 48px 0 0; /* echoes the palette's rounded tabs */
+--control-height-sm:36px;--control-height-md:44px;--control-height-lg:56px;
+}
