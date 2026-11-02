@@ -1,4 +1,4 @@
-import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
+import Fastify, { type FastifyPluginAsync, type FastifyReply, type FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
@@ -15,6 +15,8 @@ import {
   recordLogin,
   resolveAuthorizedUser,
 } from './auth.js';
+import { requirePermission, type Permission } from './permissions.js';
+import { usersRoutes } from './routes/users.js';
 
 export const SESSION_COOKIE = 'decroqui_sid';
 const FLOW_COOKIE = 'decroqui_oauth';
@@ -24,6 +26,9 @@ declare module 'fastify' {
   interface FastifyRequest {
     user: User | null;
   }
+  interface FastifyContextConfig {
+    permission?: Permission;
+  }
 }
 
 export interface AppDeps {
@@ -31,9 +36,11 @@ export interface AppDeps {
   db: Db;
   google?: GoogleClient;
   logger?: boolean;
+  /** Rotas extras no escopo protegido, com as mesmas regras de sessão e permissão. Usado nos testes. */
+  extraProtectedRoutes?: FastifyPluginAsync;
 }
 
-export async function buildApp({ config, db, google, logger = false }: AppDeps) {
+export async function buildApp({ config, db, google, logger = false, extraProtectedRoutes }: AppDeps) {
   const app = Fastify({ logger, trustProxy: true });
   const googleClient =
     google ??
@@ -123,14 +130,29 @@ export async function buildApp({ config, db, google, logger = false }: AppDeps) 
     return reply.code(204).send();
   });
 
-  // Rotas protegidas: tudo registrado aqui exige sessão válida.
+  // Rotas protegidas: tudo registrado aqui exige sessão válida. Rotas de escrita precisam
+  // declarar `config.permission` (seção 5); sem isso o servidor nem sobe.
   await app.register(async (protectedRoutes) => {
+    protectedRoutes.addHook('onRoute', (route) => {
+      const methods = [route.method].flat();
+      const writes = methods.some((m) => !['GET', 'HEAD', 'OPTIONS'].includes(m));
+      if (writes && !route.config?.permission) {
+        throw new Error(`Rota de escrita sem permissão declarada: ${methods.join(',')} ${route.url}`);
+      }
+    });
     protectedRoutes.addHook('preHandler', requireSession);
+    protectedRoutes.addHook('preHandler', async (request, reply) => {
+      const permission = request.routeOptions.config.permission;
+      if (permission) return requirePermission(permission)(request, reply);
+    });
 
     protectedRoutes.get('/me', async (request) => {
       const u = request.user!;
       return { id: u.id, email: u.email, name: u.name, role: u.role };
     });
+
+    await protectedRoutes.register(usersRoutes, { db });
+    if (extraProtectedRoutes) await protectedRoutes.register(extraProtectedRoutes);
   });
 
   return app;

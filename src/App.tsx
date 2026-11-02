@@ -3,6 +3,7 @@ import { SessionProvider, useSession } from './session';
 import { AppShell } from './layout/AppShell';
 import { LoginPage } from './pages/LoginPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
+import { CollaboratorsPage } from './pages/collaborators/CollaboratorsPage';
 
 const PAGES = [
   {
@@ -39,6 +40,13 @@ function Protected() {
   return <AppShell user={session.user} />;
 }
 
+/** A API já responde 403 para quem não é administrador; aqui só evitamos mostrar a tela vazia. */
+function AdminOnly() {
+  const session = useSession();
+  if (session.status === 'authenticated' && session.user.role === 'admin') return <CollaboratorsPage />;
+  return <PlaceholderPage title="Colaboradores" text="Esta área é só para a administração do estúdio." />;
+}
+
 function LoginRoute() {
   const session = useSession();
   if (session.status === 'loading') return null;
@@ -66,6 +74,7 @@ export function App() {
             {PAGES.map((p) => (
               <Route key={p.path} path={p.path} element={<PlaceholderPage title={p.title} text={p.text} />} />
             ))}
+            <Route path="/colaboradores" element={<AdminOnly />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

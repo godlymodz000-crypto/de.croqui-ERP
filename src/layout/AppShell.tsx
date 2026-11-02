@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { Link, NavLink, Outlet } from 'react-router';
 import { Badge, Icon } from '../ui/ds';
 import { AppIcon } from '../ui/AppIcon';
 import { logout, type SessionUser } from '../session';
@@ -94,6 +94,11 @@ function UserMenu({ user }: { user: SessionUser }) {
       {open && (
         <div className="user-menu__popover" role="menu">
           <p className="user-menu__email">{user.email}</p>
+          {user.role === 'admin' && (
+            <Link className="user-menu__item" role="menuitem" to="/colaboradores" onClick={() => setOpen(false)}>
+              Colaboradores
+            </Link>
+          )}
           <button className="user-menu__item" role="menuitem" onClick={logout}>
             <AppIcon name="log-out" size={18} />
             Sair

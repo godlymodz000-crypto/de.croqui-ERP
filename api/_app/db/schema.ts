@@ -1,4 +1,4 @@
-import { index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 export const userRole = pgEnum('user_role', ['admin', 'member', 'viewer']);
 export const userStatus = pgEnum('user_status', ['invited', 'active', 'disabled']);
@@ -27,6 +27,21 @@ export const sessions = pgTable(
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   },
   (t) => [index('sessions_user_id_idx').on(t.userId)],
+);
+
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // Quem fez a ação. Fica nulo se essa conta for removida depois; o histórico continua.
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    action: text('action').notNull(),
+    entity: text('entity').notNull(),
+    entityId: text('entity_id').notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull().default({}),
+    at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('audit_log_entity_idx').on(t.entity, t.entityId), index('audit_log_at_idx').on(t.at)],
 );
 
 export type User = typeof users.$inferSelect;
