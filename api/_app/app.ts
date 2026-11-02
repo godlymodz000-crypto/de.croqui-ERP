@@ -17,6 +17,8 @@ import {
 } from './auth.js';
 import { requirePermission, type Permission } from './permissions.js';
 import { usersRoutes } from './routes/users.js';
+import { projectsRoutes } from './routes/projects.js';
+import { createAdminDrive, type DriveClient } from './drive.js';
 
 export const SESSION_COOKIE = 'decroqui_sid';
 const FLOW_COOKIE = 'decroqui_oauth';
@@ -35,12 +37,14 @@ export interface AppDeps {
   config: Config;
   db: Db;
   google?: GoogleClient;
+  /** Drive usado nas escritas (token do administrador). Substituível nos testes. */
+  drive?: DriveClient;
   logger?: boolean;
   /** Rotas extras no escopo protegido, com as mesmas regras de sessão e permissão. Usado nos testes. */
   extraProtectedRoutes?: FastifyPluginAsync;
 }
 
-export async function buildApp({ config, db, google, logger = false, extraProtectedRoutes }: AppDeps) {
+export async function buildApp({ config, db, google, drive, logger = false, extraProtectedRoutes }: AppDeps) {
   const app = Fastify({ logger, trustProxy: true });
   const googleClient =
     google ??
@@ -152,6 +156,7 @@ export async function buildApp({ config, db, google, logger = false, extraProtec
     });
 
     await protectedRoutes.register(usersRoutes, { db });
+    await protectedRoutes.register(projectsRoutes, { db, drive: drive ?? createAdminDrive({ config, db }) });
     if (extraProtectedRoutes) await protectedRoutes.register(extraProtectedRoutes);
   });
 

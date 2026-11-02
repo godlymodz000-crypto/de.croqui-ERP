@@ -63,7 +63,7 @@ export function AppShell({ user }: { user: SessionUser }) {
           <ul className="sidebar__nav">
             {NAV_ITEMS.map((item) => (
               <li key={item.to}>
-                <NavLink to={item.to} end className={({ isActive }) => `nav-item${isActive ? ' is-active' : ''}`}>
+                <NavLink to={item.to} end={item.to === '/'} className={({ isActive }) => `nav-item${isActive ? ' is-active' : ''}`}>
                   <AppIcon name={item.icon} />
                   <span>{item.label}</span>
                   {'soon' in item && <Badge tone="neutral">Em breve</Badge>}

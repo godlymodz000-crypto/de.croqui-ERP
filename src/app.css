@@ -586,6 +586,235 @@ a.user-menu__item {
   z-index: 200;
 }
 
+/* ---------- Projetos (quadros "ERP · Projetos · 1440" e "· 1024" no Figcraft) ---------- */
+.projects-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-7);
+}
+.projects-toolbar__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.sort-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font: var(--weight-light) var(--text-sm) / 1 var(--font-body);
+  color: var(--ardosia-500);
+  cursor: pointer;
+}
+.sort-select select {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: var(--space-2) var(--space-5) var(--space-2) 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.sort-select select:focus-visible {
+  outline: 1px solid var(--border-strong);
+  outline-offset: 2px;
+}
+.sort-select__chevron {
+  position: absolute;
+  right: 0;
+  pointer-events: none;
+  line-height: 0;
+  color: var(--text-primary);
+}
+
+.projects-table {
+  --cols: minmax(0, 1fr) 240px 200px 212px;
+}
+.projects-table__head,
+.projects-table__row {
+  display: grid;
+  grid-template-columns: var(--cols);
+  align-items: center;
+}
+.projects-table__head {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-strong);
+  font: var(--weight-medium) 11px / 1 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ardosia-500);
+}
+.projects-table__row {
+  min-height: 76px;
+  border-bottom: 1px solid var(--border-hairline);
+  font: var(--weight-regular) var(--text-sm) / 1.4 var(--font-body);
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: background var(--duration-base) var(--ease-out);
+}
+.projects-table__row:hover {
+  background: var(--linho-100);
+}
+.projects-table__row:focus-visible {
+  outline: 1px solid var(--border-strong);
+  outline-offset: -1px;
+}
+.project-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  padding-right: var(--space-4);
+}
+.project-cell__thumb {
+  flex: none;
+  width: 36px;
+}
+.project-cell__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.project-cell__name {
+  font: var(--weight-light) var(--text-xl) / 1.2 var(--font-display);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-cell__sub,
+.projects-table__author {
+  font: var(--weight-light) 13px / 1.4 var(--font-body);
+  color: var(--ardosia-500);
+}
+.projects-table__client {
+  padding-right: var(--space-4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.projects-table__updated {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+@media (min-width: 769px) and (max-width: 1279px) {
+  .projects-table {
+    --cols: minmax(0, 1fr) 150px 168px 112px;
+  }
+  .projects-table__row {
+    min-height: 68px;
+  }
+}
+
+/* Projeto aberto */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  margin-bottom: var(--space-5);
+  font: var(--weight-regular) var(--text-sm) / 1 var(--font-body);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.back-link:hover {
+  color: var(--text-brand);
+}
+.project__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.project-details {
+  max-width: 720px;
+}
+.project-details__title {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-strong);
+  margin-bottom: var(--space-4);
+  font: var(--weight-light) var(--text-xl) / 1.2 var(--font-display);
+  color: var(--text-primary);
+}
+.project-details__list {
+  margin-bottom: var(--space-7);
+}
+.project-details__list > div {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 52px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+.project-details__list dt {
+  font: var(--weight-medium) 11px / 1.4 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ardosia-500);
+}
+.project-details__list dd {
+  margin: 0;
+  font: var(--weight-regular) var(--text-sm) / 1.5 var(--font-body);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.project-details__muted {
+  font-weight: var(--weight-light);
+  color: var(--ardosia-500);
+}
+.drive-folder {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+}
+.drive-folder__icon {
+  flex: none;
+  line-height: 0;
+  color: var(--text-secondary);
+}
+.drive-folder__text {
+  flex: 1;
+  min-width: 0;
+}
+.drive-folder__name {
+  font: var(--weight-regular) var(--text-sm) / 1.4 var(--font-body);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.drive-folder__path {
+  font: var(--weight-light) 13px / 1.4 var(--font-body);
+  color: var(--ardosia-500);
+}
+.drive-folder__link {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height-md);
+  font: var(--weight-medium) var(--text-xs) / 1 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.drive-folder__link:hover {
+  color: var(--text-brand);
+}
+.folder-name {
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
 /* ======================================================================
    Celular: até 768px, ou celular deitado (pouca altura em paisagem).
    A mesma condição está em src/ui/useMediaQuery.ts (MOBILE_QUERY).
@@ -830,6 +1059,95 @@ a.user-menu__item {
     border-bottom: 0;
     text-decoration: underline;
     text-underline-offset: 4px;
+  }
+
+  /* ---------- Projetos ---------- */
+  .projects-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+  }
+  .projects-toolbar__filters > [role='button'] {
+    min-height: var(--control-height-md);
+  }
+  .sort-select {
+    align-self: flex-start;
+    min-height: var(--control-height-md);
+  }
+  .sort-select select {
+    min-height: var(--control-height-md);
+  }
+
+  /* A tabela vira lista: projeto em cima, depois cliente, situação e última alteração. */
+  .projects-table__head {
+    display: none;
+  }
+  .projects-table__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'project project'
+      'client client'
+      'status updated';
+    row-gap: var(--space-2);
+    column-gap: var(--space-3);
+    padding: var(--space-4) 0;
+  }
+  .project-cell {
+    grid-area: project;
+    padding-right: 0;
+  }
+  .project-cell__name {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .projects-table__client {
+    grid-area: client;
+    padding-left: calc(36px + var(--space-4));
+    padding-right: 0;
+    white-space: normal;
+  }
+  .projects-table__client::before {
+    content: attr(data-label) ' · ';
+    font-weight: var(--weight-light);
+    color: var(--ardosia-500);
+  }
+  .projects-table__status {
+    grid-area: status;
+    padding-left: calc(36px + var(--space-4));
+  }
+  .projects-table__updated {
+    grid-area: updated;
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  /* Projeto aberto */
+  .back-link {
+    min-height: var(--control-height-md);
+    margin-bottom: var(--space-3);
+  }
+  .project__actions {
+    justify-content: space-between;
+  }
+  .project__actions > :only-child {
+    margin-left: auto;
+  }
+  .project-details__list > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+    padding: var(--space-3) 0;
+  }
+  .drive-folder {
+    flex-wrap: wrap;
+    padding: var(--space-4);
+  }
+  .drive-folder__link {
+    width: 100%;
+    justify-content: center;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xs);
+    text-decoration: none;
   }
 
   /* Dialog do design system: cabe na tela e rola por dentro quando faltar altura. */

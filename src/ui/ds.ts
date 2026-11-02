@@ -40,7 +40,7 @@ export interface InputProps {
   placeholder?: string;
   value?: string;
   onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
-  type?: 'text' | 'email' | 'search';
+  type?: 'text' | 'email' | 'search' | 'date';
   variant?: 'line' | 'box';
   iconLeft?: string;
   disabled?: boolean;
@@ -91,6 +91,23 @@ export interface IconButtonProps {
   'aria-controls'?: string;
 }
 
+export interface ArchFrameProps {
+  src?: string;
+  alt?: string;
+  shape?: 'arch' | 'soft' | 'rect' | 'round';
+  ratio?: string;
+  label?: string;
+  tone?: 'stone' | 'slate' | 'wine' | 'night';
+  style?: CSSProperties;
+}
+
+export interface TagProps {
+  children?: ReactNode;
+  selected?: boolean;
+  onClick?: () => void;
+  style?: CSSProperties;
+}
+
 interface DesignSystem {
   Button: ComponentType<ButtonProps>;
   Icon: ComponentType<IconProps>;
@@ -100,9 +117,11 @@ interface DesignSystem {
   Dialog: ComponentType<DialogProps>;
   Toast: ComponentType<ToastProps>;
   IconButton: ComponentType<IconButtonProps>;
+  ArchFrame: ComponentType<ArchFrameProps>;
+  Tag: ComponentType<TagProps>;
   ICON_NAMES: string[];
 }
 
 const ds = (window as unknown as { DeCroquiDesignSystem_5f8fc8: DesignSystem }).DeCroquiDesignSystem_5f8fc8;
 
-export const { Button, Icon, Badge, Input, Select, Dialog, Toast, IconButton, ICON_NAMES } = ds;
+export const { Button, Icon, Badge, Input, Select, Dialog, Toast, IconButton, ArchFrame, Tag, ICON_NAMES } = ds;

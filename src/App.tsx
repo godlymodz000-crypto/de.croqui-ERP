@@ -4,6 +4,8 @@ import { AppShell } from './layout/AppShell';
 import { LoginPage } from './pages/LoginPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { CollaboratorsPage } from './pages/collaborators/CollaboratorsPage';
+import { ProjectsPage } from './pages/projects/ProjectsPage';
+import { ProjectPage } from './pages/projects/ProjectPage';
 
 const PAGES = [
   {
@@ -15,11 +17,6 @@ const PAGES = [
     path: '/processos',
     title: 'Processos',
     text: 'Aqui cada projeto aparece como um card, na coluna da etapa em que está. Esta tela chega na fase dos processos.',
-  },
-  {
-    path: '/projetos',
-    title: 'Projetos',
-    text: 'Aqui ficará a lista de projetos, cada um com a própria pasta no Google Drive. Esta tela chega na fase dos projetos.',
   },
   {
     path: '/orcamentos',
@@ -74,6 +71,8 @@ export function App() {
             {PAGES.map((p) => (
               <Route key={p.path} path={p.path} element={<PlaceholderPage title={p.title} text={p.text} />} />
             ))}
+            <Route path="/projetos" element={<ProjectsPage />} />
+            <Route path="/projetos/:id" element={<ProjectPage />} />
             <Route path="/colaboradores" element={<AdminOnly />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
