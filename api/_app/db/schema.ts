@@ -1,4 +1,5 @@
-import { date, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { bigint, date, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 export const userRole = pgEnum('user_role', ['admin', 'member', 'viewer']);
 export const userStatus = pgEnum('user_status', ['invited', 'active', 'disabled']);
@@ -86,6 +87,80 @@ export const appSettings = pgTable('app_settings', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Subpastas padrão da pasta do projeto no Drive (ver drive.ts). */
+export const projectSubfolder = pgEnum('project_subfolder', ['budgets', 'presentations', 'contracts', 'photos']);
+/** upload: enviado pela tela do projeto; pdf_export: PDF salvo ao exportar no editor. */
+export const fileSource = pgEnum('file_source', ['upload', 'pdf_export']);
+
+/** Metadados dos arquivos do projeto. O arquivo em si fica no Drive do administrador. */
+export const projectFiles = pgTable(
+  'project_files',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id),
+    driveFileId: text('drive_file_id').notNull().unique(),
+    name: text('name').notNull(),
+    mimeType: text('mime_type').notNull(),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
+    subfolder: projectSubfolder('subfolder').notNull(),
+    source: fileSource('source').notNull().default('upload'),
+    uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // Exclusão lógica; o arquivo vai para a lixeira do Drive.
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (t) => [index('project_files_project_id_idx').on(t.projectId)],
+);
+
+/** Notas do projeto. Ficam só no banco, não vão para o Drive. */
+export const projectNotes = pgTable(
+  'project_notes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id),
+    body: text('body').notNull(),
+    authorUserId: uuid('author_user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (t) => [index('project_notes_project_id_idx').on(t.projectId)],
+);
+
+export const deletionItemType = pgEnum('deletion_item_type', ['file', 'note', 'project']);
+export const deletionStatus = pgEnum('deletion_status', ['pending', 'approved', 'rejected']);
+
+/** Pedidos de exclusão: colaborador pede, administrador aprova ou recusa. */
+export const deletionRequests = pgTable(
+  'deletion_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    itemType: deletionItemType('item_type').notNull(),
+    itemId: uuid('item_id').notNull(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id),
+    reason: text('reason'),
+    requestedBy: uuid('requested_by').references(() => users.id, { onDelete: 'set null' }),
+    status: deletionStatus('status').notNull().default('pending'),
+    decidedBy: uuid('decided_by').references(() => users.id, { onDelete: 'set null' }),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('deletion_requests_status_idx').on(t.status),
+    // Um pedido pendente por item.
+    uniqueIndex('deletion_requests_one_pending_idx').on(t.itemType, t.itemId).where(sql`${t.status} = 'pending'`),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type Project = typeof projects.$inferSelect;
+export type ProjectFile = typeof projectFiles.$inferSelect;
+export type ProjectNote = typeof projectNotes.$inferSelect;
+export type DeletionRequest = typeof deletionRequests.$inferSelect;
+export type Subfolder = (typeof projectSubfolder.enumValues)[number];
 export type UserRole = (typeof userRole.enumValues)[number];

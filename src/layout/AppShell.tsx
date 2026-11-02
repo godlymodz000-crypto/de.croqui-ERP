@@ -143,6 +143,11 @@ function UserMenu({ user }: { user: SessionUser }) {
               Colaboradores
             </Link>
           )}
+          {user.role === 'admin' && (
+            <Link className="user-menu__item" role="menuitem" to="/pedidos-de-exclusao" onClick={() => setOpen(false)}>
+              Pedidos de exclusão
+            </Link>
+          )}
           <button className="user-menu__item" role="menuitem" onClick={logout}>
             <AppIcon name="log-out" size={18} />
             Sair

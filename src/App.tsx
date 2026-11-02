@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { SessionProvider, useSession } from './session';
 import { AppShell } from './layout/AppShell';
@@ -6,6 +7,7 @@ import { PlaceholderPage } from './pages/PlaceholderPage';
 import { CollaboratorsPage } from './pages/collaborators/CollaboratorsPage';
 import { ProjectsPage } from './pages/projects/ProjectsPage';
 import { ProjectPage } from './pages/projects/ProjectPage';
+import { DeletionRequestsPage } from './pages/deletion/DeletionRequestsPage';
 
 const PAGES = [
   {
@@ -38,10 +40,10 @@ function Protected() {
 }
 
 /** A API já responde 403 para quem não é administrador; aqui só evitamos mostrar a tela vazia. */
-function AdminOnly() {
+function AdminOnly({ title, children }: { title: string; children: ReactNode }) {
   const session = useSession();
-  if (session.status === 'authenticated' && session.user.role === 'admin') return <CollaboratorsPage />;
-  return <PlaceholderPage title="Colaboradores" text="Esta área é só para a administração do estúdio." />;
+  if (session.status === 'authenticated' && session.user.role === 'admin') return children;
+  return <PlaceholderPage title={title} text="Esta área é só para a administração do estúdio." />;
 }
 
 function LoginRoute() {
@@ -73,7 +75,22 @@ export function App() {
             ))}
             <Route path="/projetos" element={<ProjectsPage />} />
             <Route path="/projetos/:id" element={<ProjectPage />} />
-            <Route path="/colaboradores" element={<AdminOnly />} />
+            <Route
+              path="/colaboradores"
+              element={
+                <AdminOnly title="Colaboradores">
+                  <CollaboratorsPage />
+                </AdminOnly>
+              }
+            />
+            <Route
+              path="/pedidos-de-exclusao"
+              element={
+                <AdminOnly title="Pedidos de exclusão">
+                  <DeletionRequestsPage />
+                </AdminOnly>
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

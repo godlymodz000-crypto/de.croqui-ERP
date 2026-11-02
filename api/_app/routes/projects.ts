@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { auditLog, projects, stages, users, type Project } from '../db/schema.js';
+import { auditLog, deletionRequests, projects, stages, users, type Project } from '../db/schema.js';
 import { audit } from '../audit.js';
 import { createProjectFolder, folderUrl, projectFolderName, type DriveClient } from '../drive.js';
 
@@ -225,6 +225,11 @@ export async function projectsRoutes(app: FastifyInstance, { db, drive }: { db: 
           .update(projects)
           .set({ deletedAt: sql`now()` })
           .where(eq(projects.id, current.id));
+        // Pedido pendente de excluir este projeto fica resolvido pela exclusão direta.
+        await tx
+          .update(deletionRequests)
+          .set({ status: 'approved', decidedBy: actor.id, decidedAt: new Date() })
+          .where(and(eq(deletionRequests.itemType, 'project'), eq(deletionRequests.itemId, current.id), eq(deletionRequests.status, 'pending')));
         await audit(tx, {
           userId: actor.id,
           action: 'project.delete',

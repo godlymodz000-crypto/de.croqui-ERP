@@ -26,8 +26,16 @@ export const PERMISSIONS = {
   'projects.delete': ['admin'],
   /** Criar e editar orçamento e apresentação */
   'documents.write': ['admin', 'member'],
-  /** Exportar PDF de orçamento e apresentação */
+  /** Exportar PDF de orçamento e apresentação (e salvar o PDF na pasta do projeto) */
   'documents.export': ['admin', 'member'],
+  /** Enviar arquivos e criar notas no projeto */
+  'content.write': ['admin', 'member'],
+  /** Pedir a exclusão de arquivo, nota ou projeto */
+  'deletion.request': ['admin', 'member'],
+  /** Excluir arquivo ou nota diretamente (projeto: projects.delete) */
+  'content.delete': ['admin'],
+  /** Ver, aprovar e recusar pedidos de exclusão */
+  'deletion.decide': ['admin'],
 } as const satisfies Record<string, readonly UserRole[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

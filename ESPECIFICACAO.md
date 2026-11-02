@@ -81,12 +81,26 @@ Regras:
 | Criar e editar projetos | sim | sim | não |
 | Arrastar projeto no Kanban (mudar etapa) | sim | sim | não |
 | Criar e editar eventos (ERP) | sim | sim | não |
-| Criar, renomear, remover etapas | sim | não | não **[CONFIRMAR]** |
-| Excluir projeto | sim | não | não **[CONFIRMAR]** |
+| Criar, renomear, remover etapas | sim | não | não |
+| Excluir projeto | sim | não | não |
 | Criar e editar orçamento e apresentação | sim | sim | não |
-| Exportar PDF de orçamento e apresentação | sim | sim | não **[CONFIRMAR]** |
+| Exportar PDF de orçamento e apresentação (e salvar o PDF na pasta do projeto) | sim | sim | não |
+| Ver arquivos e notas do projeto | sim | sim | sim |
+| Enviar arquivos e criar notas | sim | sim | não |
+| Pedir exclusão de arquivo, nota ou projeto | sim | sim | não |
+| Excluir arquivo ou nota diretamente | sim | não | não |
+| Ver, aprovar e recusar pedidos de exclusão | sim | não | não |
 
 Regra de implementação: a permissão é verificada no back-end em toda rota de escrita. A interface só esconde botões; não é ela que protege os dados.
+
+Permissões no código (`api/_app/permissions.ts`): `users.read`, `users.manage`, `workspace.read`, `projects.write`, `projects.move`, `events.write`, `stages.manage`, `projects.delete`, `documents.write`, `documents.export`, `content.write`, `deletion.request`, `content.delete`, `deletion.decide`.
+
+Pedidos de exclusão (Fase 3b):
+- Excluir arquivo, nota ou projeto é só da administração. O colaborador pede a exclusão, com motivo opcional, e a administração aprova ou recusa na tela "Pedidos de exclusão" (menu do avatar).
+- Só existe um pedido pendente por item. Quem pediu não aprova nem recusa o próprio pedido.
+- Aprovar um arquivo manda o arquivo para a lixeira do Drive e marca o registro como excluído. Aprovar nota ou projeto só marca o registro no ERP; a pasta do projeto continua no Drive.
+- Exclusão direta pela administração fecha o pedido pendente do mesmo item.
+- Tudo é exclusão lógica (`deleted_at`) e fica no `audit_log`.
 
 Consistência com o Drive: a permissão no ERP e a permissão no Drive são checadas juntas. Se o ERP bloquear uma ação, o Drive não é alterado, mesmo que a pasta esteja compartilhada com a pessoa.
 
@@ -128,7 +142,19 @@ De.Croqui ERP/                          <- pasta raiz, criada na primeira execu�
 - Renomear um projeto renomeia a pasta, sem trocar o ID.
 - Todos os arquivos ficam dentro da pasta raiz.
 
-Dono dos arquivos **[CONFIRMAR]**: proposta de que as operações de escrita no Drive usem o token do administrador. Assim, todos os arquivos ficam na conta do administrador (uma cota só, sem arquivo perdido na conta de colaborador). A permissão de quem pode fazer o quê fica no ERP, conforme a seção 5. Alternativa: cada pessoa usa o próprio token, com o risco de arquivo na conta de quem saiu do estúdio.
+Dono dos arquivos (decidido): todas as leituras e escritas no Drive usam o token do administrador (`ADMIN_EMAIL`), guardado criptografado. Todos os arquivos ficam na conta do administrador. A permissão de quem pode fazer o quê fica no ERP, conforme a seção 5.
+
+Configuração: os IDs de "De.Croqui ERP" e de "Projetos" ficam na tabela `app_settings`. Se uma dessas pastas for apagada no Drive, ela é criada de novo no próximo projeto. Uma subpasta padrão apagada também é recriada no próximo envio.
+
+Arquivos do projeto (Fase 3b):
+- Os metadados ficam em `project_files`: ID no Drive, nome, tipo, tamanho, subpasta, origem (envio ou PDF exportado), quem enviou e quando. A lista da tela vem dessa tabela; um arquivo posto direto no Drive, fora do ERP, não aparece na lista.
+- Envio: o servidor abre uma sessão de upload retomável no Drive, na subpasta escolhida, liberada para o endereço do ERP, e devolve o endereço da sessão com uma autorização assinada. O navegador envia o arquivo direto para o Drive, sem passar pelo servidor do ERP (limite de cerca de 4,5 MB por requisição na Vercel). No fim, o navegador confirma; o servidor confere no Drive se o arquivo está na pasta autorizada, com o nome e o tamanho autorizados, e só então grava o registro. Envio que falha ou é cancelado não deixa registro no banco; arquivo que não confere vai para a lixeira.
+- Pela tela do projeto só dá para enviar para Fotos ou Contratos. A raiz da pasta do projeto não é opção.
+- PDF exportado no editor: vai para Orçamentos ou Apresentações com o nome "<Orçamento | Apresentação> - <Projeto> - <dd-mm-aaaa>.pdf", pelo mesmo caminho de envio direto, e aparece na lista de arquivos. Os editores chegam na Fase 6 e usam `savePdfExport` (`src/api/files.ts`).
+- Visualização: dentro do ERP, numa janela com o link de pré-visualização do Drive (`/file/d/<id>/preview`). O Google só mostra o arquivo para quem está conectado, no navegador, com uma conta que tenha acesso à pasta; por isso a pasta raiz precisa estar compartilhada com cada colaborador. As miniaturas das imagens passam pelo servidor do ERP e não dependem disso.
+- Excluir arquivo (administração, direto ou ao aprovar um pedido) manda o arquivo para a lixeira do Drive, de onde ele pode ser recuperado por 30 dias.
+
+Notas do projeto: ficam só no banco (`project_notes`), com texto, autor e data. Não vão para o Drive. Edição de nota fica para depois.
 
 Compartilhamento: a pasta raiz é compartilhada com cada colaborador ao ser convidado, para ele também ver os arquivos pelo Drive, como Leitor ou Editor conforme o papel. Essa etapa é um passo de convite, não é checada a cada operação.
 

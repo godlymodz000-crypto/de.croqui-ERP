@@ -45,6 +45,11 @@ const MATRIX: { row: string; permission: Permission; method: 'GET' | 'POST'; exp
   { row: 'Excluir projeto', permission: 'projects.delete', method: 'POST', expected: { admin: true, member: false, viewer: false } },
   { row: 'Criar e editar orçamento e apresentação', permission: 'documents.write', method: 'POST', expected: { admin: true, member: true, viewer: false } },
   { row: 'Exportar PDF de orçamento e apresentação', permission: 'documents.export', method: 'POST', expected: { admin: true, member: true, viewer: false } },
+  // Fase 3b
+  { row: 'Enviar arquivos e criar notas', permission: 'content.write', method: 'POST', expected: { admin: true, member: true, viewer: false } },
+  { row: 'Pedir exclusão de arquivo, nota ou projeto', permission: 'deletion.request', method: 'POST', expected: { admin: true, member: true, viewer: false } },
+  { row: 'Excluir arquivo ou nota diretamente', permission: 'content.delete', method: 'POST', expected: { admin: true, member: false, viewer: false } },
+  { row: 'Ver, aprovar e recusar pedidos de exclusão', permission: 'deletion.decide', method: 'POST', expected: { admin: true, member: false, viewer: false } },
 ];
 
 // Rotas de sonda: uma por linha da matriz, sob as mesmas regras de sessão e permissão das rotas reais.

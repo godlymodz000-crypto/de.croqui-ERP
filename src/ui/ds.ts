@@ -39,8 +39,10 @@ export interface InputProps {
   error?: string;
   placeholder?: string;
   value?: string;
-  onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
+  onChange?: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   type?: 'text' | 'email' | 'search' | 'date';
+  multiline?: boolean;
+  rows?: number;
   variant?: 'line' | 'box';
   iconLeft?: string;
   disabled?: boolean;

@@ -12,7 +12,8 @@ import type { Db } from '../api/_app/db/client.js';
 import * as schema from '../api/_app/db/schema.js';
 import { createSession } from '../api/_app/auth.js';
 import { randomToken } from '../api/_app/crypto.js';
-import { DriveError, PROJECT_SUBFOLDERS, type DriveClient } from '../api/_app/drive.js';
+import { PROJECT_SUBFOLDERS } from '../api/_app/drive.js';
+import { FakeDrive } from './fake-drive.js';
 
 const ADMIN_EMAIL = 'admin@decroqui.test';
 const ROLES = ['admin', 'member', 'viewer'] as const;
@@ -29,61 +30,6 @@ const config: Config = {
   appUrl: 'http://localhost:5173',
   secureCookies: false,
 };
-
-interface Folder {
-  id: string;
-  name: string;
-  parentId: string | null;
-  trashed: boolean;
-}
-
-/** Drive em memória. `failOn` faz uma operação falhar (na N-ésima chamada, quando indicado). */
-class FakeDrive implements DriveClient {
-  folders = new Map<string, Folder>();
-  calls: string[] = [];
-  failOn: { op: keyof DriveClient; nth?: number } | null = null;
-  private seq = 0;
-  private count: Record<string, number> = {};
-
-  private check(op: keyof DriveClient) {
-    this.calls.push(op);
-    this.count[op] = (this.count[op] ?? 0) + 1;
-    if (this.failOn?.op === op && (this.failOn.nth === undefined || this.failOn.nth === this.count[op])) {
-      throw new DriveError(`falha simulada em ${op}`);
-    }
-  }
-  async createFolder(name: string, parentId: string | null) {
-    this.check('createFolder');
-    const id = `pasta-${++this.seq}`;
-    this.folders.set(id, { id, name, parentId, trashed: false });
-    return id;
-  }
-  async renameFolder(id: string, name: string) {
-    this.check('renameFolder');
-    const f = this.folders.get(id);
-    if (!f) throw new DriveError('não existe');
-    f.name = name;
-  }
-  async folderExists(id: string) {
-    this.check('folderExists');
-    const f = this.folders.get(id);
-    return !!f && !f.trashed;
-  }
-  async trashFolder(id: string) {
-    this.check('trashFolder');
-    const f = this.folders.get(id);
-    if (f) f.trashed = true;
-  }
-  childrenOf(id: string) {
-    return [...this.folders.values()].filter((f) => f.parentId === id && !f.trashed);
-  }
-  byName(name: string) {
-    return [...this.folders.values()].filter((f) => f.name === name && !f.trashed);
-  }
-  resetCalls() {
-    this.calls = [];
-  }
-}
 
 let db: Db;
 let app: FastifyInstance;

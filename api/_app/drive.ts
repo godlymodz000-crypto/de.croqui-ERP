@@ -1,11 +1,12 @@
 import { eq } from 'drizzle-orm';
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
-import { appSettings, users } from './db/schema.js';
+import { appSettings, users, type Subfolder } from './db/schema.js';
 import { decrypt } from './crypto.js';
 
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const FILES_ENDPOINT = 'https://www.googleapis.com/drive/v3/files';
+const UPLOAD_ENDPOINT = 'https://www.googleapis.com/upload/drive/v3/files';
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
 
 export const ROOT_FOLDER_NAME = 'De.Croqui ERP';
@@ -25,6 +26,47 @@ export interface DriveClient {
   folderExists(id: string): Promise<boolean>;
   /** Move para a lixeira (recuperável por 30 dias). Só usado para desfazer uma criação que falhou no meio. */
   trashFolder(id: string): Promise<void>;
+  /** ID da subpasta com esse nome dentro de `parentId`, se existir e não estiver na lixeira. */
+  findChildFolder(parentId: string, name: string): Promise<string | null>;
+  /**
+   * Abre uma sessão de upload retomável e devolve o endereço para onde o navegador envia o arquivo.
+   * Com `origin`, o Google libera o envio direto daquele endereço (CORS).
+   */
+  createUploadSession(input: { name: string; mimeType: string; size: number; parentId: string; origin: string }): Promise<string>;
+  getFile(id: string): Promise<DriveFile | null>;
+  /** Move o arquivo para a lixeira do Drive (recuperável por 30 dias). */
+  trashFile(id: string): Promise<void>;
+  /** Miniatura gerada pelo Drive, quando existe. */
+  thumbnail(id: string): Promise<{ contentType: string; body: ArrayBuffer } | null>;
+}
+
+export interface DriveFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  parents: string[];
+  trashed: boolean;
+}
+
+export const SUBFOLDER_NAMES: Record<Subfolder, (typeof PROJECT_SUBFOLDERS)[number]> = {
+  budgets: 'Orçamentos',
+  presentations: 'Apresentações',
+  contracts: 'Contratos',
+  photos: 'Fotos',
+};
+
+export function filePreviewUrl(id: string): string {
+  return `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
+}
+
+export function fileViewUrl(id: string): string {
+  return `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
+}
+
+/** Aspas simples e barras invertidas escapadas para a consulta `q` do Drive. */
+function qString(value: string): string {
+  return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 }
 
 export function folderUrl(id: string): string {
@@ -105,13 +147,69 @@ export function createAdminDrive({ config, db, fetch: doFetch = fetch }: { confi
     },
 
     async trashFolder(id) {
-      const res = await call(`${FILES_ENDPOINT}/${encodeURIComponent(id)}?fields=id`, {
-        method: 'PATCH',
-        body: JSON.stringify({ trashed: true }),
+      await trash(id);
+    },
+
+    async trashFile(id) {
+      await trash(id);
+    },
+
+    async findChildFolder(parentId, name) {
+      const q = `${qString(parentId)} in parents and name = ${qString(name)} and mimeType = '${FOLDER_MIME}' and trashed = false`;
+      const res = await call(`${FILES_ENDPOINT}?q=${encodeURIComponent(q)}&fields=files(id)&pageSize=1`);
+      if (!res.ok) throw new DriveError(`Busca da subpasta falhou (${res.status}).`);
+      const { files } = (await res.json()) as { files?: { id: string }[] };
+      return files?.[0]?.id ?? null;
+    },
+
+    async createUploadSession({ name, mimeType, size, parentId, origin }) {
+      const res = await call(`${UPLOAD_ENDPOINT}?uploadType=resumable&fields=id,name,mimeType,size`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json; charset=UTF-8',
+          'x-upload-content-type': mimeType,
+          'x-upload-content-length': String(size),
+          origin,
+        },
+        body: JSON.stringify({ name, mimeType, parents: [parentId] }),
       });
-      if (!res.ok) throw new DriveError(`Mover a pasta para a lixeira falhou (${res.status}).`);
+      const location = res.headers.get('location');
+      if (!res.ok || !location) throw new DriveError(`Abertura da sessão de upload falhou (${res.status}).`);
+      return location;
+    },
+
+    async getFile(id) {
+      const res = await call(`${FILES_ENDPOINT}/${encodeURIComponent(id)}?fields=id,name,mimeType,size,parents,trashed`);
+      if (res.status === 404) return null;
+      if (!res.ok) throw new DriveError(`Consulta do arquivo falhou (${res.status}).`);
+      const f = (await res.json()) as Omit<DriveFile, 'size'> & { size?: string };
+      return { ...f, size: Number(f.size ?? 0), parents: f.parents ?? [], trashed: !!f.trashed };
+    },
+
+    async thumbnail(id) {
+      const res = await call(`${FILES_ENDPOINT}/${encodeURIComponent(id)}?fields=thumbnailLink`);
+      if (!res.ok) return null;
+      const { thumbnailLink } = (await res.json()) as { thumbnailLink?: string };
+      if (!thumbnailLink) return null;
+      const img = await doFetch(thumbnailLink, { headers: { authorization: `Bearer ${await accessToken()}` } });
+      if (!img.ok) return null;
+      return { contentType: img.headers.get('content-type') ?? 'image/jpeg', body: await img.arrayBuffer() };
     },
   };
+
+  async function trash(id: string) {
+    const res = await call(`${FILES_ENDPOINT}/${encodeURIComponent(id)}?fields=id`, {
+      method: 'PATCH',
+      body: JSON.stringify({ trashed: true }),
+    });
+    if (!res.ok) throw new DriveError(`Mover para a lixeira falhou (${res.status}).`);
+  }
+}
+
+/** ID da subpasta padrão do projeto. Se alguém a apagou no Drive, ela é criada de novo. */
+export async function projectSubfolderId(drive: DriveClient, projectFolderId: string, subfolder: Subfolder): Promise<string> {
+  const name = SUBFOLDER_NAMES[subfolder];
+  return (await drive.findChildFolder(projectFolderId, name)) ?? drive.createFolder(name, projectFolderId);
 }
 
 async function readSetting(db: Db, key: string): Promise<string | null> {
