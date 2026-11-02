@@ -585,3 +585,306 @@ a.user-menu__item {
   bottom: var(--space-5);
   z-index: 200;
 }
+
+/* ======================================================================
+   Celular: até 768px, ou celular deitado (pouca altura em paisagem).
+   A mesma condição está em src/ui/useMediaQuery.ts (MOBILE_QUERY).
+   Acima disso vale o desktop dos quadros do Figcraft, sem nenhuma mudança.
+   ====================================================================== */
+
+/* Elementos que só existem no celular. */
+.topbar__menu,
+.topbar__logo,
+.sidebar__close {
+  display: none;
+}
+
+@media (max-width: 768px), (max-height: 480px) and (orientation: landscape) {
+  /* ---------- Títulos: quebram entre palavras, nunca no meio ---------- */
+  h1,
+  h2 {
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: manual;
+  }
+
+  /* ---------- Login ---------- */
+  .login {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  .login__art {
+    display: none;
+  }
+  .login__panel {
+    padding: var(--space-7) var(--space-4);
+  }
+  .login__content {
+    margin: 0 auto;
+  }
+  .login__logo {
+    margin-bottom: var(--space-6);
+  }
+  .login__title {
+    margin-bottom: var(--space-6);
+  }
+
+  /* ---------- Moldura: menu lateral vira gaveta ---------- */
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 60;
+    width: min(calc(var(--space-11) + var(--space-10)), calc(100vw - var(--space-8)));
+    height: 100vh;
+    height: 100dvh;
+    padding: var(--space-4) 0 var(--space-5);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition:
+      transform var(--duration-base) var(--ease-out),
+      visibility 0s linear var(--duration-base);
+  }
+  .sidebar.is-open {
+    transform: none;
+    visibility: visible;
+    box-shadow: var(--shadow-lg);
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+  .sidebar__close {
+    display: block;
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+  }
+  .sidebar__logo {
+    margin: var(--space-2) 0 var(--space-6) var(--space-4);
+  }
+  .sidebar__section {
+    margin-left: var(--space-4);
+  }
+  .nav-item {
+    min-height: var(--control-height-md);
+    padding-left: var(--space-4);
+  }
+  .nav-item.is-active::before {
+    left: 0;
+  }
+  .sidebar__motto {
+    margin: auto var(--space-4) 0;
+  }
+  .drawer-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: var(--surface-overlay);
+    animation: fade-in var(--duration-base) var(--ease-out);
+  }
+
+  .topbar {
+    height: var(--space-8);
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: 0 var(--space-4);
+  }
+  .topbar__menu {
+    display: block;
+    margin-left: calc(-1 * var(--space-2));
+  }
+  .topbar__logo {
+    display: block;
+    width: 120px;
+    margin-right: auto;
+  }
+  .user-menu {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .user-menu__trigger {
+    padding: 0;
+  }
+  /* No celular o cabeçalho mostra só o avatar; o Icon do design system define display em linha. */
+  .user-menu__trigger > :not(.avatar) {
+    display: none !important;
+  }
+  .user-menu__popover {
+    max-width: calc(100vw - 2 * var(--space-4));
+  }
+  .user-menu__item {
+    min-height: var(--control-height-md);
+  }
+
+  .shell__content {
+    padding: var(--space-6) var(--space-4) var(--space-8);
+  }
+  .placeholder__title {
+    flex-wrap: wrap;
+    font-size: var(--text-2xl);
+  }
+
+  /* ---------- Colaboradores ---------- */
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-5);
+    margin-bottom: var(--space-6);
+  }
+  .page-header__title {
+    font-size: var(--text-2xl);
+  }
+  .page-header > button {
+    width: 100%;
+  }
+  .toolbar {
+    flex-direction: column;
+    margin-bottom: var(--space-5);
+  }
+  .filter-chip {
+    min-height: var(--control-height-md);
+  }
+  .filter-chip select {
+    flex: 1;
+    align-self: stretch;
+  }
+
+  /* A tabela vira lista: nome e ações em cima, depois e-mail, papel com situação e último acesso. */
+  .people-table__head {
+    display: none;
+  }
+  .people-table__row {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    grid-template-areas:
+      'person person actions'
+      '. email email'
+      '. role status'
+      '. access access';
+    column-gap: var(--space-3);
+    row-gap: var(--space-1);
+    padding: var(--space-4) 0;
+  }
+  .person {
+    grid-area: person;
+  }
+  .people-table__email {
+    grid-area: email;
+    padding-right: 0;
+  }
+  .people-table__role {
+    grid-area: role;
+  }
+  .people-table__status {
+    grid-area: status;
+    justify-self: end;
+  }
+  .people-table__access {
+    grid-area: access;
+  }
+  .people-table__access::before {
+    content: attr(data-label) ' · ';
+    font-weight: var(--weight-light);
+    color: var(--ardosia-500);
+  }
+  .people-table__actions {
+    grid-area: actions;
+  }
+  .row-menu__trigger {
+    width: var(--control-height-md);
+    height: var(--control-height-md);
+  }
+  .row-menu__item {
+    min-height: var(--control-height-md);
+  }
+
+  /* Painel de convite ocupa a tela, com rolagem interna. */
+  .side-panel {
+    inset: 0;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    border-left: 0;
+    box-shadow: none;
+    z-index: 70;
+    overscroll-behavior: contain;
+  }
+  .side-panel__form {
+    padding: var(--space-4) var(--space-4) var(--space-5);
+  }
+  .side-panel__top {
+    gap: var(--space-3);
+  }
+  .side-panel__title {
+    white-space: normal;
+    font-size: var(--text-xl);
+  }
+  .link-button {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--control-height-md);
+    margin-top: 0;
+    padding: 0;
+    border-bottom: 0;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  /* Dialog do design system: cabe na tela e rola por dentro quando faltar altura. */
+  div:has(> [role='dialog'][aria-modal='true']) {
+    padding: var(--space-4) !important;
+  }
+  [role='dialog'][aria-modal='true'] {
+    max-height: calc(100dvh - 2 * var(--space-4));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-6) var(--space-5) var(--space-5) !important;
+  }
+  [role='dialog'][aria-modal='true'] h2 {
+    font-size: var(--text-xl) !important;
+  }
+  [role='dialog'][aria-modal='true'] > button[aria-label='Fechar'] {
+    width: var(--control-height-md) !important;
+    height: var(--control-height-md) !important;
+    top: var(--space-2) !important;
+    right: var(--space-2) !important;
+  }
+
+  /* Toast: largura da tela, acima da margem inferior, sem cobrir o botão principal (que fica no topo). */
+  .toast-slot {
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: var(--space-4);
+  }
+  .toast-slot > * {
+    max-width: 100%;
+  }
+}
+
+/* Celular deitado: menos respiro vertical. */
+@media (max-height: 480px) and (orientation: landscape) {
+  .login__panel {
+    padding-block: var(--space-5);
+  }
+  .login__logo,
+  .login__title {
+    margin-bottom: var(--space-5);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar.is-open,
+  .drawer-overlay {
+    transition: none;
+    animation: none;
+  }
+}

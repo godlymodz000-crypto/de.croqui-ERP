@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Dialog, Icon, Input, Select, Toast } from '../../ui/ds';
 import { useSession } from '../../session';
+import { useIsMobile } from '../../ui/useMediaQuery';
 import {
   ApiError,
   ROLE_DESCRIPTION,
@@ -52,6 +53,7 @@ export function CollaboratorsPage() {
   const [removing, setRemoving] = useState<Collaborator | null>(null);
   const [changingRole, setChangingRole] = useState<Collaborator | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
     try {
@@ -122,7 +124,7 @@ export function CollaboratorsPage() {
             placeholder="Buscar por nome ou e-mail"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            style={{ width: 360 }}
+            style={isMobile ? undefined : { width: 360 }}
           />
           <label className="filter-chip">
             <span className="filter-chip__label">Papel</span>
@@ -171,14 +173,20 @@ export function CollaboratorsPage() {
                 <span role="cell" className="people-table__email">
                   {c.email}
                 </span>
-                <span role="cell">{ROLE_LABEL[c.role]}</span>
-                <span role="cell">
+                <span role="cell" className="people-table__role">
+                  {ROLE_LABEL[c.role]}
+                </span>
+                <span role="cell" className="people-table__status">
                   <StatusBadge status={c.status} />
                 </span>
-                <span role="cell" className={access ? undefined : 'people-table__muted'}>
+                <span
+                  role="cell"
+                  className={`people-table__access${access ? '' : ' people-table__muted'}`}
+                  data-label="Último acesso"
+                >
                   {access ?? 'Ainda não entrou'}
                 </span>
-                <span role="cell">
+                <span role="cell" className="people-table__actions">
                   {c.id !== me?.id && <RowMenu label={`Ações para ${c.name ?? c.email}`} actions={actionsFor(c)} />}
                 </span>
               </div>

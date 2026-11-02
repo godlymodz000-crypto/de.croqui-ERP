@@ -87,6 +87,8 @@ export interface IconButtonProps {
   disabled?: boolean;
   onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
   style?: CSSProperties;
+  'aria-expanded'?: boolean;
+  'aria-controls'?: string;
 }
 
 interface DesignSystem {

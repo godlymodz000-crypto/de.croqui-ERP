@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router';
-import { Badge, Icon } from '../ui/ds';
+import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import { Badge, Icon, IconButton } from '../ui/ds';
+import { useIsMobile } from '../ui/useMediaQuery';
 import { AppIcon } from '../ui/AppIcon';
 import { logout, type SessionUser } from '../session';
 import logo from '../design-system/assets/logo/decroqui-imagotipo-horizontal-escuro.svg';
@@ -21,9 +22,41 @@ const ROLE_LABEL: Record<SessionUser['role'], string> = {
 };
 
 export function AppShell({ user }: { user: SessionUser }) {
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const location = useLocation();
+  const openButton = useRef<HTMLDivElement>(null);
+  const closeButton = useRef<HTMLDivElement>(null);
+  const drawer = isMobile && drawerOpen;
+
+  // No celular o menu lateral vira gaveta: fecha ao navegar, com Esc, no véu ou no botão Fechar.
+  useEffect(() => setDrawerOpen(false), [location.pathname, isMobile]);
+  useEffect(() => {
+    if (!drawer) return;
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setDrawerOpen(false);
+    document.addEventListener('keydown', esc);
+    document.body.style.overflow = 'hidden';
+    closeButton.current?.querySelector('button')?.focus();
+    const opener = openButton.current;
+    return () => {
+      document.removeEventListener('keydown', esc);
+      document.body.style.overflow = '';
+      opener?.querySelector('button')?.focus();
+    };
+  }, [drawer]);
+
   return (
     <div className="shell">
-      <aside className="sidebar">
+      {drawer && <div className="drawer-overlay" onClick={() => setDrawerOpen(false)} aria-hidden />}
+      <aside
+        id="menu-principal"
+        className={`sidebar${drawer ? ' is-open' : ''}`}
+        inert={isMobile && !drawerOpen ? true : undefined}
+        aria-label={isMobile ? 'Menu' : undefined}
+      >
+        <div className="sidebar__close" ref={closeButton}>
+          <IconButton icon="x" label="Fechar menu" variant="ghost" onClick={() => setDrawerOpen(false)} />
+        </div>
         <img className="sidebar__logo" src={logo} alt="De.Croqui" />
         <nav aria-label="Principal">
           <p className="sidebar__section">Estúdio</p>
@@ -47,6 +80,17 @@ export function AppShell({ user }: { user: SessionUser }) {
 
       <div className="shell__main">
         <header className="topbar">
+          <div className="topbar__menu" ref={openButton}>
+            <IconButton
+              icon="menu"
+              label="Abrir menu"
+              variant="ghost"
+              onClick={() => setDrawerOpen(true)}
+              aria-expanded={drawer}
+              aria-controls="menu-principal"
+            />
+          </div>
+          <img className="topbar__logo" src={logo} alt="De.Croqui" />
           <UserMenu user={user} />
         </header>
         <main className="shell__content">

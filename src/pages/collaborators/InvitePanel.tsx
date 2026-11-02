@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button, IconButton, Input, Select } from '../../ui/ds';
 import { AppIcon } from '../../ui/AppIcon';
+import { useIsMobile } from '../../ui/useMediaQuery';
 import { ApiError, ROLE_DESCRIPTION, ROLE_LABEL, usersApi, type Collaborator, type Role } from '../../api/users';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -27,6 +28,7 @@ export function InvitePanel({ onClose, onInvited }: { onClose: () => void; onInv
   const [saveFailed, setSaveFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -72,7 +74,7 @@ export function InvitePanel({ onClose, onInvited }: { onClose: () => void; onInv
           <h2 id="invite-title" className="side-panel__title">
             Convidar colaborador
           </h2>
-          <IconButton icon="x" label="Fechar" variant="ghost" size="sm" onClick={onClose} />
+          <IconButton icon="x" label="Fechar" variant="ghost" size={isMobile ? 'md' : 'sm'} onClick={onClose} />
         </div>
         <p className="side-panel__intro">Quem você cadastrar aqui passa a entrar no ERP com esta conta Google.</p>
 
