@@ -5,6 +5,7 @@ import { useSession } from '../../session';
 import { projectsApi, type Project } from '../../api/projects';
 import { formatLastAccess } from '../collaborators/format';
 import { ProjectPanel } from './ProjectPanel';
+import { LoadError } from '../../ui/LoadError';
 import { canWriteProjects, deadlineLabel, SituationBadge } from './shared';
 
 type Filter = 'all' | 'active' | 'done';
@@ -33,7 +34,7 @@ export function ProjectsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [list, setList] = useState<Project[] | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [sort, setSort] = useState<Sort>('updated');
   const [creating, setCreating] = useState(false);
@@ -42,9 +43,9 @@ export function ProjectsPage() {
   const load = useCallback(async () => {
     try {
       setList(await projectsApi.list());
-      setLoadFailed(false);
-    } catch {
-      setLoadFailed(true);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(err);
     }
   }, []);
 
@@ -122,7 +123,7 @@ export function ProjectsPage() {
           <span role="columnheader">Última alteração</span>
         </div>
 
-        {loadFailed && <p className="people-table__message">{LOAD_ERROR}</p>}
+        {loadError != null && <LoadError error={loadError} message={LOAD_ERROR} onRetry={load} />}
 
         {isEmpty ? (
           <div className="people-table__message">

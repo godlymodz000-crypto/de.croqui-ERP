@@ -3,6 +3,7 @@ import { Button, Icon, Tag } from '../../ui/ds';
 import { fileKind, filesApi, formatSize, SUBFOLDER_LABEL, type ProjectFile, type Subfolder } from '../../api/files';
 import { formatLastAccess } from '../collaborators/format';
 import { RowMenu, type RowAction } from '../collaborators/RowMenu';
+import { LoadError } from '../../ui/LoadError';
 
 const FILTERS: Subfolder[] = ['photos', 'contracts', 'files', 'presentations', 'budgets'];
 
@@ -22,6 +23,7 @@ function Thumb({ file }: { file: ProjectFile }) {
 export function FilesSection({
   files,
   failed,
+  onRetry,
   driveUrl,
   canUpload,
   actionsFor,
@@ -29,7 +31,9 @@ export function FilesSection({
   onPreview,
 }: {
   files: ProjectFile[] | null;
-  failed: boolean;
+  /** Erro da última carga, ou null. */
+  failed: unknown;
+  onRetry: () => void;
   driveUrl: string;
   canUpload: boolean;
   actionsFor: (f: ProjectFile) => RowAction[];
@@ -76,7 +80,7 @@ export function FilesSection({
           <span role="columnheader">Enviado</span>
           <span role="columnheader" aria-label="Ações" />
         </div>
-        {failed && <p className="people-table__message">Não foi possível carregar os arquivos. Tente de novo em instantes.</p>}
+        {failed != null && <LoadError error={failed} message="Não foi possível carregar os arquivos." onRetry={onRetry} />}
         {files !== null && list.length === 0 && (
           <p className="people-table__message">
             Nenhum arquivo ainda.{canUpload && ' Use Enviar arquivo para mandar fotos, documentos e arquivos de projeto para a pasta do projeto.'}

@@ -8,6 +8,7 @@ import { deletionApi, filesApi, notesApi, SUBFOLDER_LABEL, type ProjectFile, typ
 import { formatLastAccess } from '../collaborators/format';
 import type { RowAction } from '../collaborators/RowMenu';
 import { ProjectPanel } from './ProjectPanel';
+import { LoadError } from '../../ui/LoadError';
 import { FilesSection } from './FilesSection';
 import { NotesSection } from './NotesSection';
 import { UploadPanel } from './UploadPanel';
@@ -40,10 +41,11 @@ export function ProjectPage() {
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'not_found' | 'error'>('loading');
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [files, setFiles] = useState<ProjectFile[] | null>(null);
-  const [filesFailed, setFilesFailed] = useState(false);
+  const [filesError, setFilesError] = useState<unknown>(null);
   const [notes, setNotes] = useState<ProjectNote[] | null>(null);
-  const [notesFailed, setNotesFailed] = useState(false);
+  const [notesError, setNotesError] = useState<unknown>(null);
   const [editing, setEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewing, setPreviewing] = useState<ProjectFile | null>(null);
@@ -60,6 +62,7 @@ export function ProjectPage() {
       setProject(await projectsApi.get(id));
       setState('ready');
     } catch (err) {
+      setLoadError(err);
       setState(err instanceof ApiError && err.status === 404 ? 'not_found' : 'error');
     }
   }, [id]);
@@ -67,18 +70,18 @@ export function ProjectPage() {
   const loadFiles = useCallback(async () => {
     try {
       setFiles(await filesApi.list(id));
-      setFilesFailed(false);
-    } catch {
-      setFilesFailed(true);
+      setFilesError(null);
+    } catch (err) {
+      setFilesError(err);
     }
   }, [id]);
 
   const loadNotes = useCallback(async () => {
     try {
       setNotes(await notesApi.list(id));
-      setNotesFailed(false);
-    } catch {
-      setNotesFailed(true);
+      setNotesError(null);
+    } catch (err) {
+      setNotesError(err);
     }
   }, [id]);
 
@@ -170,7 +173,16 @@ export function ProjectPage() {
       <section className="project">
         {back}
         {state === 'not_found' && <p className="people-table__message">Este projeto não existe mais ou foi excluído.</p>}
-        {state === 'error' && <p className="people-table__message">Não foi possível abrir o projeto. Tente de novo em instantes.</p>}
+        {state === 'error' && (
+          <LoadError
+            error={loadError}
+            message="Não foi possível abrir o projeto."
+            onRetry={() => {
+              setState('loading');
+              load();
+            }}
+          />
+        )}
       </section>
     );
   }
@@ -216,7 +228,8 @@ export function ProjectPage() {
       <div className="project-layout">
         <FilesSection
           files={files}
-          failed={filesFailed}
+          failed={filesError}
+          onRetry={loadFiles}
           driveUrl={project.driveUrl}
           canUpload={canWrite}
           actionsFor={fileActions}
@@ -228,7 +241,8 @@ export function ProjectPage() {
           <NotesSection
             projectId={project.id}
             notes={notes}
-            failed={notesFailed}
+            failed={notesError}
+            onRetry={loadNotes}
             canWrite={canWrite}
             actionsFor={noteActions}
             onCreated={loadNotes}

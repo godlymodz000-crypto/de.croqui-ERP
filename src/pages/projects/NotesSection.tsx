@@ -3,12 +3,14 @@ import { Button, Input } from '../../ui/ds';
 import { notesApi, type ProjectNote } from '../../api/files';
 import { formatLastAccess } from '../collaborators/format';
 import { RowMenu, type RowAction } from '../collaborators/RowMenu';
+import { LoadError } from '../../ui/LoadError';
 
 /** Seção Notas do projeto aberto. Notas ficam só no banco do ERP. */
 export function NotesSection({
   projectId,
   notes,
   failed,
+  onRetry,
   canWrite,
   actionsFor,
   onCreated,
@@ -16,7 +18,9 @@ export function NotesSection({
 }: {
   projectId: string;
   notes: ProjectNote[] | null;
-  failed: boolean;
+  /** Erro da última carga, ou null. */
+  failed: unknown;
+  onRetry: () => void;
   canWrite: boolean;
   actionsFor: (n: ProjectNote) => RowAction[];
   onCreated: () => void;
@@ -66,7 +70,7 @@ export function NotesSection({
         </div>
       )}
 
-      {failed && <p className="people-table__message">Não foi possível carregar as notas.</p>}
+      {failed != null && <LoadError error={failed} message="Não foi possível carregar as notas." onRetry={onRetry} />}
       {notes !== null && notes.length === 0 && <p className="people-table__message">Nenhuma nota ainda.</p>}
       <ul className="note-list">
         {(notes ?? []).map((n) => {

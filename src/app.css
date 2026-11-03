@@ -116,6 +116,26 @@
   }
 }
 
+/* Sobre fundo claro (aviso de carregamento do ERP). */
+.spinner--light {
+  border-color: var(--border-default);
+  border-top-color: var(--text-primary);
+}
+.app-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+.app-loading__text {
+  font: var(--weight-medium) var(--text-xs) / 1 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
 /* ---------- Moldura ---------- */
 .shell {
   display: grid;

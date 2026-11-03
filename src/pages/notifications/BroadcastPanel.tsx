@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Button, IconButton, Input, Select } from '../../ui/ds';
 import { AppIcon } from '../../ui/AppIcon';
+import { LoadError } from '../../ui/LoadError';
 import { useIsMobile } from '../../ui/useMediaQuery';
 import { useSession } from '../../session';
 import { ApiError } from '../../api/http';
@@ -52,6 +53,7 @@ export function BroadcastPanel({ onClose, onSent }: { onClose: () => void; onSen
   const [link, setLink] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failed, setFailed] = useState(false);
+  const [audienceError, setAudienceError] = useState<unknown>(null);
   const [sending, setSending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   // A página passa um onClose novo a cada renderização (o sino a renderiza a cada 30 s). Guardado num ref,
@@ -59,8 +61,13 @@ export function BroadcastPanel({ onClose, onSent }: { onClose: () => void; onSen
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
 
+  const loadAudience = () => {
+    setAudienceError(null);
+    broadcastsApi.audience().then(setInfo, setAudienceError);
+  };
+
   useEffect(() => {
-    broadcastsApi.audience().then(setInfo, () => setFailed(true));
+    loadAudience();
     projectsApi.list().then(setProjects, () => {});
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current();
     window.addEventListener('keydown', esc);
@@ -148,6 +155,7 @@ export function BroadcastPanel({ onClose, onSent }: { onClose: () => void; onSen
 
           <fieldset className="choice-group">
             <legend className="field-label">Destinatários</legend>
+            {audienceError != null && <LoadError error={audienceError} message="Não foi possível carregar os destinatários." onRetry={loadAudience} />}
             {options.map((o) => (
               <label key={o.value} className="choice">
                 <input type="radio" name="audience" value={o.value} checked={audience === o.value} onChange={() => setAudience(o.value)} />

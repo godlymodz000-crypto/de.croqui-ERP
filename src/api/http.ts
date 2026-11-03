@@ -9,16 +9,37 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Tempo máximo de uma leitura. Gravações não têm limite: muitas passam pelo Google Drive, e cortar uma
+ * no meio poderia fazer a pessoa repetir algo que o servidor já concluiu.
+ */
+export const READ_TIMEOUT_MS = 15_000;
+
+/** fetch com tempo máximo. Estourar o tempo vira ApiError 'timeout'; ficar sem rede vira 'network'. */
+export async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = READ_TIMEOUT_MS): Promise<Response> {
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+  } catch (err) {
+    if (err instanceof DOMException && (err.name === 'TimeoutError' || err.name === 'AbortError')) throw new ApiError(0, 'timeout');
+    throw new ApiError(0, 'network');
+  }
+}
+
 export async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
-  const res = await fetch(`/api${url}`, {
+  const init: RequestInit = {
     method,
     credentials: 'same-origin',
     headers: body === undefined ? undefined : { 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  };
+  const res = method === 'GET' ? await fetchWithTimeout(`/api${url}`, init) : await fetch(`/api${url}`, init);
   if (res.status === 401) clearCache();
   if (res.status === 204) return undefined as T;
-  const data = await res.json().catch(() => ({}));
+  // O tempo máximo vale também para o corpo: cortado no meio, é timeout, e não uma resposta vazia.
+  const data = await res.json().catch((err) => {
+    if (err instanceof DOMException && (err.name === 'TimeoutError' || err.name === 'AbortError')) throw new ApiError(0, 'timeout');
+    return {};
+  });
   if (!res.ok) throw new ApiError(res.status, data.error ?? 'unknown', data.fields);
   return data as T;
 }

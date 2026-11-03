@@ -18,6 +18,7 @@ import {
   type View,
 } from '../../api/notifications';
 import { BroadcastPanel } from './BroadcastPanel';
+import { LoadError } from '../../ui/LoadError';
 
 type Tab = View | 'sent';
 
@@ -102,7 +103,7 @@ export function NotificationsPage() {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<NotificationsState | null>(null);
   const [sent, setSent] = useState<{ items: SentBroadcast[]; total: number } | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [composing, setComposing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -110,9 +111,9 @@ export function NotificationsPage() {
     try {
       if (tab === 'sent') setSent(await broadcastsApi.list(page));
       else setData(await notificationsApi.list({ view: tab, type, page }, { force }));
-      setLoadFailed(false);
-    } catch {
-      setLoadFailed(true);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(err);
     }
   }, [tab, type, page]);
 
@@ -234,8 +235,8 @@ export function NotificationsPage() {
             <span>Data</span>
             <span />
           </div>
-          {loadFailed && <p className="people-table__message">{GENERIC_ERROR}</p>}
-          {data && !loadFailed && items.length === 0 && (
+          {loadError != null && <LoadError error={loadError} message={GENERIC_ERROR} onRetry={() => load(true)} />}
+          {data && loadError == null && items.length === 0 && (
             <div className="notice-table__empty">
               {type !== 'all' ? (
                 <p>Nenhuma notificação deste tipo{tab === 'unread' ? ' para ler' : ''}.</p>
@@ -269,8 +270,8 @@ export function NotificationsPage() {
             <span role="columnheader">Enviado em</span>
             <span role="columnheader">Leram</span>
           </div>
-          {loadFailed && <p className="people-table__message">{GENERIC_ERROR}</p>}
-          {sent && !loadFailed && sent.items.length === 0 && (
+          {loadError != null && <LoadError error={loadError} message={GENERIC_ERROR} onRetry={() => load(true)} />}
+          {sent && loadError == null && sent.items.length === 0 && (
             <div className="notice-table__empty">
               <p>Nenhum comunicado enviado.</p>
               <p>Use Novo comunicado para avisar o estúdio dentro do ERP.</p>

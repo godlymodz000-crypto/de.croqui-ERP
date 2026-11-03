@@ -14,6 +14,7 @@ import {
 } from '../../api/users';
 import { formatLastAccess, initialsOf, normalize } from './format';
 import { InvitePanel } from './InvitePanel';
+import { LoadError } from '../../ui/LoadError';
 import { RowMenu, type RowAction } from './RowMenu';
 
 const ACTION_ERRORS: Record<string, string> = {
@@ -53,7 +54,7 @@ export function CollaboratorsPage() {
   const session = useSession();
   const me = session.status === 'authenticated' ? session.user : null;
   const [list, setList] = useState<Collaborator[] | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [inviting, setInviting] = useState(false);
@@ -65,9 +66,9 @@ export function CollaboratorsPage() {
   const load = useCallback(async () => {
     try {
       setList(await usersApi.list());
-      setLoadFailed(false);
-    } catch {
-      setLoadFailed(true);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(err);
     }
   }, []);
 
@@ -159,7 +160,7 @@ export function CollaboratorsPage() {
           <span role="columnheader" aria-label="Ações" />
         </div>
 
-        {loadFailed && <p className="people-table__message">{GENERIC_ERROR}</p>}
+        {loadError != null && <LoadError error={loadError} message="Não foi possível carregar os colaboradores." onRetry={load} />}
 
         {isEmpty ? (
           <div className="people-table__message">

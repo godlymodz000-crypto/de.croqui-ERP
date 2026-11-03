@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { SessionProvider, useSession } from './session';
+import { AppLoading } from './ui/AppLoading';
 import { ErrorBoundary, RecoveryScreen } from './ui/ErrorBoundary';
 import { AppShell } from './layout/AppShell';
 import { LoginPage } from './pages/LoginPage';
@@ -36,7 +37,7 @@ const PAGES = [
 
 function Protected() {
   const session = useSession();
-  if (session.status === 'loading') return null;
+  if (session.status === 'loading') return <AppLoading />;
   if (session.status === 'anonymous') return <Navigate to="/entrar" replace />;
   return <AppShell user={session.user} />;
 }
@@ -50,7 +51,7 @@ function AdminOnly({ title, children }: { title: string; children: ReactNode }) 
 
 function LoginRoute() {
   const session = useSession();
-  if (session.status === 'loading') return null;
+  if (session.status === 'loading') return <AppLoading />;
   if (session.status === 'authenticated') return <Navigate to="/" replace />;
   return <LoginPage />;
 }

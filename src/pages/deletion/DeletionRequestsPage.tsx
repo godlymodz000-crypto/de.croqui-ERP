@@ -5,6 +5,7 @@ import { ApiError } from '../../api/http';
 import { deletionApi, SUBFOLDER_LABEL, type DeletionRequest, type RequestStatus, type Subfolder } from '../../api/files';
 import { formatLastAccess } from '../collaborators/format';
 import { useNotifications } from '../../layout/NotificationBell';
+import { LoadError } from '../../ui/LoadError';
 
 const STATUS: { value: RequestStatus; label: string }[] = [
   { value: 'pending', label: 'Pendentes' },
@@ -41,7 +42,7 @@ function describe(r: DeletionRequest) {
 export function DeletionRequestsPage() {
   const [status, setStatus] = useState<RequestStatus>('pending');
   const [data, setData] = useState<{ requests: DeletionRequest[]; counts: Record<RequestStatus, number> } | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<{ tone: 'neutral' | 'danger'; message: string } | null>(null);
   const { refresh: refreshCounters } = useNotifications();
@@ -49,9 +50,9 @@ export function DeletionRequestsPage() {
   const load = useCallback(async () => {
     try {
       setData(await deletionApi.list(status));
-      setLoadFailed(false);
-    } catch {
-      setLoadFailed(true);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(err);
     }
   }, [status]);
 
@@ -123,7 +124,7 @@ export function DeletionRequestsPage() {
           <span role="columnheader" aria-label={status === 'pending' ? 'Ações' : 'Decisão'} />
         </div>
 
-        {loadFailed && <p className="people-table__message">{GENERIC_ERROR}</p>}
+        {loadError != null && <LoadError error={loadError} message="Não foi possível carregar os pedidos." onRetry={load} />}
         {data && requests.length === 0 && (
           <p className="people-table__message">
             {status === 'pending' ? 'Nenhum pedido esperando decisão.' : status === 'approved' ? 'Nenhum pedido aprovado.' : 'Nenhum pedido recusado.'}
