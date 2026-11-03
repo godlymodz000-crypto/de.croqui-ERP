@@ -210,6 +210,10 @@ describe('ERP para o Google', () => {
       extendedProperties: { private: { erpId: e.id, kind: 'client_meeting' } },
     });
     expect(g).not.toHaveProperty('attendees');
+    // Link para abrir no Google Agenda: ID do evento e do calendário em base64.
+    const eid = new URL(e.googleUrl).searchParams.get('eid')!;
+    expect(Buffer.from(eid, 'base64').toString()).toBe(`${g.id} ${g.calendarId}`);
+    expect(e.conflict).toBeNull();
     const r = await row(e.id);
     expect(r.googleEventId).toBe(g.id);
     expect(r.googleEtag).toBe(g.etag);
@@ -409,6 +413,8 @@ describe('conflito: alteração dos dois lados', () => {
     await due();
     const body = await agenda();
     expect(body.events[0].title).toBe('Título do Google');
+    // O painel do evento conta que houve conflito e qual lado ficou.
+    expect((body.events[0] as unknown as { conflict: { winner: string } }).conflict.winner).toBe('google');
     expect(google.events.get(gid)!.summary).toBe('Título do Google');
     const [c] = await auditRows('event.conflict');
     expect(c.payload).toMatchObject({ winner: 'google', erp: { title: 'Título do ERP' }, google: { title: 'Título do Google' } });

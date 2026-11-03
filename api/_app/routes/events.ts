@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import { and, asc, eq, gt, isNull, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, lt } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { eventKind, events, projects, type Event, type EventKind } from '../db/schema.js';
+import { auditLog, eventKind, events, projects, type Event, type EventKind } from '../db/schema.js';
 import { audit } from '../audit.js';
 import { CalendarError, zonedDate, zonedMidnight } from '../calendar.js';
 import type { CalendarSync } from '../calendar-sync.js';
@@ -12,6 +12,8 @@ export const MAX_LOCATION = 200;
 export const MAX_DESCRIPTION = 2000;
 /** Maior período de uma leitura: o mês com as semanas das pontas (6 semanas), com folga. */
 export const MAX_RANGE_DAYS = 62;
+/** Por quantos dias o painel do evento conta que houve conflito. */
+export const CONFLICT_NOTE_DAYS = 7;
 
 /** Evento como a tela recebe. */
 export interface EventDto {
@@ -29,6 +31,16 @@ export interface EventDto {
   syncStatus: 'synced' | 'pending' | 'error';
   /** Ocorrência de uma série do Google: aparece, mas o ERP não edita nem remove. */
   recurring: boolean;
+  /** Endereço do evento no Google Agenda (só abre na conta do administrador, dona do calendário). */
+  googleUrl: string | null;
+  /** Conflito recente: qual lado ficou e quando. A versão que perdeu está no audit_log. */
+  conflict: { winner: 'google' | 'erp'; at: string } | null;
+}
+
+/** Link do Google Agenda para o evento: `eid` é o ID do evento e o do calendário, em base64. */
+export function googleEventUrl(googleEventId: string, calendarId: string): string {
+  const eid = Buffer.from(`${googleEventId} ${calendarId}`).toString('base64').replace(/=+$/, '');
+  return `https://calendar.google.com/calendar/event?eid=${encodeURIComponent(eid)}`;
 }
 
 function text(value: unknown): string {
@@ -50,10 +62,35 @@ export async function eventsRoutes(app: FastifyInstance, { db, sync }: { db: Db;
       .from(events)
       .leftJoin(projects, eq(projects.id, events.projectId))
       .where(and(eq(events.id, id), isNull(events.deletedAt)));
-    return row ? toDto(row.e, row.projectName) : null;
+    if (!row) return null;
+    const conflicts = await recentConflicts([id]);
+    return toDto(row.e, row.projectName, conflicts.get(id) ?? null);
   }
 
-  function toDto(e: Event, projectName: string | null): EventDto {
+  /** Último conflito dos últimos dias de cada evento, numa consulta só. */
+  async function recentConflicts(ids: string[]): Promise<Map<string, EventDto['conflict']>> {
+    const found = new Map<string, EventDto['conflict']>();
+    if (!ids.length) return found;
+    const rows = await db
+      .select({ entityId: auditLog.entityId, payload: auditLog.payload, at: auditLog.at })
+      .from(auditLog)
+      .where(
+        and(
+          eq(auditLog.action, 'event.conflict'),
+          inArray(auditLog.entityId, ids),
+          gt(auditLog.at, new Date(Date.now() - CONFLICT_NOTE_DAYS * 86_400_000)),
+        ),
+      )
+      .orderBy(desc(auditLog.at));
+    for (const r of rows) {
+      const winner = r.payload.winner;
+      if (found.has(r.entityId) || (winner !== 'google' && winner !== 'erp')) continue;
+      found.set(r.entityId, { winner, at: r.at.toISOString() });
+    }
+    return found;
+  }
+
+  function toDto(e: Event, projectName: string | null, conflict: EventDto['conflict'] = null): EventDto {
     return {
       id: e.id,
       title: e.title,
@@ -68,6 +105,8 @@ export async function eventsRoutes(app: FastifyInstance, { db, sync }: { db: Db;
       source: e.source,
       syncStatus: e.syncStatus,
       recurring: !!e.recurringEventId,
+      googleUrl: e.googleEventId && e.googleCalendarId ? googleEventUrl(e.googleEventId, e.googleCalendarId) : null,
+      conflict,
     };
   }
 
@@ -131,7 +170,8 @@ export async function eventsRoutes(app: FastifyInstance, { db, sync }: { db: Db;
         .leftJoin(projects, eq(projects.id, events.projectId))
         .where(and(isNull(events.deletedAt), lt(events.startsAt, to), gt(events.endsAt, from)))
         .orderBy(asc(events.startsAt), asc(events.title));
-      return { events: rows.map((r) => toDto(r.e, r.projectName)), calendar };
+      const conflicts = await recentConflicts(rows.map((r) => r.e.id));
+      return { events: rows.map((r) => toDto(r.e, r.projectName, conflicts.get(r.e.id) ?? null)), calendar };
     },
   );
 
