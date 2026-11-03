@@ -3109,6 +3109,17 @@ body.is-card-dragging * {
   display: grid;
   grid-template-columns: var(--agenda-cols);
 }
+/* O corpo rola na vertical e a barra come largura das colunas; o cabeçalho e a linha
+   "Dia todo" reservam o mesmo espaço para as colunas ficarem alinhadas. */
+.agenda-grid__head,
+.agenda-grid__allday,
+.agenda-grid__body {
+  scrollbar-gutter: stable;
+}
+.agenda-grid__head,
+.agenda-grid__allday {
+  overflow-y: hidden;
+}
 .agenda-grid__head {
   border-bottom: 1px solid var(--border-hairline);
 }
