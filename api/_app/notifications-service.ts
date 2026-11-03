@@ -1,15 +1,13 @@
 import { and, eq, ne, sql } from 'drizzle-orm';
 import type { Db } from './db/client.js';
-import { deletionRequests, notifications, projectFiles, projects, users, type DeletionRequest } from './db/schema.js';
+import { deletionRequests, notifications, projectFiles, projects, users, type DeletionRequest, type NotificationType } from './db/schema.js';
 
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 type Writer = Db | Tx;
 
-/** Tipos de notificação (seção 7). O texto vai pronto; a tela só mostra. */
-export type NotificationType = 'deletion.requested' | 'deletion.approved' | 'deletion.rejected' | 'drive.failed';
-
+/** Tipos de notificação (seção 7). O texto vai pronto; a tela só mostra. Comunicados saem de routes/notifications.ts. */
 interface Notice {
-  type: NotificationType;
+  type: Exclude<NotificationType, 'announcement'>;
   title: string;
   body: string;
   /** Caminho dentro do ERP para o item. */

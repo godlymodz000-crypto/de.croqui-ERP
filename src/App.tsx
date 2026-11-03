@@ -8,6 +8,7 @@ import { CollaboratorsPage } from './pages/collaborators/CollaboratorsPage';
 import { ProjectsPage } from './pages/projects/ProjectsPage';
 import { ProjectPage } from './pages/projects/ProjectPage';
 import { DeletionRequestsPage } from './pages/deletion/DeletionRequestsPage';
+import { NotificationsPage } from './pages/notifications/NotificationsPage';
 
 const PAGES = [
   {
@@ -75,6 +76,7 @@ export function App() {
             ))}
             <Route path="/projetos" element={<ProjectsPage />} />
             <Route path="/projetos/:id" element={<ProjectPage />} />
+            <Route path="/notificacoes" element={<NotificationsPage />} />
             <Route
               path="/colaboradores"
               element={

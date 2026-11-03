@@ -361,7 +361,7 @@
 .notifications__list {
   margin: 0;
   padding: 0;
-  max-height: min(480px, calc(100vh - 160px));
+  max-height: min(640px, calc(100vh - 200px));
   overflow-y: auto;
   list-style: none;
 }
@@ -1492,6 +1492,390 @@ a.user-menu__item {
   }
 }
 
+/* ---------- Página de Notificações (quadros "ERP · Notificações · página · 1440") ---------- */
+/* Sino: link "Ver todas" no fim da lista. */
+.notifications__footer {
+  padding: 14px var(--space-4) var(--space-2);
+  border-top: 1px solid var(--border-hairline);
+}
+.arrow-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--weight-medium) var(--text-xs) / 1.4 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  color: var(--text-primary);
+}
+a.arrow-link:hover,
+.notice-row:hover .arrow-link {
+  color: var(--text-brand);
+}
+
+/* Abas no estilo "line" do Tabs do design system. */
+.tabs {
+  display: flex;
+  gap: 28px;
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border-hairline);
+}
+.tabs__tab {
+  margin-bottom: -1px;
+  padding: 0 0 14px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: none;
+  font: var(--weight-medium) var(--text-xs) / 1.4 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+.tabs__tab:hover {
+  color: var(--text-primary);
+}
+.tabs__tab[aria-selected='true'] {
+  color: var(--text-brand);
+  border-bottom-color: var(--vinho-800);
+}
+.tabs__tab:focus-visible {
+  outline: 1.5px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.notifications-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+.notifications-toolbar .filter-chip {
+  height: 40px;
+}
+
+/* Lista: marcador, notificação, tipo, data e o link para o item. */
+.notice-table {
+  --cols: 8px minmax(0, 1fr) 120px 130px 120px;
+}
+.notice-table__head,
+.notice-row {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: var(--space-4);
+}
+.notice-table__head {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-strong);
+  font: var(--weight-medium) 11px / 1 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ardosia-500);
+}
+.notice-table__head > :first-child {
+  grid-column: 2;
+}
+.notice-table__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.notice-row {
+  align-items: start;
+  width: 100%;
+  padding: 20px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-hairline);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-base) var(--ease-out);
+}
+.notice-row:hover {
+  background: var(--linho-100);
+}
+.notice-row:focus-visible {
+  outline: 1px solid var(--border-strong);
+  outline-offset: -1px;
+}
+.notice-row .notification__mark {
+  height: 22px;
+}
+.notice-row.is-unread .notification__mark::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--surface-brand);
+}
+.notice-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.notice-row__title {
+  font: var(--weight-regular) 15px / 1.45 var(--font-body);
+  color: var(--text-primary);
+}
+.notice-row.is-unread .notice-row__title {
+  font-weight: var(--weight-medium);
+}
+.notice-row__body {
+  font: var(--weight-light) var(--text-sm) / 1.45 var(--font-body);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.notice-row__meta {
+  display: none;
+}
+.notice-row__type,
+.notice-row__when {
+  padding-top: 2px;
+  font: var(--weight-regular) 13px / 1.45 var(--font-body);
+  color: var(--text-secondary);
+}
+.notice-row__when {
+  color: var(--ardosia-500);
+}
+.notice-row__open {
+  justify-self: end;
+  padding-top: 2px;
+}
+.notice-table__empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-6) 0;
+  font: var(--weight-light) 15px / 1.5 var(--font-body);
+  color: var(--text-secondary);
+}
+
+/* Comunicados enviados: comunicado, destinatários, data e quantos leram. */
+.sent-table {
+  --cols: minmax(0, 1fr) 200px 130px 120px;
+}
+.sent-table__head,
+.sent-table__row {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: var(--space-4);
+}
+.sent-table__head {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-strong);
+  font: var(--weight-medium) 11px / 1 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ardosia-500);
+}
+.sent-table__head > :last-child,
+.sent-table__read {
+  justify-self: end;
+}
+.sent-table__row {
+  align-items: start;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border-hairline);
+}
+.sent-table__audience,
+.sent-table__read {
+  padding-top: 2px;
+  font: var(--weight-regular) var(--text-sm) / 1.45 var(--font-body);
+  color: var(--text-primary);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+.pagination__count {
+  font: var(--weight-light) 13px / 1.4 var(--font-body);
+  color: var(--text-muted);
+}
+.pagination__nav {
+  display: flex;
+  gap: var(--space-5);
+}
+.pagination__nav .text-button {
+  padding: 0;
+}
+.pagination__nav .text-button:disabled {
+  opacity: 0.45;
+  color: var(--text-primary);
+  cursor: default;
+}
+
+/* Painel "Novo comunicado": topo e rodapé fixos, o meio rola. */
+.broadcast-panel {
+  display: flex;
+  width: 480px;
+  overflow: hidden;
+}
+.broadcast-panel__form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+.broadcast-panel__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 28px var(--space-6) var(--space-4);
+}
+.broadcast-panel__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-height: 0;
+  padding: 0 var(--space-6) var(--space-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.broadcast-panel__footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6) var(--space-5);
+}
+.field-label {
+  margin-bottom: var(--space-3);
+  padding: 0;
+  font: var(--weight-medium) 11px / 1.4 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ardosia-500);
+}
+.field-error {
+  margin-top: var(--space-1);
+  font: var(--weight-regular) 13px / 1.45 var(--font-body);
+  color: var(--feedback-danger);
+}
+/* Rádio e caixa de seleção no desenho do Radio e do Checkbox do design system. */
+.choice-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.choice {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+.choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.choice__box {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border: 1px solid var(--border-default);
+  background: var(--surface-card);
+  color: var(--text-on-dark);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.choice__box--radio {
+  border-radius: 50%;
+}
+.choice__box--radio::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vinho-800);
+  transform: scale(0);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.choice input:checked + .choice__box--radio {
+  border-color: var(--vinho-800);
+}
+.choice input:checked + .choice__box--radio::after {
+  transform: scale(1);
+}
+.choice__box--check {
+  border-radius: var(--radius-xs);
+}
+.choice__box--check svg {
+  opacity: 0;
+  stroke-width: 2;
+}
+.choice input:checked + .choice__box--check {
+  background: var(--vinho-800);
+  border-color: var(--vinho-800);
+}
+.choice input:checked + .choice__box--check svg {
+  opacity: 1;
+}
+.choice input:focus-visible + .choice__box {
+  outline: 1.5px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+.choice__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.choice__label {
+  font: var(--weight-regular) 15px / 1.45 var(--font-body);
+  color: var(--text-primary);
+}
+.choice__hint {
+  font: var(--weight-light) 13px / 1.45 var(--font-body);
+  color: var(--text-secondary);
+}
+.people-pick {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xs);
+  background: var(--surface-page);
+}
+.people-pick__item {
+  padding: var(--space-3) 14px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+.people-pick__item:last-child {
+  border-bottom: 0;
+}
+.broadcast-preview__card {
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-xs);
+  background: var(--surface-page);
+}
+.broadcast-preview__card .notification {
+  cursor: default;
+}
+.broadcast-preview__card .notification:hover {
+  background: none;
+}
+
 /* ======================================================================
    Celular: até 768px, ou celular deitado (pouca altura em paisagem).
    A mesma condição está em src/ui/useMediaQuery.ts (MOBILE_QUERY).
@@ -2028,6 +2412,85 @@ a.user-menu__item {
   .requests-table__decision {
     align-items: flex-start;
     text-align: left;
+  }
+
+  /* ---------- Notificações: lista na largura toda, painel de envio em tela cheia ---------- */
+  .notifications__footer .arrow-link {
+    min-height: var(--control-height-sm);
+  }
+  .tabs {
+    gap: var(--space-5);
+    margin-bottom: var(--space-5);
+  }
+  .tabs__tab {
+    padding-top: 13px;
+  }
+  .notifications-toolbar {
+    margin-bottom: var(--space-4);
+  }
+  .notifications-toolbar .filter-chip {
+    height: var(--control-height-md);
+  }
+  .notifications-toolbar__all {
+    padding: 0;
+    white-space: nowrap;
+  }
+  .notice-table__head,
+  .sent-table__head {
+    display: none;
+  }
+  .notice-table__list:not(:empty),
+  .sent-table:has(.sent-table__row) {
+    border-top: 1px solid var(--border-strong);
+  }
+  .notice-row {
+    grid-template-columns: 8px minmax(0, 1fr);
+    column-gap: 10px;
+    padding: var(--space-4) 0;
+  }
+  .notice-row__type,
+  .notice-row__open,
+  .notice-row > .notice-row__when {
+    display: none;
+  }
+  .notice-row__meta {
+    display: block;
+    font: var(--weight-regular) 13px / 1.45 var(--font-body);
+    color: var(--ardosia-500);
+  }
+  .sent-table__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+    padding: var(--space-4) 0;
+  }
+  .sent-table__read {
+    justify-self: start;
+  }
+  .sent-table__row [data-label]::before {
+    content: attr(data-label) ' · ';
+    font-weight: var(--weight-light);
+    color: var(--ardosia-500);
+  }
+  .pagination__nav .text-button {
+    min-height: var(--control-height-md);
+  }
+
+  .broadcast-panel {
+    width: 100%;
+  }
+  .broadcast-panel__top {
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+    border-bottom: 1px solid var(--border-hairline);
+  }
+  .broadcast-panel__body {
+    padding: var(--space-5) var(--space-4) var(--space-6);
+  }
+  .broadcast-panel__footer {
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--border-hairline);
+  }
+  .choice {
+    min-height: var(--control-height-sm);
   }
 
   /* Dialog do design system: cabe na tela e rola por dentro quando faltar altura.

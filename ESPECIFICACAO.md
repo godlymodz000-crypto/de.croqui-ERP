@@ -64,7 +64,8 @@ Tabelas principais (nomes em inglês, no código):
 - **budgets**: `id`, `project_id`, `number`, `status` (`draft` | `sent` | `approved`), `data` (JSON com o conteúdo do editor), `total_cents`, `created_by`, `updated_at`.
 - **presentations**: `id`, `project_id`, `status`, `data` (JSON com o conteúdo do editor), `updated_at`.
 - **audit_log**: `id`, `user_id`, `action`, `entity`, `entity_id`, `payload` (JSON), `at`.
-- **notifications**: `id`, `user_id` (destinatário), `type`, `title`, `body`, `link`, `read_at`, `created_at`. Notificações dentro do ERP (Fase 3c).
+- **notifications**: `id`, `user_id` (destinatário), `type` (`deletion.requested` | `deletion.approved` | `deletion.rejected` | `drive.failed` | `announcement`), `title`, `body`, `link`, `sender_user_id` e `broadcast_id` (só nos comunicados), `read_at`, `created_at`. Notificações dentro do ERP (Fase 3c; comunicados na migração 0005).
+- **broadcasts**: `id`, `sender_user_id`, `audience` (`all` | `members` | `viewers` | `people`), `title`, `body`, `link`, `created_at`. Comunicados da administração; cada destinatário recebe uma linha em `notifications` com o `broadcast_id`.
 
 Regras:
 - Valores monetários em centavos, inteiros. Nunca float.
@@ -92,11 +93,12 @@ Regras:
 | Excluir arquivo ou nota diretamente | sim | não | não |
 | Ver, aprovar e recusar pedidos de exclusão | sim | não | não |
 | Ver e marcar como lidas as próprias notificações | sim | sim | sim |
+| Enviar comunicado e ver os comunicados enviados | sim | não | não |
 | Tentar de novo o compartilhamento ou a revogação no Drive | sim | não | não |
 
 Regra de implementação: a permissão é verificada no back-end em toda rota de escrita. A interface só esconde botões; não é ela que protege os dados.
 
-Permissões no código (`api/_app/permissions.ts`): `users.read`, `users.manage`, `workspace.read`, `projects.write`, `projects.move`, `events.write`, `stages.manage`, `projects.delete`, `documents.write`, `documents.export`, `content.write`, `deletion.request`, `content.delete`, `deletion.decide`, `notifications.own` (todos os papéis: ler e marcar como lidas as próprias notificações; a de outra pessoa responde 404).
+Permissões no código (`api/_app/permissions.ts`): `users.read`, `users.manage`, `workspace.read`, `projects.write`, `projects.move`, `events.write`, `stages.manage`, `projects.delete`, `documents.write`, `documents.export`, `content.write`, `deletion.request`, `content.delete`, `deletion.decide`, `notifications.own` (todos os papéis: ler e marcar como lidas as próprias notificações; a de outra pessoa responde 404), `notifications.send` (só administrador: enviar comunicado, ver os enviados e a lista de destinatários).
 
 Pedidos de exclusão (Fase 3b):
 - Excluir arquivo, nota ou projeto é só da administração. O colaborador pede a exclusão, com motivo opcional, e a administração aprova ou recusa na tela "Pedidos de exclusão" (menu do avatar).
@@ -173,7 +175,10 @@ Compartilhamento automático (Fase 3c):
 Notificações (Fase 3c), só dentro do ERP, sem e-mail nem push:
 - Administradores ativos: chegou um pedido de exclusão (menos quem pediu); uma ação no Drive falhou e precisa ser repetida (compartilhar ou revogar).
 - Quem pediu: o pedido foi aprovado ou recusado, inclusive quando a administração exclui o item direto e isso fecha o pedido.
-- Sino no cabeçalho, antes do avatar, com o contador de não lidas. A lista mostra as 20 mais recentes; clicar leva ao item e marca como lida; há "Marcar todas como lidas". O sino se atualiza a cada 30 segundos enquanto a página está aberta e visível.
+- Sino no cabeçalho, antes do avatar, com o contador de não lidas. A lista mostra as 5 mais recentes e o link "Ver todas" para a página de Notificações; clicar leva ao item e marca como lida; há "Marcar todas como lidas". O sino se atualiza a cada 30 segundos enquanto a página está aberta e visível.
+- Página de Notificações (`/notificacoes`), para todos os papéis: abas "Não lidas" e "Todas" (abre em Todas), seletor por tipo (Pedidos, Comunicados e, para a administração, Drive), "Marcar todas como lidas" e 20 por página (`GET /notifications?view=all|unread&type=requests|announcements|drive&page=N`; o sino pede `limit=5`).
+- Comunicados (só administração, `POST /broadcasts`): destino "Todos os usuários ativos", "Só colaboradores", "Só leitores" ou "Pessoas específicas". Título e texto obrigatórios; link opcional para um projeto que existe ou para uma tela do ERP (as telas da administração só quando todos os destinatários são administradores). Só contas ativas recebem, leitores inclusive. Em "todos" e nos grupos, quem envia fica de fora; em "Pessoas específicas", recebe se se marcou. Pelo menos um destinatário. Comunicados não expiram. O envio fica no `audit_log`.
+- Aba "Comunicados enviados" (só administração, `GET /broadcasts`): título, destinatários, data e quantas pessoas leram, 20 por página. O painel de envio mostra a prévia com o número de destinatários (`GET /broadcasts/audience`).
 - No menu do avatar, para o administrador, "Pedidos de exclusão" mostra a quantidade de pedidos pendentes. Some quando zera.
 
 Escopo do Drive: `drive` completo, para ver as pastas compartilhadas pelo administrador. O escopo `drive.file` não serve, porque não mostra as pastas criadas por outra conta.

@@ -52,6 +52,8 @@ const MATRIX: { row: string; permission: Permission; method: 'GET' | 'POST'; exp
   { row: 'Ver, aprovar e recusar pedidos de exclusão', permission: 'deletion.decide', method: 'POST', expected: { admin: true, member: false, viewer: false } },
   // Fase 3c
   { row: 'Ler e marcar as próprias notificações', permission: 'notifications.own', method: 'POST', expected: { admin: true, member: true, viewer: true } },
+  // Página de Notificações
+  { row: 'Enviar comunicado e ver comunicados enviados', permission: 'notifications.send', method: 'POST', expected: { admin: true, member: false, viewer: false } },
 ];
 
 // Rotas de sonda: uma por linha da matriz, sob as mesmas regras de sessão e permissão das rotas reais.

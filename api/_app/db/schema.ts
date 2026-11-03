@@ -159,6 +159,31 @@ export const deletionRequests = pgTable(
   ],
 );
 
+export const notificationType = pgEnum('notification_type', [
+  'deletion.requested',
+  'deletion.approved',
+  'deletion.rejected',
+  'drive.failed',
+  'announcement',
+]);
+/** Para quem vai o comunicado: todos os ativos, só colaboradores, só leitores ou pessoas escolhidas. */
+export const broadcastAudience = pgEnum('broadcast_audience', ['all', 'members', 'viewers', 'people']);
+
+/** Comunicados enviados pela administração. Cada destinatário recebe uma linha em `notifications`. */
+export const broadcasts = pgTable(
+  'broadcasts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    senderUserId: uuid('sender_user_id').references(() => users.id, { onDelete: 'set null' }),
+    audience: broadcastAudience('audience').notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    link: text('link'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('broadcasts_created_idx').on(t.createdAt)],
+);
+
 /** Notificações dentro do ERP. Cada pessoa só lê as próprias. */
 export const notifications = pgTable(
   'notifications',
@@ -167,15 +192,23 @@ export const notifications = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    type: text('type').notNull(),
+    type: notificationType('type').notNull(),
     title: text('title').notNull(),
     body: text('body').notNull(),
     // Caminho dentro do ERP para o item da notificação, ex.: "/pedidos-de-exclusao".
     link: text('link'),
+    // Comunicado: quem enviou e de qual envio esta linha faz parte (para contar quem leu).
+    senderUserId: uuid('sender_user_id').references(() => users.id, { onDelete: 'set null' }),
+    broadcastId: uuid('broadcast_id').references(() => broadcasts.id, { onDelete: 'cascade' }),
     readAt: timestamp('read_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('notifications_user_created_idx').on(t.userId, t.createdAt)],
+  (t) => [
+    index('notifications_user_created_idx').on(t.userId, t.createdAt),
+    // Aba "Não lidas" e contador do sino.
+    index('notifications_user_unread_idx').on(t.userId, t.createdAt).where(sql`${t.readAt} is null`),
+    index('notifications_broadcast_idx').on(t.broadcastId),
+  ],
 );
 
 export type User = typeof users.$inferSelect;
@@ -184,5 +217,7 @@ export type ProjectFile = typeof projectFiles.$inferSelect;
 export type ProjectNote = typeof projectNotes.$inferSelect;
 export type DeletionRequest = typeof deletionRequests.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
+export type NotificationType = (typeof notificationType.enumValues)[number];
+export type BroadcastAudience = (typeof broadcastAudience.enumValues)[number];
 export type Subfolder = (typeof projectSubfolder.enumValues)[number];
 export type UserRole = (typeof userRole.enumValues)[number];

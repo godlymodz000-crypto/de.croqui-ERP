@@ -36,6 +36,13 @@
       "when": 1793665491988,
       "tag": "0004_notificacoes_compartilhamento",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793673633649,
+      "tag": "0005_comunicados",
+      "breakpoints": true
     }
   ]
 }

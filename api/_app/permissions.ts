@@ -38,6 +38,8 @@ export const PERMISSIONS = {
   'deletion.decide': ['admin'],
   /** Ler e marcar como lidas as próprias notificações (cada um só as suas) */
   'notifications.own': ['admin', 'member', 'viewer'],
+  /** Enviar comunicado e ver os comunicados enviados */
+  'notifications.send': ['admin'],
 } as const satisfies Record<string, readonly UserRole[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

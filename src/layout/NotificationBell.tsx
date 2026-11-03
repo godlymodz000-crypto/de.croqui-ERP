@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { AppIcon } from '../ui/AppIcon';
-import { notificationsApi, type Notification, type NotificationsState } from '../api/notifications';
+import { BELL_SIZE, notificationsApi, type Notification, type NotificationsState } from '../api/notifications';
 import { formatLastAccess } from '../pages/collaborators/format';
 
 /** O sino se atualiza sozinho neste intervalo, enquanto a página está aberta e visível. */
@@ -22,7 +22,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      setState(await notificationsApi.list());
+      setState(await notificationsApi.list({ limit: BELL_SIZE }));
     } catch {
       // Falha passageira: mantém o que já está na tela e tenta de novo no próximo ciclo.
     }
@@ -73,14 +73,14 @@ export function useNotifications() {
 }
 
 /** "Agora", "Há 12 min", "Hoje, 9h40", "Ontem, 17h05" ou "30 out 2026". */
-function when(iso: string, now = new Date()) {
+export function when(iso: string, now = new Date()) {
   const minutes = Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000);
   if (minutes < 1) return 'Agora';
   if (minutes < 60) return `Há ${minutes} min`;
   return formatLastAccess(iso, now);
 }
 
-/** Sino do cabeçalho com a lista de notificações (quadros "ERP · Notificações · 1440"). */
+/** Sino do cabeçalho com as últimas notificações e o link para a página (quadros "ERP · Notificações · 1440"). */
 export function NotificationBell() {
   const { state, markRead, markAllRead } = useNotifications();
   const [open, setOpen] = useState(false);
@@ -145,7 +145,7 @@ export function NotificationBell() {
             <div className="notifications__empty">
               <p className="notifications__empty-title">Nenhuma notificação por enquanto.</p>
               <p className="notifications__empty-text">
-                Pedidos de exclusão, decisões sobre os seus pedidos e falhas no Google Drive aparecem aqui.
+                Comunicados do estúdio, pedidos de exclusão e respostas aos seus pedidos aparecem aqui.
               </p>
             </div>
           ) : (
@@ -167,6 +167,12 @@ export function NotificationBell() {
               ))}
             </ul>
           )}
+          <div className="notifications__footer">
+            <Link to="/notificacoes" className="arrow-link" onClick={() => setOpen(false)}>
+              Ver todas
+              <AppIcon name="arrow-right" size={14} />
+            </Link>
+          </div>
         </div>
       )}
     </div>
