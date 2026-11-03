@@ -1,10 +1,9 @@
 import { eq } from 'drizzle-orm';
+import { AdminTokenError, createAdminAccessToken } from './admin-token.js';
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
-import { appSettings, users, type Subfolder } from './db/schema.js';
-import { decrypt } from './crypto.js';
+import { appSettings, type Subfolder } from './db/schema.js';
 
-const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const FILES_ENDPOINT = 'https://www.googleapis.com/drive/v3/files';
 const UPLOAD_ENDPOINT = 'https://www.googleapis.com/upload/drive/v3/files';
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
@@ -90,31 +89,14 @@ export function projectFolderName(clientName: string, projectName: string): stri
  * Assim os arquivos ficam numa conta só. Quem pode fazer o quê é checado antes, no ERP (seção 5).
  */
 export function createAdminDrive({ config, db, fetch: doFetch = fetch }: { config: Config; db: Db; fetch?: typeof fetch }): DriveClient {
-  let cached: { token: string; expiresAt: number } | null = null;
+  const token = createAdminAccessToken({ config, db, fetch: doFetch });
 
   async function accessToken(): Promise<string> {
-    if (cached && cached.expiresAt > Date.now() + 60_000) return cached.token;
-    const [admin] = await db
-      .select({ refreshToken: users.googleRefreshToken })
-      .from(users)
-      .where(eq(users.email, config.adminEmail))
-      .limit(1);
-    if (!admin?.refreshToken) throw new DriveError('O administrador ainda não autorizou o Drive (sem refresh token).');
-    const res = await doFetch(TOKEN_ENDPOINT, {
-      method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: config.googleClientId,
-        client_secret: config.googleClientSecret,
-        refresh_token: decrypt(admin.refreshToken, config.tokenEncryptionKey),
-        grant_type: 'refresh_token',
-      }),
-    });
-    if (!res.ok) throw new DriveError(`Renovação do token do administrador falhou (${res.status}).`);
-    const body = (await res.json()) as { access_token?: string; expires_in?: number };
-    if (!body.access_token) throw new DriveError('Resposta do Google sem access_token.');
-    cached = { token: body.access_token, expiresAt: Date.now() + (body.expires_in ?? 3600) * 1000 };
-    return cached.token;
+    try {
+      return await token.accessToken();
+    } catch (err) {
+      throw err instanceof AdminTokenError ? new DriveError(err.message) : err;
+    }
   }
 
   async function call(url: string, init: RequestInit = {}): Promise<Response> {
@@ -122,7 +104,7 @@ export function createAdminDrive({ config, db, fetch: doFetch = fetch }: { confi
       ...init,
       headers: { authorization: `Bearer ${await accessToken()}`, 'content-type': 'application/json', ...init.headers },
     });
-    if (res.status === 401) cached = null;
+    if (res.status === 401) token.forget();
     return res;
   }
 
