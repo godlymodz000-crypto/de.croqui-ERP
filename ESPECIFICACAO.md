@@ -198,7 +198,7 @@ Conexão:
 
 Entrada (Google para ERP), por consulta periódica:
 - Incremental com `syncToken`, dentro da mesma leitura que abre a Agenda (`GET /events`). Enquanto a Agenda estiver aberta e a aba visível, a tela lê de novo a cada 2 minutos.
-- O servidor faz no máximo uma consulta ao Google a cada 2 minutos, para todos. "Tentar de novo", depois de um erro, pode consultar antes (no máximo a cada 10 segundos).
+- O servidor faz no máximo uma consulta ao Google a cada 2 minutos, para todos. "Tentar de novo", depois de um erro, pode consultar antes (no máximo a cada 3 segundos).
 - Eventos novos e alterados entram com `source = google`. Apagados no Google viram exclusão lógica no ERP.
 - `syncToken` vencido (410): leitura completa e recomeça.
 - Webhook (`events.watch`) fica para depois, se o atraso de 2 minutos deixar de servir.

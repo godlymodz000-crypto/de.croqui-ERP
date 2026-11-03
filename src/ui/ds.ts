@@ -40,7 +40,7 @@ export interface InputProps {
   placeholder?: string;
   value?: string;
   onChange?: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  type?: 'text' | 'email' | 'search' | 'date';
+  type?: 'text' | 'email' | 'search' | 'date' | 'time';
   multiline?: boolean;
   rows?: number;
   variant?: 'line' | 'box';

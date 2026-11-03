@@ -16,8 +16,8 @@ import {
 
 /** No máximo uma consulta ao Google a cada 2 minutos, para todos (decisão da Fase 5). */
 export const SYNC_INTERVAL_MS = 2 * 60_000;
-/** "Tentar de novo" depois de um erro pula a espera, mas não mais que uma vez a cada 10 segundos. */
-const RETRY_GAP_MS = 10_000;
+/** "Tentar de novo" depois de um erro pula a espera, mas não mais que uma vez a cada 3 segundos. */
+const RETRY_GAP_MS = 3_000;
 /** Envios por sincronização. O resto vai na próxima, para a leitura da Agenda não demorar. */
 const PUSH_BATCH = 10;
 /** Páginas de 250 eventos lidas por sincronização. */
