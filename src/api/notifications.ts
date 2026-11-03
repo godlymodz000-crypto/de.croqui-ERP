@@ -72,6 +72,11 @@ export const TYPE_LABEL: Record<NotificationType, string> = {
   announcement: 'Comunicado',
 };
 
+/** Rótulo do tipo. Um tipo que a interface ainda não conhece vira "Aviso" em vez de sumir. */
+export function typeLabel(type: string | null | undefined) {
+  return (type && TYPE_LABEL[type as NotificationType]) || 'Aviso';
+}
+
 export const notificationsApi = {
   list: (q: { view?: View; type?: TypeFilter; page?: number; limit?: number } = {}) => {
     const qs = new URLSearchParams();

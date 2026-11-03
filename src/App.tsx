@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { SessionProvider, useSession } from './session';
+import { ErrorBoundary, RecoveryScreen } from './ui/ErrorBoundary';
 import { AppShell } from './layout/AppShell';
 import { LoginPage } from './pages/LoginPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
@@ -54,49 +55,52 @@ function LoginRoute() {
   return <LoginPage />;
 }
 
+/** Último recurso: um erro fora da moldura (sessão, rotas) mostra a tela de recuperação, não uma página em branco. */
 export function App() {
   return (
-    <SessionProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/entrar" element={<LoginRoute />} />
-          <Route element={<Protected />}>
-            <Route
-              index
-              element={
-                <PlaceholderPage
-                  title="Dashboard"
-                  soon
-                  text="Aqui você verá o resumo do estúdio: projetos em andamento, prazos, compromissos e orçamentos. O dashboard chega depois das outras telas."
-                />
-              }
-            />
-            {PAGES.map((p) => (
-              <Route key={p.path} path={p.path} element={<PlaceholderPage title={p.title} text={p.text} />} />
-            ))}
-            <Route path="/projetos" element={<ProjectsPage />} />
-            <Route path="/projetos/:id" element={<ProjectPage />} />
-            <Route path="/notificacoes" element={<NotificationsPage />} />
-            <Route
-              path="/colaboradores"
-              element={
-                <AdminOnly title="Colaboradores">
-                  <CollaboratorsPage />
-                </AdminOnly>
-              }
-            />
-            <Route
-              path="/pedidos-de-exclusao"
-              element={
-                <AdminOnly title="Pedidos de exclusão">
-                  <DeletionRequestsPage />
-                </AdminOnly>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </SessionProvider>
+    <ErrorBoundary fallback={(error) => <RecoveryScreen error={error} fullPage />}>
+      <SessionProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/entrar" element={<LoginRoute />} />
+            <Route element={<Protected />}>
+              <Route
+                index
+                element={
+                  <PlaceholderPage
+                    title="Dashboard"
+                    soon
+                    text="Aqui você verá o resumo do estúdio: projetos em andamento, prazos, compromissos e orçamentos. O dashboard chega depois das outras telas."
+                  />
+                }
+              />
+              {PAGES.map((p) => (
+                <Route key={p.path} path={p.path} element={<PlaceholderPage title={p.title} text={p.text} />} />
+              ))}
+              <Route path="/projetos" element={<ProjectsPage />} />
+              <Route path="/projetos/:id" element={<ProjectPage />} />
+              <Route path="/notificacoes" element={<NotificationsPage />} />
+              <Route
+                path="/colaboradores"
+                element={
+                  <AdminOnly title="Colaboradores">
+                    <CollaboratorsPage />
+                  </AdminOnly>
+                }
+              />
+              <Route
+                path="/pedidos-de-exclusao"
+                element={
+                  <AdminOnly title="Pedidos de exclusão">
+                    <DeletionRequestsPage />
+                  </AdminOnly>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </SessionProvider>
+    </ErrorBoundary>
   );
 }

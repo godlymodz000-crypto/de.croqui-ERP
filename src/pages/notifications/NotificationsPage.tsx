@@ -9,7 +9,7 @@ import {
   broadcastsApi,
   notificationsApi,
   PAGE_SIZE,
-  TYPE_LABEL,
+  typeLabel,
   type Audience,
   type Notification,
   type NotificationsState,
@@ -57,6 +57,35 @@ function Pagination({ page, total, onPage }: { page: number; total: number; onPa
         </button>
       </span>
     </nav>
+  );
+}
+
+/** Uma linha da lista. Tipo desconhecido, título, texto, data ou link ausentes não quebram a página. */
+export function NoticeRow({ n, onOpen }: { n: Notification; onOpen: (n: Notification) => void }) {
+  const label = typeLabel(n.type);
+  const date = when(n.createdAt);
+  return (
+    <button type="button" className={`notice-row${n.readAt ? '' : ' is-unread'}`} onClick={() => onOpen(n)}>
+      <span className="notification__mark" aria-hidden />
+      <span className="notice-row__text">
+        <span className="notice-row__title">
+          {n.title || label}
+          {!n.readAt && <span className="visually-hidden"> (não lida)</span>}
+        </span>
+        {n.body && <span className="notice-row__body">{n.body}</span>}
+        <span className="notice-row__meta">{date ? `${label} · ${date}` : label}</span>
+      </span>
+      <span className="notice-row__type">{label}</span>
+      <span className="notice-row__when">{date}</span>
+      <span className="notice-row__open">
+        {n.link && (
+          <span className="arrow-link">
+            Abrir
+            <AppIcon name="arrow-right" size={14} />
+          </span>
+        )}
+      </span>
+    </button>
   );
 }
 
@@ -226,29 +255,7 @@ export function NotificationsPage() {
           <ul className="notice-table__list" aria-label="Notificações">
           {items.map((n) => (
             <li key={n.id}>
-              <button type="button" className={`notice-row${n.readAt ? '' : ' is-unread'}`} onClick={() => open(n)}>
-                <span className="notification__mark" aria-hidden />
-                <span className="notice-row__text">
-                  <span className="notice-row__title">
-                    {n.title}
-                    {!n.readAt && <span className="visually-hidden"> (não lida)</span>}
-                  </span>
-                  <span className="notice-row__body">{n.body}</span>
-                  <span className="notice-row__meta">
-                    {TYPE_LABEL[n.type]} · {when(n.createdAt)}
-                  </span>
-                </span>
-                <span className="notice-row__type">{TYPE_LABEL[n.type]}</span>
-                <span className="notice-row__when">{when(n.createdAt)}</span>
-                <span className="notice-row__open">
-                  {n.link && (
-                    <span className="arrow-link">
-                      Abrir
-                      <AppIcon name="arrow-right" size={14} />
-                    </span>
-                  )}
-                </span>
-              </button>
+              <NoticeRow n={n} onOpen={open} />
             </li>
           ))}
           </ul>

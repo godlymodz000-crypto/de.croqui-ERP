@@ -460,6 +460,56 @@
   color: var(--ardosia-500);
 }
 
+/* ---------- Tela de recuperação (erro de renderização) ---------- */
+.recovery {
+  max-width: 560px;
+  padding: var(--space-8) 0;
+}
+.recovery--page {
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: var(--space-10) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.recovery__title {
+  font: var(--weight-light) var(--text-3xl) / var(--leading-tight) var(--font-display);
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+.recovery__text {
+  font: var(--type-lead);
+  color: var(--ardosia-500);
+  margin-bottom: var(--space-6);
+}
+.recovery__button {
+  align-self: flex-start;
+  height: var(--control-height-md);
+  padding: 0 var(--space-6);
+  border: 0;
+  border-radius: var(--radius-none);
+  background: var(--vinho-800);
+  color: var(--text-on-dark);
+  font: var(--weight-medium) var(--text-xs) / 1 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.recovery__details {
+  margin-top: var(--space-6);
+  font: var(--type-small);
+  color: var(--text-secondary);
+}
+.recovery__details summary {
+  cursor: pointer;
+}
+.recovery__details code {
+  display: block;
+  margin-top: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
 /* ---------- Colaboradores (quadro "ERP · Colaboradores · 1440" no Figcraft) ---------- */
 a.user-menu__item {
   text-decoration: none;

@@ -4,7 +4,8 @@ import { Badge, Icon, IconButton } from '../ui/ds';
 import { useIsMobile } from '../ui/useMediaQuery';
 import { AppIcon } from '../ui/AppIcon';
 import { logout, type SessionUser } from '../session';
-import { NotificationBell, NotificationsProvider, useNotifications } from './NotificationBell';
+import { ErrorBoundary, RecoveryScreen } from '../ui/ErrorBoundary';
+import { BellFallback, NotificationBell, NotificationsProvider, useNotifications } from './NotificationBell';
 import logo from '../design-system/assets/logo/decroqui-imagotipo-horizontal-escuro.svg';
 
 export const NAV_ITEMS = [
@@ -101,11 +102,16 @@ function Shell({ user }: { user: SessionUser }) {
             />
           </div>
           <img className="topbar__logo" src={logo} alt="De.Croqui" />
-          <NotificationBell />
+          <ErrorBoundary fallback={() => <BellFallback />}>
+            <NotificationBell />
+          </ErrorBoundary>
           <UserMenu user={user} />
         </header>
         <main className="shell__content">
-          <Outlet />
+          {/* Um erro na tela fica só nela: o menu e o cabeçalho continuam, e trocar de rota tenta de novo. */}
+          <ErrorBoundary resetKey={location.pathname} fallback={(error) => <RecoveryScreen error={error} />}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>
