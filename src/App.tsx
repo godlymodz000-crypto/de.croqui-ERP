@@ -9,6 +9,7 @@ import { PlaceholderPage } from './pages/PlaceholderPage';
 import { CollaboratorsPage } from './pages/collaborators/CollaboratorsPage';
 import { ProjectsPage } from './pages/projects/ProjectsPage';
 import { ProjectPage } from './pages/projects/ProjectPage';
+import { ProcessesPage } from './pages/processes/ProcessesPage';
 import { DeletionRequestsPage } from './pages/deletion/DeletionRequestsPage';
 import { NotificationsPage } from './pages/notifications/NotificationsPage';
 
@@ -17,11 +18,6 @@ const PAGES = [
     path: '/agenda',
     title: 'Agenda',
     text: 'Aqui você verá os compromissos do estúdio, em sincronia com o Google Agenda. Esta tela chega na fase da agenda.',
-  },
-  {
-    path: '/processos',
-    title: 'Processos',
-    text: 'Aqui cada projeto aparece como um card, na coluna da etapa em que está. Esta tela chega na fase dos processos.',
   },
   {
     path: '/orcamentos',
@@ -78,6 +74,7 @@ export function App() {
               {PAGES.map((p) => (
                 <Route key={p.path} path={p.path} element={<PlaceholderPage title={p.title} text={p.text} />} />
               ))}
+              <Route path="/processos" element={<ProcessesPage />} />
               <Route path="/projetos" element={<ProjectsPage />} />
               <Route path="/projetos/:id" element={<ProjectPage />} />
               <Route path="/notificacoes" element={<NotificationsPage />} />

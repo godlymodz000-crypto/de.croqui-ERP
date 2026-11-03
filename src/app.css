@@ -840,6 +840,11 @@ a.user-menu__item {
   bottom: var(--space-5);
   z-index: 200;
 }
+/* Ação dentro do aviso (fundo escuro do Toast), como o "Tentar de novo" do Kanban. */
+.toast-slot .link-button {
+  margin-top: 0;
+  color: var(--text-on-dark);
+}
 
 /* ---------- Projetos (quadros "ERP · Projetos · 1440" e "· 1024" no Figcraft) ---------- */
 .projects-toolbar {
@@ -1952,6 +1957,282 @@ a.arrow-link:hover,
    Acima disso vale o desktop dos quadros do Figcraft, sem nenhuma mudança.
    ====================================================================== */
 
+/* ---------- Processos (quadros "ERP · Processos · 1440" e "· 1024" no Figcraft) ---------- */
+.row-menu__heading {
+  margin: var(--space-2) var(--space-5) var(--space-1);
+  font: var(--weight-medium) 11px / 1.4 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.row-menu__item[aria-disabled='true'] {
+  color: var(--text-muted);
+  cursor: default;
+}
+.row-menu__item[aria-disabled='true']:hover {
+  background: none;
+}
+.board__loading {
+  font: var(--type-small);
+  color: var(--text-secondary);
+}
+.board {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-4);
+  min-height: calc(100vh - 300px);
+  overflow-x: auto;
+  padding-bottom: var(--space-4);
+}
+.board-column {
+  /* Tom do cartão e da borda à esquerda, pela posição da etapa (repete depois da sétima). */
+  --card-bg: var(--surface-card);
+  --card-edge: var(--linho-600);
+  --avatar-bg: var(--surface-stone);
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 248px;
+  padding: var(--space-3);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-xs);
+}
+.board-column--tone-1 {
+  --card-bg: var(--ardosia-100);
+  --card-edge: var(--ardosia-500);
+  --avatar-bg: var(--surface-card);
+}
+.board-column--tone-2 {
+  --card-bg: var(--vinho-100);
+  --card-edge: var(--vinho-600);
+  --avatar-bg: var(--surface-card);
+}
+.board-column--tone-3 {
+  --card-bg: var(--ocre-200);
+  --card-edge: var(--ocre-600);
+  --avatar-bg: var(--surface-card);
+}
+.board-column--tone-4 {
+  --card-bg: var(--linho-300);
+  --card-edge: var(--linho-600);
+  --avatar-bg: var(--surface-card);
+}
+.board-column--tone-5 {
+  --card-bg: var(--oliva-200);
+  --card-edge: var(--oliva-600);
+  --avatar-bg: var(--surface-card);
+}
+.board-column--tone-6 {
+  --card-bg: var(--surface-stone);
+  --card-edge: var(--ardosia-700);
+  --avatar-bg: var(--surface-card);
+}
+.board-column.is-drop-target {
+  box-shadow: inset 0 0 0 1px var(--border-default);
+}
+.board-column__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: var(--space-1) 2px var(--space-2) var(--space-1);
+  margin-bottom: var(--space-2);
+}
+.board-column__title {
+  font: var(--weight-medium) 11px / 1.4 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+.board-column__count {
+  margin-left: var(--space-2);
+  font: var(--weight-regular) 12px / 1 var(--font-body);
+  letter-spacing: 0;
+  color: var(--ardosia-500);
+}
+.board-column__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.board-column__empty {
+  padding: 0 var(--space-1);
+  font: var(--weight-light) 13px / var(--leading-normal) var(--font-body);
+  color: var(--text-secondary);
+}
+.board-column__drop {
+  height: 2px;
+  margin-top: 10px;
+  background: var(--noite-900);
+}
+.board-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  background: var(--card-bg);
+  border-left: 2px solid var(--card-edge);
+  border-radius: var(--radius-xs);
+}
+.board-card[draggable='true'] {
+  cursor: grab;
+}
+.board-card.is-dragging {
+  opacity: 0.45;
+}
+.board-card__link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-right: var(--space-4);
+  color: inherit;
+  text-decoration: none;
+}
+/* O cartão inteiro abre o projeto; o menu fica por cima do link. */
+.board-card__link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.board-card__link:focus-visible {
+  outline: none;
+}
+.board-card:has(.board-card__link:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.board-card__name {
+  font: var(--weight-regular) 20px / 1.15 var(--font-display);
+  color: var(--text-primary);
+}
+.board-card__client {
+  font: var(--weight-light) 12px / 1.4 var(--font-body);
+  color: var(--text-secondary);
+}
+.board-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 26px;
+}
+.board-card__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--avatar-bg);
+  font: var(--weight-regular) 12px / 1 var(--font-body);
+  color: var(--text-primary);
+}
+.board-card__deadline {
+  font: var(--weight-regular) 12px / 1 var(--font-body);
+  color: var(--text-secondary);
+}
+.board-card__deadline.is-overdue {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-xs);
+  background: var(--terracota-200);
+  font: var(--weight-medium) 11px / 1.3 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--terracota-600);
+}
+.board-card__menu {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 1;
+  opacity: 0;
+}
+.board-card:hover .board-card__menu,
+.board-card__menu:focus-within,
+.board-card__menu.is-open {
+  opacity: 1;
+}
+.board-card__menu.is-open {
+  z-index: 30;
+}
+.board-card__menu .row-menu__trigger {
+  background: var(--card-bg);
+}
+.board-card__menu .row-menu__trigger:hover,
+.board-card__menu .row-menu__trigger.is-open {
+  background: var(--surface-stone);
+}
+.board.is-dragging .board-card__menu {
+  opacity: 0;
+}
+.board__add-stage {
+  display: inline-flex;
+  flex: 0 0 248px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  height: var(--control-height-md);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-xs);
+  background: none;
+  font: var(--weight-medium) 11px / 1 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.board__add-stage:hover {
+  background: var(--surface-sunken);
+}
+.board-column--new {
+  align-self: flex-start;
+}
+.stage-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-1) 0 var(--space-2);
+}
+.stage-form__label {
+  font: var(--weight-medium) 11px / 1.3 var(--font-body);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.stage-form__input {
+  height: 42px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xs);
+  background: var(--surface-card);
+  font: var(--weight-regular) var(--text-sm) / 1 var(--font-body);
+  color: var(--text-primary);
+}
+.stage-form__input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.stage-form__error,
+.dialog-error {
+  font: var(--weight-regular) 12px / 1.4 var(--font-body);
+  color: var(--feedback-danger);
+}
+.dialog-error {
+  margin-top: var(--space-4);
+}
+.stage-form__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.stage-form__actions .text-button {
+  padding: 0 var(--space-3);
+}
+
 /* Elementos que só existem no celular. */
 .topbar__menu,
 .topbar__logo,
@@ -2592,6 +2873,29 @@ a.arrow-link:hover,
   }
   .toast-slot > * {
     max-width: 100%;
+  }
+}
+
+/* Processos no celular: lista por etapa no lugar das colunas, sem arrastar; o menu do cartão fica à vista. */
+@media (max-width: 768px), (max-height: 480px) and (orientation: landscape) {
+  .board {
+    flex-direction: column;
+    min-height: 0;
+    overflow: visible;
+  }
+  .board-column,
+  .board__add-stage {
+    flex: none;
+    width: 100%;
+  }
+  .board-column--new {
+    align-self: stretch;
+  }
+  .board-card__menu {
+    opacity: 1;
+  }
+  .board-card__menu .row-menu__trigger {
+    background: transparent;
   }
 }
 
