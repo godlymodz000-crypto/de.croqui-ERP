@@ -44,38 +44,40 @@ function driveFailed(request: FastifyRequest, reply: FastifyReply, err: unknown)
   return reply.code(502).send({ error: 'drive_failed' });
 }
 
-export async function projectsRoutes(app: FastifyInstance, { db, drive }: { db: Db; drive: DriveClient }) {
-  /** Monta a resposta com etapa, dono e quem fez a última alteração (pelo audit_log). */
-  async function toDtos(rows: Project[]) {
-    if (!rows.length) return [];
-    const ids = rows.map((p) => p.id);
-    const stageRows = await db.select().from(stages);
-    const stageById = new Map(stageRows.map((s) => [s.id, s]));
-    const lastEdits = await db
-      .selectDistinctOn([auditLog.entityId], { projectId: auditLog.entityId, userName: users.name, userEmail: users.email })
-      .from(auditLog)
-      .leftJoin(users, eq(users.id, auditLog.userId))
-      .where(and(eq(auditLog.entity, 'project'), inArray(auditLog.entityId, ids)))
-      .orderBy(auditLog.entityId, desc(auditLog.at));
-    const editorById = new Map(lastEdits.map((e) => [e.projectId, e.userName ?? e.userEmail ?? null]));
+/** Monta a resposta com etapa, dono e quem fez a última alteração (pelo audit_log). */
+export async function projectDtos(db: Db, rows: Project[]) {
+  if (!rows.length) return [];
+  const ids = rows.map((p) => p.id);
+  const stageRows = await db.select().from(stages);
+  const stageById = new Map(stageRows.map((s) => [s.id, s]));
+  const lastEdits = await db
+    .selectDistinctOn([auditLog.entityId], { projectId: auditLog.entityId, userName: users.name, userEmail: users.email })
+    .from(auditLog)
+    .leftJoin(users, eq(users.id, auditLog.userId))
+    .where(and(eq(auditLog.entity, 'project'), inArray(auditLog.entityId, ids)))
+    .orderBy(auditLog.entityId, desc(auditLog.at));
+  const editorById = new Map(lastEdits.map((e) => [e.projectId, e.userName ?? e.userEmail ?? null]));
 
-    return rows.map((p) => {
-      const stage = stageById.get(p.stageId);
-      return {
-        id: p.id,
-        name: p.name,
-        clientName: p.clientName,
-        stage: stage ? { id: stage.id, name: stage.name } : null,
-        status: p.status,
-        deadline: p.deadline,
-        driveFolderId: p.driveFolderId,
-        driveUrl: folderUrl(p.driveFolderId),
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt,
-        updatedBy: editorById.get(p.id) ?? null,
-      };
-    });
-  }
+  return rows.map((p) => {
+    const stage = stageById.get(p.stageId);
+    return {
+      id: p.id,
+      name: p.name,
+      clientName: p.clientName,
+      stage: stage ? { id: stage.id, name: stage.name } : null,
+      status: p.status,
+      deadline: p.deadline,
+      driveFolderId: p.driveFolderId,
+      driveUrl: folderUrl(p.driveFolderId),
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      updatedBy: editorById.get(p.id) ?? null,
+    };
+  });
+}
+
+export async function projectsRoutes(app: FastifyInstance, { db, drive }: { db: Db; drive: DriveClient }) {
+  const toDtos = (rows: Project[]) => projectDtos(db, rows);
 
   async function findActive(id: string): Promise<Project | undefined> {
     if (!UUID_RE.test(id)) return undefined;

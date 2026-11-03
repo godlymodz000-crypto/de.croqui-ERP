@@ -13,6 +13,7 @@ import {
   type Subfolder,
 } from '../db/schema.js';
 import { audit } from '../audit.js';
+import { projectDtos } from './projects.js';
 import { fileViewUrl, projectSubfolderId, type DriveClient } from '../drive.js';
 import { closePending, noticeDecision, noticeNewRequest } from '../notifications-service.js';
 import { signGrant, verifyGrant, UPLOAD_GRANT_TTL_MS, type UploadGrant } from '../upload-token.js';
@@ -327,6 +328,24 @@ export async function filesRoutes(app: FastifyInstance, { db, drive, sessionSecr
   });
 
   // ---------- Notas ----------
+
+  /** Tela do projeto numa leitura só: projeto, arquivos e notas, com uma checagem do projeto. Mesma permissão das três rotas. */
+  app.get<{ Params: { id: string } }>('/projects/:id/page', { config: { permission: 'workspace.read' } }, async (request, reply) => {
+    const project = await activeProject(request.params.id);
+    if (!project) return reply.code(404).send({ error: 'not_found' });
+    const [dto] = await projectDtos(db, [project]);
+    const fileRows = await db
+      .select()
+      .from(projectFiles)
+      .where(and(eq(projectFiles.projectId, project.id), isNull(projectFiles.deletedAt)))
+      .orderBy(desc(projectFiles.createdAt));
+    const noteRows = await db
+      .select()
+      .from(projectNotes)
+      .where(and(eq(projectNotes.projectId, project.id), isNull(projectNotes.deletedAt)))
+      .orderBy(desc(projectNotes.createdAt));
+    return { project: dto, files: await fileDtos(fileRows), notes: await noteDtos(noteRows) };
+  });
 
   app.get<{ Params: { id: string } }>('/projects/:id/notes', { config: { permission: 'workspace.read' } }, async (request, reply) => {
     const project = await activeProject(request.params.id);

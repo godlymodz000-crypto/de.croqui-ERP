@@ -57,9 +57,15 @@ export function ProjectPage() {
   const canWrite = canWriteProjects(me);
   const canRequest = me?.role === 'member';
 
+  // Ao abrir, uma leitura só traz projeto, arquivos e notas. Depois de enviar ou apagar, cada lista se atualiza sozinha.
   const load = useCallback(async () => {
     try {
-      setProject(await projectsApi.get(id));
+      const page = await projectsApi.page(id);
+      setProject(page.project);
+      setFiles(page.files);
+      setFilesError(null);
+      setNotes(page.notes);
+      setNotesError(null);
       setState('ready');
     } catch (err) {
       setLoadError(err);
@@ -87,9 +93,7 @@ export function ProjectPage() {
 
   useEffect(() => {
     load();
-    loadFiles();
-    loadNotes();
-  }, [load, loadFiles, loadNotes]);
+  }, [load]);
 
   useEffect(() => {
     if (!toast) return;

@@ -101,6 +101,7 @@ const LINES: { row: string; route: string; expected: Record<Role, boolean>; call
   { row: 'Ver arquivos', route: 'GET /projects/:id/files', expected: { admin: true, member: true, viewer: true }, ok: 200, call: (c) => inject('GET', `/projects/${c.projectId}/files`, c.headers) },
   { row: 'Ver miniatura', route: 'GET /files/:id/thumbnail', expected: { admin: true, member: true, viewer: true }, ok: 200, call: (c) => inject('GET', `/files/${c.fileId}/thumbnail`, c.headers) },
   { row: 'Ver notas', route: 'GET /projects/:id/notes', expected: { admin: true, member: true, viewer: true }, ok: 200, call: (c) => inject('GET', `/projects/${c.projectId}/notes`, c.headers) },
+  { row: 'Ver a tela do projeto (projeto, arquivos e notas)', route: 'GET /projects/:id/page', expected: { admin: true, member: true, viewer: true }, ok: 200, call: (c) => inject('GET', `/projects/${c.projectId}/page`, c.headers) },
   {
     row: 'Enviar arquivo (abrir sessão)',
     route: 'POST /projects/:id/uploads',
@@ -184,6 +185,29 @@ describe('Permissões da Fase 3b (seção 5), cada linha em cada papel', () => {
       });
     }
   }
+});
+
+describe('Tela do projeto numa leitura só', () => {
+  it('devolve o mesmo que as três leituras separadas', async () => {
+    const ids = await seed();
+    const { headers } = await as('viewer');
+    const page = await app.inject({ method: 'GET', url: `/projects/${ids.projectId}/page`, headers });
+    expect(page.statusCode).toBe(200);
+    const [project, files, notes] = await Promise.all(
+      ['', '/files', '/notes'].map((suffix) => app.inject({ method: 'GET', url: `/projects/${ids.projectId}${suffix}`, headers })),
+    );
+    expect(page.json()).toEqual({ project: project.json(), files: files.json(), notes: notes.json() });
+  });
+
+  it('projeto inexistente, excluído ou com id inválido responde 404; sem sessão, 401', async () => {
+    const ids = await seed();
+    const admin = await as('admin');
+    expect((await app.inject({ method: 'GET', url: '/projects/nao-e-uuid/page', headers: admin.headers })).statusCode).toBe(404);
+    expect((await app.inject({ method: 'GET', url: '/projects/00000000-0000-4000-8000-000000000000/page', headers: admin.headers })).statusCode).toBe(404);
+    await app.inject({ method: 'DELETE', url: `/projects/${ids.projectId}`, headers: admin.headers });
+    expect((await app.inject({ method: 'GET', url: `/projects/${ids.projectId}/page`, headers: admin.headers })).statusCode).toBe(404);
+    expect((await app.inject({ method: 'GET', url: `/projects/${ids.projectId}/page` })).statusCode).toBe(401);
+  });
 });
 
 describe('Upload direto no Drive (aceite)', () => {
