@@ -41,6 +41,8 @@ const MATRIX: { row: string; permission: Permission; method: 'GET' | 'POST'; exp
   { row: 'Criar e editar projetos', permission: 'projects.write', method: 'POST', expected: { admin: true, member: true, viewer: false } },
   { row: 'Arrastar projeto no Kanban (mudar etapa)', permission: 'projects.move', method: 'POST', expected: { admin: true, member: true, viewer: false } },
   { row: 'Criar e editar eventos (ERP)', permission: 'events.write', method: 'POST', expected: { admin: true, member: true, viewer: false } },
+  // Fase 5
+  { row: 'Conectar e desconectar o Google Agenda do estúdio', permission: 'calendar.connect', method: 'POST', expected: { admin: true, member: false, viewer: false } },
   { row: 'Criar, renomear, remover etapas', permission: 'stages.manage', method: 'POST', expected: { admin: true, member: false, viewer: false } },
   { row: 'Excluir projeto', permission: 'projects.delete', method: 'POST', expected: { admin: true, member: false, viewer: false } },
   { row: 'Criar e editar orçamento e apresentação', permission: 'documents.write', method: 'POST', expected: { admin: true, member: true, viewer: false } },

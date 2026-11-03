@@ -20,6 +20,8 @@ export const PERMISSIONS = {
   'projects.move': ['admin', 'member'],
   /** Criar e editar eventos (ERP) */
   'events.write': ['admin', 'member'],
+  /** Conectar e desconectar o Google Agenda do estúdio (calendário na conta do administrador) */
+  'calendar.connect': ['admin'],
   /** Criar, renomear e remover etapas */
   'stages.manage': ['admin'],
   /** Excluir projeto */

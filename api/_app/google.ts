@@ -41,7 +41,7 @@ export function createGoogleClient(opts: GoogleClientOptions) {
   const doFetch = opts.fetch ?? fetch;
 
   return {
-    authorizationUrl(state: string, codeVerifier: string): string {
+    authorizationUrl(state: string, codeVerifier: string, { consent = false }: { consent?: boolean } = {}): string {
       const url = new URL(AUTH_ENDPOINT);
       url.search = new URLSearchParams({
         client_id: opts.clientId,
@@ -53,7 +53,7 @@ export function createGoogleClient(opts: GoogleClientOptions) {
         code_challenge_method: 'S256',
         access_type: 'offline',
         include_granted_scopes: 'true',
-        prompt: 'select_account',
+        prompt: consent ? 'consent select_account' : 'select_account',
       }).toString();
       return url.toString();
     },

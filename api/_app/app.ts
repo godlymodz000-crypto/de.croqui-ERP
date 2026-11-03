@@ -22,6 +22,9 @@ import { filesRoutes } from './routes/files.js';
 import { notificationsRoutes } from './routes/notifications.js';
 import { stagesRoutes } from './routes/stages.js';
 import { createAdminDrive, type DriveClient } from './drive.js';
+import { createAdminCalendar, type CalendarClient } from './calendar.js';
+import { createCalendarSync } from './calendar-sync.js';
+import { eventsRoutes } from './routes/events.js';
 
 export const SESSION_COOKIE = 'decroqui_sid';
 const FLOW_COOKIE = 'decroqui_oauth';
@@ -42,12 +45,14 @@ export interface AppDeps {
   google?: GoogleClient;
   /** Drive usado nas escritas (token do administrador). Substituível nos testes. */
   drive?: DriveClient;
+  /** Google Agenda (token do administrador). Substituível nos testes. */
+  calendar?: CalendarClient;
   logger?: boolean;
   /** Rotas extras no escopo protegido, com as mesmas regras de sessão e permissão. Usado nos testes. */
   extraProtectedRoutes?: FastifyPluginAsync;
 }
 
-export async function buildApp({ config, db, google, drive, logger = false, extraProtectedRoutes }: AppDeps) {
+export async function buildApp({ config, db, google, drive, calendar, logger = false, extraProtectedRoutes }: AppDeps) {
   const app = Fastify({ logger, trustProxy: true });
   const googleClient =
     google ??
@@ -91,11 +96,13 @@ export async function buildApp({ config, db, google, drive, logger = false, extr
 
   app.get('/health', async () => ({ ok: true }));
 
-  app.get('/auth/google', async (_request, reply) => {
+  // `?reconectar=1`: pede o consentimento de novo, para o Google devolver um refresh token novo
+  // (o anterior venceu; no modo de teste ele dura cerca de 7 dias).
+  app.get<{ Querystring: { reconectar?: string } }>('/auth/google', async (request, reply) => {
     const state = randomToken();
     const verifier = randomToken(48);
     reply.setCookie(FLOW_COOKIE, JSON.stringify({ state, verifier }), { ...baseCookie, maxAge: FLOW_TTL_S });
-    return reply.redirect(googleClient.authorizationUrl(state, verifier));
+    return reply.redirect(googleClient.authorizationUrl(state, verifier, { consent: request.query.reconectar === '1' }));
   });
 
   app.get<{ Querystring: { code?: string; state?: string; error?: string } }>(
@@ -176,6 +183,8 @@ export async function buildApp({ config, db, google, drive, logger = false, extr
     });
     await protectedRoutes.register(notificationsRoutes, { db });
     await protectedRoutes.register(stagesRoutes, { db });
+    const sync = createCalendarSync({ db, calendar: calendar ?? createAdminCalendar({ config, db }) });
+    await protectedRoutes.register(eventsRoutes, { db, sync });
     if (extraProtectedRoutes) await protectedRoutes.register(extraProtectedRoutes);
   });
 
