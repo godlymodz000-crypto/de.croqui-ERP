@@ -11,6 +11,7 @@ import { canWriteProjects } from '../projects/shared';
 import { cardDeadline, initials, STAGE_TONES } from './cards';
 import { StageForm } from './StageForm';
 import { RemoveStageDialog } from './RemoveStageDialog';
+import { createCardGesture, isCardBackground } from './cardDrag';
 
 const LOAD_ERROR = 'Não foi possível carregar os processos.';
 
@@ -43,6 +44,7 @@ export function ProcessesPage() {
   const [creatingProject, setCreatingProject] = useState(false);
   const [dragging, setDragging] = useState<BoardCard | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const gesture = useRef(createCardGesture());
 
   // O ref acompanha o estado para as gravações guardarem no cache o quadro que está na tela.
   const setBoard = useCallback((next: Board | null) => {
@@ -244,6 +246,16 @@ export function ProcessesPage() {
                       draggable={draggable}
                       onDragStart={draggable ? (e) => onDragStart(e, card) : undefined}
                       onDragEnd={draggable ? onDragEnd : undefined}
+                      onPointerDown={(e) => e.button === 0 && gesture.current.down({ x: e.clientX, y: e.clientY })}
+                      onPointerMove={(e) => e.buttons & 1 && gesture.current.move({ x: e.clientX, y: e.clientY })}
+                      onClickCapture={(e) => {
+                        // Clique com movimento não abre nada, nem pelo link do nome.
+                        if (!gesture.current.isClick()) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }
+                      }}
+                      onClick={(e) => isCardBackground(e.target as Element) && navigate(`/projetos/${card.id}`)}
                     >
                       <Link to={`/projetos/${card.id}`} className="board-card__link" draggable={false}>
                         <span className="board-card__name">{card.name}</span>

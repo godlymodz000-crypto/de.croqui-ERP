@@ -2076,6 +2076,7 @@ a.arrow-link:hover,
   background: var(--card-bg);
   border-left: 2px solid var(--card-edge);
   border-radius: var(--radius-xs);
+  cursor: pointer;
 }
 .board-card[draggable='true'] {
   cursor: grab;
@@ -2090,12 +2091,6 @@ a.arrow-link:hover,
   padding-right: var(--space-4);
   color: inherit;
   text-decoration: none;
-}
-/* O cartão inteiro abre o projeto; o menu fica por cima do link. */
-.board-card__link::after {
-  content: '';
-  position: absolute;
-  inset: 0;
 }
 .board-card__link:focus-visible {
   outline: none;
