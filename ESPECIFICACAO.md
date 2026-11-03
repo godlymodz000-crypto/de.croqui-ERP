@@ -211,7 +211,7 @@ Todos os desenhos aprovados ficam em `design/`. O arquivo do Figcraft completo �
 | Login | `erp-login-1440.png`, `erp-login-erro-1440.png`, `erp-login-carregando-1440.png` | `/entrar` |
 | Colaboradores | `erp-colaboradores-*.png` (7 telas) | `/colaboradores` (pelo avatar) |
 | Agenda | `erp-agenda-*.png` (dia, semana, mês, lista, evento aberto, novo evento, erro) | `/agenda` |
-| Processos | `erp-processos-*.png` (arrastando, nova etapa, remover etapa, erro, etapa atualizada) | `/processos` |
+| Processos | `erp-processos-*.png` (quadro em 1440 e 1024, menu da etapa, renomear, nova etapa, remover etapa, menu do cartão, arrastando, etapa atualizada, erro ao mover, erro ao carregar, somente leitura; lista e "Mover para" em 390) | `/processos` |
 | Projetos | `erp-projetos-e-editor-1440.png` | `/projetos` |
 | Orçamento (editor) | `erp-editor-orcamento-1440-rolagem-completa.png` | `/projetos/:id/orcamentos/:orcId` |
 | Apresentação (editor) | `erp-editor-apresentacao-*.png` | `/projetos/:id/apresentacoes/:apId` |
