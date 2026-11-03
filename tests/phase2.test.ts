@@ -50,6 +50,8 @@ const MATRIX: { row: string; permission: Permission; method: 'GET' | 'POST'; exp
   { row: 'Pedir exclusão de arquivo, nota ou projeto', permission: 'deletion.request', method: 'POST', expected: { admin: true, member: true, viewer: false } },
   { row: 'Excluir arquivo ou nota diretamente', permission: 'content.delete', method: 'POST', expected: { admin: true, member: false, viewer: false } },
   { row: 'Ver, aprovar e recusar pedidos de exclusão', permission: 'deletion.decide', method: 'POST', expected: { admin: true, member: false, viewer: false } },
+  // Fase 3c
+  { row: 'Ler e marcar as próprias notificações', permission: 'notifications.own', method: 'POST', expected: { admin: true, member: true, viewer: true } },
 ];
 
 // Rotas de sonda: uma por linha da matriz, sob as mesmas regras de sessão e permissão das rotas reais.

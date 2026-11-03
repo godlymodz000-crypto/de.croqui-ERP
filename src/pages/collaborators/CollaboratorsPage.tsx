@@ -21,6 +21,13 @@ const ACTION_ERRORS: Record<string, string> = {
   self: 'Você não pode alterar a sua própria conta por aqui.',
   invalid_status: 'Desative a conta antes de remover.',
   not_found: 'Este colaborador não está mais na lista.',
+  drive_failed: 'Não foi possível falar com o Google Drive. Nada foi alterado. Tente de novo em instantes.',
+};
+
+/** Aviso embaixo do e-mail quando a parte do Drive falhou (quadro "Colaboradores · Drive não compartilhado"). */
+const DRIVE_WARNING: Partial<Record<Collaborator['driveAccess'], string>> = {
+  missing: 'Pasta do Drive não compartilhada',
+  revoke_pending: 'Acesso ao Drive não revogado',
 };
 const GENERIC_ERROR = 'Não foi possível concluir. Tente de novo em instantes.';
 
@@ -171,7 +178,15 @@ export function CollaboratorsPage() {
                   <span className="person__name">{c.name ?? c.email}</span>
                 </span>
                 <span role="cell" className="people-table__email">
-                  {c.email}
+                  <span className="people-table__address">{c.email}</span>
+                  {DRIVE_WARNING[c.driveAccess] && (
+                    <span className="drive-warning">
+                      {DRIVE_WARNING[c.driveAccess]} ·{' '}
+                      <button type="button" className="drive-warning__retry" onClick={() => run(() => usersApi.retryDrive(c.id))}>
+                        Tentar de novo
+                      </button>
+                    </span>
+                  )}
                 </span>
                 <span role="cell" className="people-table__role">
                   {ROLE_LABEL[c.role]}

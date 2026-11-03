@@ -11,7 +11,7 @@ import { ProjectPanel } from './ProjectPanel';
 import { FilesSection } from './FilesSection';
 import { NotesSection } from './NotesSection';
 import { UploadPanel } from './UploadPanel';
-import { FilePreview } from './FilePreview';
+import { FilePreview, isImage } from './FilePreview';
 import { ConfirmDeleteDialog, RequestDeletionDialog } from './DeletionDialogs';
 import { canDeleteProjects, canWriteProjects, deadlineLabel, folderName, formatDate, SituationBadge } from './shared';
 
@@ -119,8 +119,8 @@ export function ProjectPage() {
 
   function fileActions(f: ProjectFile): RowAction[] {
     const actions: RowAction[] = [
-      { label: 'Visualizar', onSelect: () => setPreviewing(f) },
-      { label: 'Abrir no Drive', onSelect: () => window.open(f.driveUrl, '_blank', 'noopener') },
+      ...(isImage(f) ? [{ label: 'Visualizar', onSelect: () => setPreviewing(f) }] : []),
+      { label: 'Abrir no Drive', onSelect: () => openInDrive(f) },
     ];
     if (isAdmin) actions.push({ label: 'Excluir', danger: true, onSelect: () => setPending({ kind: 'delete-file', file: f }) });
     else if (canRequest && !f.pendingDeletion)
@@ -129,6 +129,10 @@ export function ProjectPage() {
         onSelect: () => setPending({ kind: 'request', itemType: 'file', itemId: f.id, label: f.name, keeps: 'o arquivo continua no projeto e no Google Drive' }),
       });
     return actions;
+  }
+
+  function openInDrive(f: ProjectFile) {
+    window.open(f.driveUrl, '_blank', 'noopener');
   }
 
   function noteActions(n: ProjectNote): RowAction[] {
@@ -142,9 +146,15 @@ export function ProjectPage() {
     setDeletingProject(false);
     try {
       await projectsApi.remove(target.id);
-      navigate('/projetos', { state: { toast: `${target.name} saiu do ERP. A pasta continua no Google Drive.` } });
-    } catch {
-      setToast({ tone: 'danger', message: 'Não foi possível excluir o projeto. Tente de novo em instantes.' });
+      navigate('/projetos', { state: { toast: `${target.name} saiu do ERP. A pasta foi para a lixeira do Google Drive.` } });
+    } catch (err) {
+      setToast({
+        tone: 'danger',
+        message:
+          err instanceof ApiError && err.code === 'drive_failed'
+            ? 'Não foi possível mover a pasta para a lixeira do Google Drive. Nada foi alterado.'
+            : 'Não foi possível excluir o projeto. Tente de novo em instantes.',
+      });
     }
   }
 
@@ -211,7 +221,7 @@ export function ProjectPage() {
           canUpload={canWrite}
           actionsFor={fileActions}
           onUpload={() => setUploading(true)}
-          onPreview={setPreviewing}
+          onPreview={(f) => (isImage(f) ? setPreviewing(f) : openInDrive(f))}
         />
 
         <div className="project-layout__side">
@@ -317,8 +327,8 @@ export function ProjectPage() {
         }
       >
         <p>
-          O projeto sai do ERP para todo o estúdio. A pasta {folderName(project)} e os arquivos dela continuam no Google
-          Drive: o ERP não apaga nada lá. Se quiser apagar a pasta, faça isso no próprio Drive.
+          O projeto sai do ERP para todo o estúdio. A pasta {folderName(project)} e os arquivos dela vão para a lixeira do
+          Google Drive, onde ficam por 30 dias antes de serem apagados de vez. Até lá, dá para recuperar a pasta pelo Drive.
         </p>
       </Dialog>
 

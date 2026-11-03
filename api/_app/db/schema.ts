@@ -13,6 +13,8 @@ export const users = pgTable('users', {
   status: userStatus('status').notNull().default('invited'),
   // Refresh token do Google, sempre criptografado com TOKEN_ENCRYPTION_KEY (ver crypto.ts).
   googleRefreshToken: text('google_refresh_token'),
+  // Permissão de leitor na pasta "De.Croqui ERP", criada no convite. Guardada para revogar só ela depois.
+  drivePermissionId: text('drive_permission_id'),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -88,7 +90,7 @@ export const appSettings = pgTable('app_settings', {
 });
 
 /** Subpastas padrão da pasta do projeto no Drive (ver drive.ts). */
-export const projectSubfolder = pgEnum('project_subfolder', ['budgets', 'presentations', 'contracts', 'photos']);
+export const projectSubfolder = pgEnum('project_subfolder', ['budgets', 'presentations', 'contracts', 'photos', 'files']);
 /** upload: enviado pela tela do projeto; pdf_export: PDF salvo ao exportar no editor. */
 export const fileSource = pgEnum('file_source', ['upload', 'pdf_export']);
 
@@ -157,10 +159,30 @@ export const deletionRequests = pgTable(
   ],
 );
 
+/** Notificações dentro do ERP. Cada pessoa só lê as próprias. */
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    // Caminho dentro do ERP para o item da notificação, ex.: "/pedidos-de-exclusao".
+    link: text('link'),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('notifications_user_created_idx').on(t.userId, t.createdAt)],
+);
+
 export type User = typeof users.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type ProjectFile = typeof projectFiles.$inferSelect;
 export type ProjectNote = typeof projectNotes.$inferSelect;
 export type DeletionRequest = typeof deletionRequests.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
 export type Subfolder = (typeof projectSubfolder.enumValues)[number];
 export type UserRole = (typeof userRole.enumValues)[number];

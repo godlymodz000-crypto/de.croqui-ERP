@@ -4,6 +4,7 @@ import { Button, Tag, Toast } from '../../ui/ds';
 import { ApiError } from '../../api/http';
 import { deletionApi, SUBFOLDER_LABEL, type DeletionRequest, type RequestStatus, type Subfolder } from '../../api/files';
 import { formatLastAccess } from '../collaborators/format';
+import { useNotifications } from '../../layout/NotificationBell';
 
 const STATUS: { value: RequestStatus; label: string }[] = [
   { value: 'pending', label: 'Pendentes' },
@@ -14,7 +15,7 @@ const STATUS: { value: RequestStatus; label: string }[] = [
 const ERRORS: Record<string, string> = {
   own_request: 'Este pedido é seu. Outra pessoa da administração precisa decidir.',
   not_pending: 'Este pedido já foi decidido.',
-  drive_failed: 'Não foi possível mover o arquivo para a lixeira do Google Drive. O pedido continua pendente.',
+  drive_failed: 'Não foi possível mover para a lixeira do Google Drive. O pedido continua pendente.',
   not_found: 'Este pedido não existe mais.',
 };
 const GENERIC_ERROR = 'Não foi possível concluir. Tente de novo em instantes.';
@@ -33,7 +34,7 @@ function describe(r: DeletionRequest) {
     const when = r.itemDetail ? formatLastAccess(r.itemDetail) : null;
     return { label: when ? `Nota de ${when.toLowerCase()}` : 'Nota', detail: `Nota · “${excerpt(r.itemLabel ?? '')}”` };
   }
-  return { label: r.itemLabel ?? 'Projeto', detail: 'Projeto · a pasta continua no Drive' };
+  return { label: r.itemLabel ?? 'Projeto', detail: 'Projeto · a pasta vai para a lixeira do Drive' };
 }
 
 /** Pedidos de exclusão, só para a administração (mesmo padrão de Colaboradores). */
@@ -43,6 +44,7 @@ export function DeletionRequestsPage() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<{ tone: 'neutral' | 'danger'; message: string } | null>(null);
+  const { refresh: refreshCounters } = useNotifications();
 
   const load = useCallback(async () => {
     try {
@@ -75,7 +77,9 @@ export function DeletionRequestsPage() {
             ? `Pedido recusado. ${label} continua no projeto.`
             : r.itemType === 'file'
               ? `${label} foi para a lixeira do Google Drive.`
-              : `${label} saiu do ERP.`,
+              : r.itemType === 'project'
+                ? `${label} saiu do ERP. A pasta foi para a lixeira do Google Drive.`
+                : `${label} saiu do ERP.`,
       });
     } catch (err) {
       setToast({ tone: 'danger', message: (err instanceof ApiError && ERRORS[err.code]) || GENERIC_ERROR });
@@ -83,6 +87,8 @@ export function DeletionRequestsPage() {
       setBusy(null);
     }
     load();
+    // O contador do menu do avatar acompanha a decisão, sem esperar o próximo ciclo do sino.
+    refreshCounters();
   }
 
   const requests = data?.requests ?? [];
@@ -94,8 +100,8 @@ export function DeletionRequestsPage() {
           <p className="page-header__eyebrow">Administração</p>
           <h1 className="page-header__title">Pedidos de exclusão</h1>
           <p className="page-header__intro page-header__intro--wide">
-            Colaboradores pedem, a administração decide. Aprovar um pedido de arquivo manda o arquivo para a lixeira do Google
-            Drive. Notas e projetos saem só do ERP.
+            Colaboradores pedem, a administração decide. Aprovar um arquivo ou um projeto manda o arquivo ou a pasta para a
+            lixeira do Google Drive, onde fica por 30 dias. Notas saem só do ERP.
           </p>
         </div>
       </header>

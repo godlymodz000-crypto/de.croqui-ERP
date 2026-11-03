@@ -1,15 +1,30 @@
-import type { FastifyInstance, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { and, asc, eq } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { sessions, userRole, users, type User, type UserRole } from '../db/schema.js';
 import { audit } from '../audit.js';
+import { ensureRootFolder, type DriveClient } from '../drive.js';
+import { notifyAdmins } from '../notifications-service.js';
 
 const ROLES = userRole.enumValues;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
-export function toUserDto(u: User) {
+/**
+ * Acesso à pasta "De.Croqui ERP" no Drive, sempre como leitor:
+ * owner: é a conta dona dos arquivos; reader: compartilhada; missing: devia ter e não tem (falhou ou é anterior à Fase 3c);
+ * revoke_pending: desativado, mas a revogação falhou; none: desativado e sem acesso.
+ */
+export type DriveAccess = 'owner' | 'reader' | 'missing' | 'revoke_pending' | 'none';
+
+function driveAccess(u: User, adminEmail: string): DriveAccess {
+  if (u.email === adminEmail) return 'owner';
+  if (u.status === 'disabled') return u.drivePermissionId ? 'revoke_pending' : 'none';
+  return u.drivePermissionId ? 'reader' : 'missing';
+}
+
+export function toUserDto(u: User, adminEmail: string) {
   return {
     id: u.id,
     email: u.email,
@@ -18,6 +33,7 @@ export function toUserDto(u: User) {
     status: u.status,
     lastLoginAt: u.lastLoginAt,
     createdAt: u.createdAt,
+    driveAccess: driveAccess(u, adminEmail),
   };
 }
 
@@ -52,10 +68,53 @@ function sendConflict(reply: FastifyReply, err: unknown) {
   throw err;
 }
 
-export async function usersRoutes(app: FastifyInstance, { db }: { db: Db }) {
+export async function usersRoutes(app: FastifyInstance, { db, drive, adminEmail }: { db: Db; drive: DriveClient; adminEmail: string }) {
+  const dto = (u: User) => toUserDto(u, adminEmail);
+
+  /** Compartilha a pasta raiz como leitor e guarda o ID da permissão. Devolve o usuário atualizado, ou null se o Drive falhou. */
+  async function grantDrive(u: User, actorId: string, request: FastifyRequest): Promise<User | null> {
+    try {
+      const rootId = await ensureRootFolder(db, drive);
+      const permissionId = await drive.shareReader(rootId, u.email);
+      const [updated] = await db.update(users).set({ drivePermissionId: permissionId }).where(eq(users.id, u.id)).returning();
+      await audit(db, { userId: actorId, action: 'drive.share', entity: 'user', entityId: u.id, payload: { email: u.email, role: 'reader', permissionId } });
+      return updated;
+    } catch (err) {
+      request.log.error({ err: (err as Error)?.message ?? err }, 'falha ao compartilhar a pasta do Drive');
+      return null;
+    }
+  }
+
+  /** Revoga só a permissão guardada. Devolve o usuário atualizado, ou null se o Drive falhou. */
+  async function revokeDrive(u: User, actorId: string, request: FastifyRequest): Promise<User | null> {
+    if (!u.drivePermissionId) return u;
+    try {
+      const rootId = await ensureRootFolder(db, drive);
+      await drive.revokePermission(rootId, u.drivePermissionId);
+      const [updated] = await db.update(users).set({ drivePermissionId: null }).where(eq(users.id, u.id)).returning();
+      await audit(db, { userId: actorId, action: 'drive.revoke', entity: 'user', entityId: u.id, payload: { email: u.email, permissionId: u.drivePermissionId } });
+      return updated ?? u;
+    } catch (err) {
+      request.log.error({ err: (err as Error)?.message ?? err }, 'falha ao revogar o acesso ao Drive');
+      return null;
+    }
+  }
+
+  function driveFailedNotice(u: User, what: 'share' | 'revoke') {
+    return {
+      type: 'drive.failed' as const,
+      title: what === 'share' ? 'Compartilhamento do Drive falhou' : 'Revogação no Drive falhou',
+      body:
+        what === 'share'
+          ? `Não foi possível compartilhar a pasta De.Croqui ERP com ${u.email}. O convite está salvo. Tente de novo em Colaboradores.`
+          : `Não foi possível tirar o acesso de ${u.email} à pasta De.Croqui ERP. Tente de novo em Colaboradores.`,
+      link: '/colaboradores',
+    };
+  }
+
   app.get('/users', { config: { permission: 'users.read' } }, async () => {
     const rows = await db.select().from(users).orderBy(asc(users.createdAt));
-    return rows.map(toUserDto);
+    return rows.map(dto);
   });
 
   app.post<{ Body: { email?: unknown; name?: unknown; role?: unknown } }>(
@@ -89,7 +148,10 @@ export async function usersRoutes(app: FastifyInstance, { db }: { db: Db }) {
         entityId: created.id,
         payload: { email, name, role },
       });
-      return reply.code(201).send(toUserDto(created));
+      // O convite fica salvo mesmo se o Drive falhar; a administração recebe o aviso para tentar de novo.
+      const shared = await grantDrive(created, request.user!.id, request);
+      if (!shared) await notifyAdmins(db, driveFailedNotice(created, 'share'));
+      return reply.code(201).send(dto(shared ?? created));
     },
   );
 
@@ -118,7 +180,7 @@ export async function usersRoutes(app: FastifyInstance, { db }: { db: Db }) {
           });
           return u;
         });
-        return toUserDto(updated);
+        return dto(updated);
       } catch (err) {
         return sendConflict(reply, err);
       }
@@ -149,7 +211,10 @@ export async function usersRoutes(app: FastifyInstance, { db }: { db: Db }) {
           });
           return u;
         });
-        return toUserDto(updated);
+        // A conta já está desativada no ERP; se o Drive falhar, a administração recebe o aviso para tentar de novo.
+        const revoked = await revokeDrive(updated, actor.id, request);
+        if (!revoked) await notifyAdmins(db, driveFailedNotice(updated, 'revoke'));
+        return dto(revoked ?? updated);
       } catch (err) {
         return sendConflict(reply, err);
       }
@@ -162,6 +227,12 @@ export async function usersRoutes(app: FastifyInstance, { db }: { db: Db }) {
     async (request, reply) => {
       const actor = request.user!;
       if (request.params.id === actor.id) return reply.code(409).send({ error: 'self' });
+
+      // Revoga antes de apagar o registro, que guarda o ID da permissão. Se o Drive falhar, nada é removido.
+      const [current] = UUID_RE.test(request.params.id) ? await db.select().from(users).where(eq(users.id, request.params.id)) : [];
+      if (current && current.status !== 'active' && current.drivePermissionId) {
+        if (!(await revokeDrive(current, actor.id, request))) return reply.code(502).send({ error: 'drive_failed' });
+      }
 
       try {
         await db.transaction(async (tx) => {
@@ -182,6 +253,26 @@ export async function usersRoutes(app: FastifyInstance, { db }: { db: Db }) {
       } catch (err) {
         return sendConflict(reply, err);
       }
+    },
+  );
+
+  /** Tenta de novo a parte do Drive que falhou: compartilhar (convidado ou ativo) ou revogar (desativado). */
+  app.post<{ Params: { id: string } }>(
+    '/users/:id/drive-access',
+    { config: { permission: 'users.manage' } },
+    async (request, reply) => {
+      const [target] = UUID_RE.test(request.params.id) ? await db.select().from(users).where(eq(users.id, request.params.id)) : [];
+      if (!target) return reply.code(404).send({ error: 'not_found' });
+      const access = driveAccess(target, adminEmail);
+      if (access === 'missing') {
+        const shared = await grantDrive(target, request.user!.id, request);
+        return shared ? dto(shared) : reply.code(502).send({ error: 'drive_failed' });
+      }
+      if (access === 'revoke_pending') {
+        const revoked = await revokeDrive(target, request.user!.id, request);
+        return revoked ? dto(revoked) : reply.code(502).send({ error: 'drive_failed' });
+      }
+      return dto(target);
     },
   );
 }

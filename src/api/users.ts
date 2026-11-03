@@ -4,6 +4,8 @@ export { ApiError } from './http';
 
 export type Role = 'admin' | 'member' | 'viewer';
 export type Status = 'invited' | 'active' | 'disabled';
+/** Acesso de leitor à pasta "De.Croqui ERP" (ver api/_app/routes/users.ts). */
+export type DriveAccess = 'owner' | 'reader' | 'missing' | 'revoke_pending' | 'none';
 
 export interface Collaborator {
   id: string;
@@ -13,6 +15,7 @@ export interface Collaborator {
   status: Status;
   lastLoginAt: string | null;
   createdAt: string;
+  driveAccess: DriveAccess;
 }
 
 export interface InviteInput {
@@ -27,6 +30,8 @@ export const usersApi = {
   changeRole: (id: string, role: Role) => request<Collaborator>('PATCH', `/users/${id}/role`, { role }),
   disable: (id: string) => request<Collaborator>('POST', `/users/${id}/disable`),
   remove: (id: string) => request<void>('DELETE', `/users/${id}`),
+  /** Tenta de novo compartilhar (ou revogar) a pasta do Drive. */
+  retryDrive: (id: string) => request<Collaborator>('POST', `/users/${id}/drive-access`),
 };
 
 export const ROLE_LABEL: Record<Role, string> = {

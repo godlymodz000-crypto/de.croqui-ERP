@@ -16,6 +16,12 @@ export class FakeDrive implements DriveClient {
   calls: string[] = [];
   failOn: { op: keyof DriveClient; nth?: number } | null = null;
   sessions = new Map<string, { name: string; mimeType: string; size: number; parentId: string; origin: string }>();
+  /** Permissões de leitor criadas pelo ERP: id -> { pasta, e-mail }. */
+  permissions = new Map<string, { folderId: string; email: string; role: 'reader' }>();
+  /** Tamanhos pedidos ao gerar imagem (miniatura x imagem grande). */
+  thumbnailSizes: number[] = [];
+  /** IDs sem imagem gerada pelo Drive (simula formato que o Drive não converte). */
+  noThumbnail = new Set<string>();
   private seq = 0;
   private count: Record<string, number> = {};
 
@@ -73,11 +79,33 @@ export class FakeDrive implements DriveClient {
     if (!f || f.folder) return null;
     return { id: f.id, name: f.name, mimeType: f.mimeType, size: f.size, parents: f.parentId ? [f.parentId] : [], trashed: f.trashed };
   }
-  async thumbnail(id: string) {
+  async thumbnail(id: string, size = 220) {
     this.check('thumbnail');
+    this.thumbnailSizes.push(size);
     const f = this.folders.get(id);
-    if (!f || !f.mimeType.startsWith('image/')) return null;
-    return { contentType: 'image/png', body: new Uint8Array([137, 80, 78, 71]).buffer };
+    if (!f || !f.mimeType.startsWith('image/') || this.noThumbnail.has(id)) return null;
+    return { contentType: 'image/jpeg', body: new Uint8Array([255, 216, size % 256]).buffer };
+  }
+  async download(id: string, maxBytes: number) {
+    this.check('download');
+    const f = this.folders.get(id);
+    if (!f || f.folder || f.size > maxBytes) return null;
+    return { contentType: f.mimeType, body: new Uint8Array([1, 2, 3]).buffer };
+  }
+  async shareReader(folderId: string, email: string) {
+    this.check('shareReader');
+    const id = `permissao-${++this.seq}`;
+    this.permissions.set(id, { folderId, email, role: 'reader' });
+    return id;
+  }
+  async revokePermission(folderId: string, permissionId: string) {
+    this.check('revokePermission');
+    const p = this.permissions.get(permissionId);
+    if (p && p.folderId === folderId) this.permissions.delete(permissionId);
+  }
+  /** Permissões de um e-mail numa pasta. */
+  permissionsOf(email: string) {
+    return [...this.permissions.entries()].filter(([, p]) => p.email === email).map(([id, p]) => ({ id, ...p }));
   }
 
   /** O que o navegador faz: envia o arquivo para a sessão. Devolve o ID que o Drive responde. */

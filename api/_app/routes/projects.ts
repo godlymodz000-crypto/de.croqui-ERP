@@ -1,8 +1,9 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { auditLog, deletionRequests, projects, stages, users, type Project } from '../db/schema.js';
+import { auditLog, projects, stages, users, type Project } from '../db/schema.js';
 import { audit } from '../audit.js';
+import { closePending } from '../notifications-service.js';
 import { createProjectFolder, folderUrl, projectFolderName, type DriveClient } from '../drive.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -212,7 +213,8 @@ export async function projectsRoutes(app: FastifyInstance, { db, drive }: { db: 
     },
   );
 
-  // Exclusão lógica: o projeto sai do ERP, a pasta e os arquivos continuam no Drive.
+  // Exclusão lógica no ERP; a pasta do projeto vai para a lixeira do Drive (recuperável por 30 dias).
+  // Se o Drive falhar, nada muda no banco.
   app.delete<{ Params: { id: string } }>(
     '/projects/:id',
     { config: { permission: 'projects.delete' } },
@@ -220,22 +222,24 @@ export async function projectsRoutes(app: FastifyInstance, { db, drive }: { db: 
       const current = await findActive(request.params.id);
       if (!current) return reply.code(404).send({ error: 'not_found' });
       const actor = request.user!;
+      try {
+        await drive.trashFolder(current.driveFolderId);
+      } catch (err) {
+        return driveFailed(request, reply, err);
+      }
       await db.transaction(async (tx) => {
         await tx
           .update(projects)
           .set({ deletedAt: sql`now()` })
           .where(eq(projects.id, current.id));
         // Pedido pendente de excluir este projeto fica resolvido pela exclusão direta.
-        await tx
-          .update(deletionRequests)
-          .set({ status: 'approved', decidedBy: actor.id, decidedAt: new Date() })
-          .where(and(eq(deletionRequests.itemType, 'project'), eq(deletionRequests.itemId, current.id), eq(deletionRequests.status, 'pending')));
+        await closePending(tx, 'project', current.id, actor.id);
         await audit(tx, {
           userId: actor.id,
           action: 'project.delete',
           entity: 'project',
           entityId: current.id,
-          payload: { name: current.name, clientName: current.clientName, driveFolderId: current.driveFolderId, keptInDrive: true },
+          payload: { name: current.name, clientName: current.clientName, driveFolderId: current.driveFolderId, trashedInDrive: true },
         });
       });
       return reply.code(204).send();

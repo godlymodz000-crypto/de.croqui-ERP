@@ -4,6 +4,7 @@ import { Badge, Icon, IconButton } from '../ui/ds';
 import { useIsMobile } from '../ui/useMediaQuery';
 import { AppIcon } from '../ui/AppIcon';
 import { logout, type SessionUser } from '../session';
+import { NotificationBell, NotificationsProvider, useNotifications } from './NotificationBell';
 import logo from '../design-system/assets/logo/decroqui-imagotipo-horizontal-escuro.svg';
 
 export const NAV_ITEMS = [
@@ -21,7 +22,16 @@ const ROLE_LABEL: Record<SessionUser['role'], string> = {
   viewer: 'Somente leitura',
 };
 
+/** Moldura do ERP. As notificações ficam num provider só, usado pelo sino e pelo menu do avatar. */
 export function AppShell({ user }: { user: SessionUser }) {
+  return (
+    <NotificationsProvider>
+      <Shell user={user} />
+    </NotificationsProvider>
+  );
+}
+
+function Shell({ user }: { user: SessionUser }) {
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
@@ -91,6 +101,7 @@ export function AppShell({ user }: { user: SessionUser }) {
             />
           </div>
           <img className="topbar__logo" src={logo} alt="De.Croqui" />
+          <NotificationBell />
           <UserMenu user={user} />
         </header>
         <main className="shell__content">
@@ -110,6 +121,7 @@ function initials(user: SessionUser) {
 function UserMenu({ user }: { user: SessionUser }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const pending = useNotifications().state?.pendingDeletionRequests ?? 0;
 
   useEffect(() => {
     if (!open) return;
@@ -146,6 +158,11 @@ function UserMenu({ user }: { user: SessionUser }) {
           {user.role === 'admin' && (
             <Link className="user-menu__item" role="menuitem" to="/pedidos-de-exclusao" onClick={() => setOpen(false)}>
               Pedidos de exclusão
+              {pending > 0 && (
+                <span className="user-menu__count" aria-label={`${pending} ${pending === 1 ? 'pendente' : 'pendentes'}`}>
+                  {pending}
+                </span>
+              )}
             </Link>
           )}
           <button className="user-menu__item" role="menuitem" onClick={logout}>

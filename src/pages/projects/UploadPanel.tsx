@@ -4,12 +4,16 @@ import { AppIcon } from '../../ui/AppIcon';
 import { useIsMobile } from '../../ui/useMediaQuery';
 import { formatSize, SUBFOLDER_LABEL, uploadFile, UploadError, type ProjectFile } from '../../api/files';
 
-type Target = 'photos' | 'contracts';
+type Target = 'photos' | 'contracts' | 'files';
 
 const TARGETS: Record<Target, string> = {
   photos: 'Imagens do projeto, da obra e de referência.',
-  contracts: 'Contratos e demais documentos do projeto. Para imagens, use Fotos.',
+  contracts: 'Contratos e documentos assinados. Para imagens, use Fotos.',
+  files: 'Qualquer tipo de arquivo, como plantas em CAD, modelos do SketchUp e PDFs.',
 };
+
+/** Extensões de CAD e modelagem que vão direto para Arquivos. */
+const PROJECT_FILE_EXT = /\.(dwg|dxf|skp|rvt|rfa|ifc|3dm|pln|max|blend|obj|fbx)$/i;
 
 type State = { phase: 'idle' } | { phase: 'sending'; sent: number } | { phase: 'failed'; sent: number };
 
@@ -37,6 +41,7 @@ export function UploadPanel({ projectId, onClose, onUploaded }: { projectId: str
     setFile(f);
     setState({ phase: 'idle' });
     if (f.type.startsWith('image/')) setTarget('photos');
+    else if (PROJECT_FILE_EXT.test(f.name)) setTarget('files');
   }
 
   function onDrop(e: DragEvent) {
@@ -84,7 +89,7 @@ export function UploadPanel({ projectId, onClose, onUploaded }: { projectId: str
           <Select
             label="Pasta · obrigatório"
             variant="box"
-            options={(['photos', 'contracts'] as Target[]).map((t) => ({ value: t, label: SUBFOLDER_LABEL[t] }))}
+            options={(['photos', 'contracts', 'files'] as Target[]).map((t) => ({ value: t, label: SUBFOLDER_LABEL[t] }))}
             value={target}
             disabled={sending}
             onChange={(e) => setTarget(e.target.value as Target)}

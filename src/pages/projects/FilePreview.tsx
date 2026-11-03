@@ -1,16 +1,22 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon, IconButton } from '../../ui/ds';
 import { useIsMobile } from '../../ui/useMediaQuery';
-import { fileKind, formatSize, SUBFOLDER_LABEL, type ProjectFile } from '../../api/files';
+import { fileKind, filesApi, formatSize, SUBFOLDER_LABEL, type ProjectFile } from '../../api/files';
 import { formatLastAccess } from '../collaborators/format';
 
+/** Imagens abrem dentro do ERP; PDF, CAD e o resto abrem no Drive. */
+export function isImage(file: ProjectFile) {
+  return file.mimeType.startsWith('image/');
+}
+
 /**
- * Visualização dentro do ERP, com o link de pré-visualização do Drive (quadro "visualizar arquivo").
- * O Google só mostra o arquivo para quem está conectado com uma conta que tenha acesso à pasta.
+ * Visualização da imagem dentro do ERP (quadro "visualizar arquivo"). A imagem vem do servidor do ERP,
+ * em tamanho grande, e não depende do login Google no navegador.
  */
 export function FilePreview({ file, onClose }: { file: ProjectFile; onClose: () => void }) {
   const closeRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const [image, setImage] = useState<'loading' | 'ready' | 'failed'>('loading');
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -48,7 +54,19 @@ export function FilePreview({ file, onClose }: { file: ProjectFile; onClose: () 
             <IconButton icon="x" label="Fechar" variant="ghost" size={isMobile ? 'md' : 'sm'} onClick={onClose} />
           </div>
         </header>
-        <iframe className="preview__frame" src={file.previewUrl} title={`Pré-visualização de ${file.name}`} allow="autoplay" />
+        <div className="preview__stage">
+          {image === 'failed' ? (
+            <p className="preview__message">Não foi possível carregar a imagem. Use Abrir no Drive para ver o arquivo original.</p>
+          ) : (
+            <img
+              className={`preview__image${image === 'loading' ? ' is-loading' : ''}`}
+              src={filesApi.imageUrl(file.id)}
+              alt={file.name}
+              onLoad={() => setImage('ready')}
+              onError={() => setImage('failed')}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

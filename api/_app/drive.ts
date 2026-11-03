@@ -11,7 +11,7 @@ const FOLDER_MIME = 'application/vnd.google-apps.folder';
 
 export const ROOT_FOLDER_NAME = 'De.Croqui ERP';
 export const PROJECTS_FOLDER_NAME = 'Projetos';
-export const PROJECT_SUBFOLDERS = ['Orçamentos', 'Apresentações', 'Contratos', 'Fotos'] as const;
+export const PROJECT_SUBFOLDERS = ['Orçamentos', 'Apresentações', 'Contratos', 'Fotos', 'Arquivos'] as const;
 
 const ROOT_KEY = 'drive_root_folder_id';
 const PROJECTS_KEY = 'drive_projects_folder_id';
@@ -24,7 +24,7 @@ export interface DriveClient {
   renameFolder(id: string, name: string): Promise<void>;
   /** A pasta existe e não está na lixeira. */
   folderExists(id: string): Promise<boolean>;
-  /** Move para a lixeira (recuperável por 30 dias). Só usado para desfazer uma criação que falhou no meio. */
+  /** Move para a lixeira (recuperável por 30 dias). Ao excluir projeto e ao desfazer uma criação que falhou no meio. */
   trashFolder(id: string): Promise<void>;
   /** ID da subpasta com esse nome dentro de `parentId`, se existir e não estiver na lixeira. */
   findChildFolder(parentId: string, name: string): Promise<string | null>;
@@ -36,8 +36,19 @@ export interface DriveClient {
   getFile(id: string): Promise<DriveFile | null>;
   /** Move o arquivo para a lixeira do Drive (recuperável por 30 dias). */
   trashFile(id: string): Promise<void>;
-  /** Miniatura gerada pelo Drive, quando existe. */
-  thumbnail(id: string): Promise<{ contentType: string; body: ArrayBuffer } | null>;
+  /** Imagem gerada pelo Drive com o lado maior em `size` px (miniatura ou visualização grande), quando existe. */
+  thumbnail(id: string, size?: number): Promise<Image | null>;
+  /** Conteúdo do arquivo, só quando cabe em `maxBytes`. Usado quando o Drive não gera a imagem. */
+  download(id: string, maxBytes: number): Promise<Image | null>;
+  /** Compartilha a pasta como leitor com o e-mail, sem e-mail do Google. Devolve o ID da permissão. */
+  shareReader(folderId: string, email: string): Promise<string>;
+  /** Revoga só aquela permissão. Permissão que já não existe conta como revogada. */
+  revokePermission(folderId: string, permissionId: string): Promise<void>;
+}
+
+export interface Image {
+  contentType: string;
+  body: ArrayBuffer;
 }
 
 export interface DriveFile {
@@ -54,11 +65,8 @@ export const SUBFOLDER_NAMES: Record<Subfolder, (typeof PROJECT_SUBFOLDERS)[numb
   presentations: 'Apresentações',
   contracts: 'Contratos',
   photos: 'Fotos',
+  files: 'Arquivos',
 };
-
-export function filePreviewUrl(id: string): string {
-  return `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
-}
 
 export function fileViewUrl(id: string): string {
   return `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
@@ -186,14 +194,44 @@ export function createAdminDrive({ config, db, fetch: doFetch = fetch }: { confi
       return { ...f, size: Number(f.size ?? 0), parents: f.parents ?? [], trashed: !!f.trashed };
     },
 
-    async thumbnail(id) {
+    async thumbnail(id, size = 220) {
       const res = await call(`${FILES_ENDPOINT}/${encodeURIComponent(id)}?fields=thumbnailLink`);
       if (!res.ok) return null;
       const { thumbnailLink } = (await res.json()) as { thumbnailLink?: string };
       if (!thumbnailLink) return null;
-      const img = await doFetch(thumbnailLink, { headers: { authorization: `Bearer ${await accessToken()}` } });
+      // O link termina em "=s220"; trocar o número pede a mesma imagem em outro tamanho.
+      const sized = /=s\d+$/.test(thumbnailLink) ? thumbnailLink.replace(/=s\d+$/, `=s${size}`) : thumbnailLink;
+      const img = await doFetch(sized, { headers: { authorization: `Bearer ${await accessToken()}` } });
       if (!img.ok) return null;
       return { contentType: img.headers.get('content-type') ?? 'image/jpeg', body: await img.arrayBuffer() };
+    },
+
+    async download(id, maxBytes) {
+      const meta = await call(`${FILES_ENDPOINT}/${encodeURIComponent(id)}?fields=size,mimeType`);
+      if (!meta.ok) return null;
+      const { size, mimeType } = (await meta.json()) as { size?: string; mimeType?: string };
+      if (!size || Number(size) > maxBytes) return null;
+      const res = await call(`${FILES_ENDPOINT}/${encodeURIComponent(id)}?alt=media`);
+      if (!res.ok) return null;
+      return { contentType: mimeType ?? 'application/octet-stream', body: await res.arrayBuffer() };
+    },
+
+    async shareReader(folderId, email) {
+      const res = await call(`${FILES_ENDPOINT}/${encodeURIComponent(folderId)}/permissions?sendNotificationEmail=false&fields=id`, {
+        method: 'POST',
+        body: JSON.stringify({ type: 'user', role: 'reader', emailAddress: email }),
+      });
+      if (!res.ok) throw new DriveError(`Compartilhar a pasta falhou (${res.status}).`);
+      const { id } = (await res.json()) as { id?: string };
+      if (!id) throw new DriveError('Resposta do Drive sem ID da permissão.');
+      return id;
+    },
+
+    async revokePermission(folderId, permissionId) {
+      const res = await call(`${FILES_ENDPOINT}/${encodeURIComponent(folderId)}/permissions/${encodeURIComponent(permissionId)}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok && res.status !== 404) throw new DriveError(`Revogar o acesso falhou (${res.status}).`);
     },
   };
 
@@ -202,7 +240,8 @@ export function createAdminDrive({ config, db, fetch: doFetch = fetch }: { confi
       method: 'PATCH',
       body: JSON.stringify({ trashed: true }),
     });
-    if (!res.ok) throw new DriveError(`Mover para a lixeira falhou (${res.status}).`);
+    // 404: já não existe no Drive (apagado por fora); não há o que mover.
+    if (!res.ok && res.status !== 404) throw new DriveError(`Mover para a lixeira falhou (${res.status}).`);
   }
 }
 
@@ -254,4 +293,10 @@ export async function createProjectFolder(db: Db, drive: DriveClient, clientName
 
 export async function driveRootFolderId(db: Db): Promise<string | null> {
   return readSetting(db, ROOT_KEY);
+}
+
+/** ID de "De.Croqui ERP", criando a estrutura se ainda não existir (o convite pode vir antes do primeiro projeto). */
+export async function ensureRootFolder(db: Db, drive: DriveClient): Promise<string> {
+  await ensureProjectsFolder(db, drive);
+  return (await readSetting(db, ROOT_KEY))!;
 }

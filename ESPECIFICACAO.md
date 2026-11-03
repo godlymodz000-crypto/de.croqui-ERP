@@ -54,7 +54,7 @@ Navegador (React)  <-- localhost:5173 (dev) -->  Back-end (Fastify, localhost:30
 
 Tabelas principais (nomes em inglês, no código):
 
-- **users**: `id`, `google_sub` (único, identificador fixo da conta Google), `email` (único), `name`, `role` (`admin` | `member` | `viewer`), `status` (`invited` | `active` | `disabled`), `last_login_at`, `created_at`.
+- **users**: `id`, `google_sub` (único, identificador fixo da conta Google), `email` (único), `name`, `role` (`admin` | `member` | `viewer`), `status` (`invited` | `active` | `disabled`), `drive_permission_id` (permissão de leitor na pasta raiz do Drive, ver seção 7), `last_login_at`, `created_at`.
 - **sessions**: `id`, `user_id`, `expires_at`.
 - **stages**: `id`, `name`, `position`, `created_at`. Etapas do Kanban (padrão: Briefing, Levantamento, Projeto, Orçamento, Aprovação, Execução, Entrega).
 - **projects**: `id`, `name`, `client_name`, `stage_id`, `owner_user_id`, `drive_folder_id`, `deadline`, `status`, `created_at`, `updated_at`.
@@ -64,6 +64,7 @@ Tabelas principais (nomes em inglês, no código):
 - **budgets**: `id`, `project_id`, `number`, `status` (`draft` | `sent` | `approved`), `data` (JSON com o conteúdo do editor), `total_cents`, `created_by`, `updated_at`.
 - **presentations**: `id`, `project_id`, `status`, `data` (JSON com o conteúdo do editor), `updated_at`.
 - **audit_log**: `id`, `user_id`, `action`, `entity`, `entity_id`, `payload` (JSON), `at`.
+- **notifications**: `id`, `user_id` (destinatário), `type`, `title`, `body`, `link`, `read_at`, `created_at`. Notificações dentro do ERP (Fase 3c).
 
 Regras:
 - Valores monetários em centavos, inteiros. Nunca float.
@@ -90,15 +91,18 @@ Regras:
 | Pedir exclusão de arquivo, nota ou projeto | sim | sim | não |
 | Excluir arquivo ou nota diretamente | sim | não | não |
 | Ver, aprovar e recusar pedidos de exclusão | sim | não | não |
+| Ver e marcar como lidas as próprias notificações | sim | sim | sim |
+| Tentar de novo o compartilhamento ou a revogação no Drive | sim | não | não |
 
 Regra de implementação: a permissão é verificada no back-end em toda rota de escrita. A interface só esconde botões; não é ela que protege os dados.
 
-Permissões no código (`api/_app/permissions.ts`): `users.read`, `users.manage`, `workspace.read`, `projects.write`, `projects.move`, `events.write`, `stages.manage`, `projects.delete`, `documents.write`, `documents.export`, `content.write`, `deletion.request`, `content.delete`, `deletion.decide`.
+Permissões no código (`api/_app/permissions.ts`): `users.read`, `users.manage`, `workspace.read`, `projects.write`, `projects.move`, `events.write`, `stages.manage`, `projects.delete`, `documents.write`, `documents.export`, `content.write`, `deletion.request`, `content.delete`, `deletion.decide`, `notifications.own` (todos os papéis: ler e marcar como lidas as próprias notificações; a de outra pessoa responde 404).
 
 Pedidos de exclusão (Fase 3b):
 - Excluir arquivo, nota ou projeto é só da administração. O colaborador pede a exclusão, com motivo opcional, e a administração aprova ou recusa na tela "Pedidos de exclusão" (menu do avatar).
 - Só existe um pedido pendente por item. Quem pediu não aprova nem recusa o próprio pedido.
-- Aprovar um arquivo manda o arquivo para a lixeira do Drive e marca o registro como excluído. Aprovar nota ou projeto só marca o registro no ERP; a pasta do projeto continua no Drive.
+- Aprovar um arquivo manda o arquivo para a lixeira do Drive e marca o registro como excluído. Aprovar um projeto manda a pasta do projeto para a lixeira do Drive (Fase 3c). Aprovar nota só marca o registro no ERP.
+- Se o Drive falhar ao aprovar, nada muda e o pedido continua pendente.
 - Exclusão direta pela administração fecha o pedido pendente do mesmo item.
 - Tudo é exclusão lógica (`deleted_at`) e fica no `audit_log`.
 
@@ -135,6 +139,7 @@ De.Croqui ERP/                          <- pasta raiz, criada na primeira execu�
       Apresentações/
       Contratos/
       Fotos/
+      Arquivos/                         <- Fase 3c: qualquer tipo, como CAD, SketchUp e PDF
 ```
 
 - A pasta raiz é criada uma vez, e o ID fica salvo em configuração.
@@ -149,14 +154,27 @@ Configuração: os IDs de "De.Croqui ERP" e de "Projetos" ficam na tabela `app_s
 Arquivos do projeto (Fase 3b):
 - Os metadados ficam em `project_files`: ID no Drive, nome, tipo, tamanho, subpasta, origem (envio ou PDF exportado), quem enviou e quando. A lista da tela vem dessa tabela; um arquivo posto direto no Drive, fora do ERP, não aparece na lista.
 - Envio: o servidor abre uma sessão de upload retomável no Drive, na subpasta escolhida, liberada para o endereço do ERP, e devolve o endereço da sessão com uma autorização assinada. O navegador envia o arquivo direto para o Drive, sem passar pelo servidor do ERP (limite de cerca de 4,5 MB por requisição na Vercel). No fim, o navegador confirma; o servidor confere no Drive se o arquivo está na pasta autorizada, com o nome e o tamanho autorizados, e só então grava o registro. Envio que falha ou é cancelado não deixa registro no banco; arquivo que não confere vai para a lixeira.
-- Pela tela do projeto só dá para enviar para Fotos ou Contratos. A raiz da pasta do projeto não é opção.
+- Pela tela do projeto dá para enviar para Fotos, Contratos ou Arquivos (Fase 3c). Arquivos aceita qualquer tipo, como CAD (DWG, DXF), SketchUp (SKP) e PDF; os nomes continuam sem etiqueta extra. Projetos criados antes da Fase 3c ganham a subpasta Arquivos no primeiro envio. A raiz da pasta do projeto não é opção.
 - PDF exportado no editor: vai para Orçamentos ou Apresentações com o nome "<Orçamento | Apresentação> - <Projeto> - <dd-mm-aaaa>.pdf", pelo mesmo caminho de envio direto, e aparece na lista de arquivos. Os editores chegam na Fase 6 e usam `savePdfExport` (`src/api/files.ts`).
-- Visualização: dentro do ERP, numa janela com o link de pré-visualização do Drive (`/file/d/<id>/preview`). O Google só mostra o arquivo para quem está conectado, no navegador, com uma conta que tenha acesso à pasta; por isso a pasta raiz precisa estar compartilhada com cada colaborador. As miniaturas das imagens passam pelo servidor do ERP e não dependem disso.
+- Visualização (Fase 3c): imagens abrem dentro do ERP, em tamanho grande, servidas pelo servidor do ERP (`GET /files/:id/image`), sem depender da pré-visualização do Drive nem do login Google no navegador. O servidor pede ao Drive a versão da imagem com 1600 px no lado maior; quando o Drive não gera essa versão, passa o original só até 4 MB (limite de resposta da Vercel). PDF, CAD e os demais tipos abrem pelo botão "Abrir no Drive". As miniaturas da lista também passam pelo servidor do ERP.
 - Excluir arquivo (administração, direto ou ao aprovar um pedido) manda o arquivo para a lixeira do Drive, de onde ele pode ser recuperado por 30 dias.
+- Excluir projeto (Fase 3c), direto ou ao aprovar um pedido, manda a pasta do projeto para a lixeira do Drive, nunca apaga de vez. A confirmação avisa que a lixeira guarda a pasta por 30 dias. Se o Drive falhar, o projeto continua no ERP e nada muda. Pasta que já não existe no Drive não impede a exclusão.
 
 Notas do projeto: ficam só no banco (`project_notes`), com texto, autor e data. Não vão para o Drive. Edição de nota fica para depois.
 
-Compartilhamento: a pasta raiz é compartilhada com cada colaborador ao ser convidado, para ele também ver os arquivos pelo Drive, como Leitor ou Editor conforme o papel. Essa etapa é um passo de convite, não é checada a cada operação.
+Compartilhamento automático (Fase 3c):
+- Ao convidar, o ERP compartilha a pasta raiz "De.Croqui ERP" com o e-mail, sempre como leitor, qualquer que seja o papel, sem e-mail do Google. O ID da permissão fica em `users.drive_permission_id`, para revogar depois só ela, sem mexer em outras permissões. Se a pasta raiz ainda não existir, ela é criada no convite.
+- Alterar o papel não muda a permissão no Drive.
+- Desativar revoga a permissão. Remover (convidado ou desativado) revoga antes de apagar o registro; se o Drive falhar, nada é removido.
+- Escrita no Drive continua só pelo token do administrador. A conta do administrador é a dona dos arquivos e não recebe permissão.
+- Se o compartilhamento falhar ao convidar, o convite continua salvo. Se a revogação falhar ao desativar, a conta continua desativada no ERP. Nos dois casos, cada administrador ativo recebe uma notificação, e a tela de Colaboradores mostra embaixo do e-mail "Pasta do Drive não compartilhada · Tentar de novo" ou "Acesso ao Drive não revogado · Tentar de novo" (`POST /users/:id/drive-access`).
+- Quem foi convidado antes da Fase 3c aparece com "Pasta do Drive não compartilhada", e o administrador compartilha pelo mesmo botão.
+
+Notificações (Fase 3c), só dentro do ERP, sem e-mail nem push:
+- Administradores ativos: chegou um pedido de exclusão (menos quem pediu); uma ação no Drive falhou e precisa ser repetida (compartilhar ou revogar).
+- Quem pediu: o pedido foi aprovado ou recusado, inclusive quando a administração exclui o item direto e isso fecha o pedido.
+- Sino no cabeçalho, antes do avatar, com o contador de não lidas. A lista mostra as 20 mais recentes; clicar leva ao item e marca como lida; há "Marcar todas como lidas". O sino se atualiza a cada 30 segundos enquanto a página está aberta e visível.
+- No menu do avatar, para o administrador, "Pedidos de exclusão" mostra a quantidade de pedidos pendentes. Some quando zera.
 
 Escopo do Drive: `drive` completo, para ver as pastas compartilhadas pelo administrador. O escopo `drive.file` não serve, porque não mostra as pastas criadas por outra conta.
 

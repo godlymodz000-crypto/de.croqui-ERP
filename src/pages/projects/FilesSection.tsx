@@ -4,7 +4,7 @@ import { fileKind, filesApi, formatSize, SUBFOLDER_LABEL, type ProjectFile, type
 import { formatLastAccess } from '../collaborators/format';
 import { RowMenu, type RowAction } from '../collaborators/RowMenu';
 
-const FILTERS: Subfolder[] = ['photos', 'contracts', 'presentations', 'budgets'];
+const FILTERS: Subfolder[] = ['photos', 'contracts', 'files', 'presentations', 'budgets'];
 
 function Thumb({ file }: { file: ProjectFile }) {
   const [failed, setFailed] = useState(false);
@@ -79,14 +79,14 @@ export function FilesSection({
         {failed && <p className="people-table__message">Não foi possível carregar os arquivos. Tente de novo em instantes.</p>}
         {files !== null && list.length === 0 && (
           <p className="people-table__message">
-            Nenhum arquivo ainda.{canUpload && ' Use Enviar arquivo para mandar fotos e documentos para a pasta do projeto.'}
+            Nenhum arquivo ainda.{canUpload && ' Use Enviar arquivo para mandar fotos, documentos e arquivos de projeto para a pasta do projeto.'}
           </p>
         )}
         {files !== null && list.length > 0 && visible.length === 0 && <p className="people-table__message">Nenhum arquivo nesta pasta.</p>}
         {visible.map((f) => (
           <div key={f.id} className="files-table__row" role="row">
             <span role="cell" className="file-cell">
-              <button type="button" className="file-cell__open" onClick={() => onPreview(f)} aria-label={`Visualizar ${f.name}`}>
+              <button type="button" className="file-cell__open" onClick={() => onPreview(f)} aria-label={f.mimeType.startsWith('image/') ? `Visualizar ${f.name}` : `Abrir ${f.name} no Drive`}>
                 <Thumb file={f} />
               </button>
               <span className="file-cell__text">

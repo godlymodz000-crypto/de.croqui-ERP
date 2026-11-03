@@ -19,6 +19,7 @@ import { requirePermission, type Permission } from './permissions.js';
 import { usersRoutes } from './routes/users.js';
 import { projectsRoutes } from './routes/projects.js';
 import { filesRoutes } from './routes/files.js';
+import { notificationsRoutes } from './routes/notifications.js';
 import { createAdminDrive, type DriveClient } from './drive.js';
 
 export const SESSION_COOKIE = 'decroqui_sid';
@@ -156,8 +157,8 @@ export async function buildApp({ config, db, google, drive, logger = false, extr
       return { id: u.id, email: u.email, name: u.name, role: u.role };
     });
 
-    await protectedRoutes.register(usersRoutes, { db });
     const driveClient = drive ?? createAdminDrive({ config, db });
+    await protectedRoutes.register(usersRoutes, { db, drive: driveClient, adminEmail: config.adminEmail });
     await protectedRoutes.register(projectsRoutes, { db, drive: driveClient });
     await protectedRoutes.register(filesRoutes, {
       db,
@@ -165,6 +166,7 @@ export async function buildApp({ config, db, google, drive, logger = false, extr
       sessionSecret: config.sessionSecret,
       appOrigin: new URL(config.appUrl).origin,
     });
+    await protectedRoutes.register(notificationsRoutes, { db });
     if (extraProtectedRoutes) await protectedRoutes.register(extraProtectedRoutes);
   });
 

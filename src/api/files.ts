@@ -1,12 +1,13 @@
 import { ApiError, request } from './http';
 
-export type Subfolder = 'budgets' | 'presentations' | 'contracts' | 'photos';
+export type Subfolder = 'budgets' | 'presentations' | 'contracts' | 'photos' | 'files';
 
 export const SUBFOLDER_LABEL: Record<Subfolder, string> = {
   photos: 'Fotos',
   contracts: 'Contratos',
   presentations: 'Apresentações',
   budgets: 'Orçamentos',
+  files: 'Arquivos',
 };
 
 export interface ProjectFile {
@@ -19,7 +20,6 @@ export interface ProjectFile {
   createdAt: string;
   uploadedBy: string | null;
   driveFileId: string;
-  previewUrl: string;
   driveUrl: string;
   hasThumbnail: boolean;
   pendingDeletion: boolean;
@@ -63,6 +63,8 @@ export const filesApi = {
   list: (projectId: string) => request<ProjectFile[]>('GET', `/projects/${projectId}/files`),
   remove: (id: string) => request<void>('DELETE', `/files/${id}`),
   thumbnailUrl: (id: string) => `/api/files/${id}/thumbnail`,
+  /** Imagem grande servida pelo ERP (não depende do login Google no navegador). */
+  imageUrl: (id: string) => `/api/files/${id}/image`,
 };
 
 export const notesApi = {
@@ -127,7 +129,7 @@ async function sendThroughSession(
 export async function uploadFile(
   projectId: string,
   file: File,
-  subfolder: 'photos' | 'contracts',
+  subfolder: 'photos' | 'contracts' | 'files',
   onProgress: (sent: number) => void,
   signal?: AbortSignal,
 ): Promise<ProjectFile> {

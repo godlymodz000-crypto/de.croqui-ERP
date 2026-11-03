@@ -148,7 +148,7 @@ describe('Permissões de projetos (seção 5), cada linha em cada papel', () => 
 });
 
 describe('Criar projeto (aceite: cria a pasta no Drive com as subpastas)', () => {
-  it('cria "De.Croqui ERP/Projetos/<cliente> - <projeto>" com Orçamentos, Apresentações, Contratos e Fotos', async () => {
+  it('cria "De.Croqui ERP/Projetos/<cliente> - <projeto>" com Orçamentos, Apresentações, Contratos, Fotos e Arquivos', async () => {
     const { user, headers } = await as('member');
     const res = await createProject(headers);
     expect(res.statusCode).toBe(201);
@@ -161,7 +161,7 @@ describe('Criar projeto (aceite: cria a pasta no Drive com as subpastas)', () =>
     const [folder] = drive.childrenOf(projetos.id);
     expect(folder.name).toBe('Helena Prado - Casa Alecrim');
     expect(drive.childrenOf(folder.id).map((f) => f.name)).toEqual([...PROJECT_SUBFOLDERS]);
-    expect(PROJECT_SUBFOLDERS).toEqual(['Orçamentos', 'Apresentações', 'Contratos', 'Fotos']);
+    expect(PROJECT_SUBFOLDERS).toEqual(['Orçamentos', 'Apresentações', 'Contratos', 'Fotos', 'Arquivos']);
 
     expect(body.driveFolderId).toBe(folder.id);
     expect(body.driveUrl).toBe(`https://drive.google.com/drive/folders/${folder.id}`);
@@ -267,7 +267,7 @@ describe('Renomear projeto (aceite: mantém o drive_folder_id)', () => {
     const [row] = await projectRows();
     expect(row.driveFolderId).toBe(created.driveFolderId);
     expect(row.name).toBe('Casa Alecrim Reforma');
-    expect(drive.childrenOf(created.driveFolderId)).toHaveLength(4);
+    expect(drive.childrenOf(created.driveFolderId)).toHaveLength(5);
   });
 
   it('grava no audit_log o antes e o depois', async () => {
@@ -304,15 +304,15 @@ describe('Renomear projeto (aceite: mantém o drive_folder_id)', () => {
   });
 });
 
-describe('Excluir projeto: só no ERP, a pasta continua no Drive', () => {
-  it('marca deleted_at, some da lista, não chama o Drive e registra no audit_log', async () => {
+describe('Excluir projeto: sai do ERP e a pasta vai para a lixeira do Drive (Fase 3c)', () => {
+  it('marca deleted_at, some da lista, manda a pasta para a lixeira e registra no audit_log', async () => {
     const admin = await as('admin');
     const created = (await createProject(admin.headers)).json();
     drive.resetCalls();
     const res = await app.inject({ method: 'DELETE', url: `/projects/${created.id}`, headers: admin.headers });
     expect(res.statusCode).toBe(204);
-    expect(drive.calls).toEqual([]);
-    expect(drive.folders.get(created.driveFolderId)?.trashed).toBe(false);
+    expect(drive.calls).toEqual(['trashFolder']);
+    expect(drive.folders.get(created.driveFolderId)?.trashed).toBe(true);
 
     const [row] = await projectRows();
     expect(row.deletedAt).not.toBeNull();
@@ -322,7 +322,7 @@ describe('Excluir projeto: só no ERP, a pasta continua no Drive', () => {
 
     const entries = await auditFor(created.id);
     expect(entries.at(-1)).toMatchObject({ action: 'project.delete', userId: admin.user.id });
-    expect(entries.at(-1)?.payload).toMatchObject({ driveFolderId: created.driveFolderId, keptInDrive: true });
+    expect(entries.at(-1)?.payload).toMatchObject({ driveFolderId: created.driveFolderId, trashedInDrive: true });
   });
 });
 

@@ -13,7 +13,8 @@ import {
   type Subfolder,
 } from '../db/schema.js';
 import { audit } from '../audit.js';
-import { filePreviewUrl, fileViewUrl, projectSubfolderId, type DriveClient } from '../drive.js';
+import { fileViewUrl, projectSubfolderId, type DriveClient } from '../drive.js';
+import { closePending, noticeDecision, noticeNewRequest } from '../notifications-service.js';
 import { signGrant, verifyGrant, UPLOAD_GRANT_TTL_MS, type UploadGrant } from '../upload-token.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -21,9 +22,13 @@ const MAX_FILE_NAME = 200;
 const MAX_FILE_SIZE = 2 * 1024 ** 3;
 const MAX_NOTE = 5000;
 const MAX_REASON = 500;
+/** Lado maior da imagem grande servida pelo ERP. */
+const IMAGE_SIZE = 1600;
+/** Sem imagem gerada pelo Drive, o original só passa pelo servidor se couber na resposta da Vercel (cerca de 4,5 MB). */
+const MAX_IMAGE_PASSTHROUGH = 4 * 1024 * 1024;
 
-/** Pelo upload da tela do projeto só dá para escolher Fotos ou Contratos; a raiz do projeto não é opção. */
-const UPLOAD_SUBFOLDERS: Subfolder[] = ['photos', 'contracts'];
+/** Pelo upload da tela do projeto: Fotos, Contratos ou Arquivos (qualquer tipo, como CAD e SketchUp). A raiz do projeto não é opção. */
+const UPLOAD_SUBFOLDERS: Subfolder[] = ['photos', 'contracts', 'files'];
 const EXPORT_KINDS = { budget: { subfolder: 'budgets', label: 'Orçamento' }, presentation: { subfolder: 'presentations', label: 'Apresentação' } } as const;
 
 type ItemType = DeletionRequest['itemType'];
@@ -93,7 +98,6 @@ export async function filesRoutes(app: FastifyInstance, { db, drive, sessionSecr
       createdAt: f.createdAt,
       uploadedBy: f.uploadedBy ? (names.get(f.uploadedBy) ?? null) : null,
       driveFileId: f.driveFileId,
-      previewUrl: filePreviewUrl(f.driveFileId),
       driveUrl: fileViewUrl(f.driveFileId),
       hasThumbnail: f.mimeType.startsWith('image/'),
       pendingDeletion: pending.has(f.id),
@@ -110,14 +114,6 @@ export async function filesRoutes(app: FastifyInstance, { db, drive, sessionSecr
       author: n.authorUserId ? (names.get(n.authorUserId) ?? null) : null,
       pendingDeletion: pending.has(n.id),
     }));
-  }
-
-  /** Fecha os pedidos pendentes de um item excluído direto pelo administrador. */
-  async function closePending(tx: Tx, type: ItemType, itemId: string, actorId: string) {
-    await tx
-      .update(deletionRequests)
-      .set({ status: 'approved', decidedBy: actorId, decidedAt: new Date() })
-      .where(and(eq(deletionRequests.itemType, type), eq(deletionRequests.itemId, itemId), eq(deletionRequests.status, 'pending')));
   }
 
   // ---------- Arquivos ----------
@@ -143,6 +139,21 @@ export async function filesRoutes(app: FastifyInstance, { db, drive, sessionSecr
     const thumb = await drive.thumbnail(file.driveFileId).catch(() => null);
     if (!thumb) return reply.code(404).send({ error: 'no_thumbnail' });
     return reply.header('content-type', thumb.contentType).header('cache-control', 'private, max-age=3600').send(Buffer.from(thumb.body));
+  });
+
+  /** Imagem grande pelo servidor do ERP, sem depender da pré-visualização do Drive nem do login Google no navegador. */
+  app.get<{ Params: { id: string } }>('/files/:id/image', { config: { permission: 'workspace.read' } }, async (request, reply) => {
+    if (!UUID_RE.test(request.params.id)) return reply.code(404).send({ error: 'not_found' });
+    const [file] = await db
+      .select()
+      .from(projectFiles)
+      .where(and(eq(projectFiles.id, request.params.id), isNull(projectFiles.deletedAt)));
+    if (!file || !file.mimeType.startsWith('image/')) return reply.code(404).send({ error: 'not_found' });
+    const image =
+      (await drive.thumbnail(file.driveFileId, IMAGE_SIZE).catch(() => null)) ??
+      (await drive.download(file.driveFileId, MAX_IMAGE_PASSTHROUGH).catch(() => null));
+    if (!image) return reply.code(404).send({ error: 'no_image' });
+    return reply.header('content-type', image.contentType).header('cache-control', 'private, max-age=3600').send(Buffer.from(image.body));
   });
 
   /** Abre a sessão no Drive e devolve o endereço de envio com a autorização assinada. */
@@ -398,6 +409,7 @@ export async function filesRoutes(app: FastifyInstance, { db, drive, sessionSecr
       entityId: req.id,
       payload: { itemType: req.itemType, itemId: req.itemId, projectId: req.projectId, requestedBy: req.requestedBy },
     });
+    await noticeDecision(tx, req, status, actorId);
   }
 
   app.post<{ Body: { itemType?: unknown; itemId?: unknown; reason?: unknown } }>(
@@ -437,6 +449,7 @@ export async function filesRoutes(app: FastifyInstance, { db, drive, sessionSecr
             entityId: r.id,
             payload: { itemType, itemId: r.itemId, projectId: r.projectId, reason: r.reason },
           });
+          await noticeNewRequest(tx, r);
           return r;
         });
         if (!created) return reply.code(409).send({ error: 'already_pending' });
@@ -524,8 +537,13 @@ export async function filesRoutes(app: FastifyInstance, { db, drive, sessionSecr
       await db.transaction((tx) => deleteNote(tx, item.note, actorId, req));
       return { id: req.id, status: 'approved' };
     }
-    // Projeto: exclusão lógica no ERP; a pasta e os arquivos continuam no Drive.
+    // Projeto: sai do ERP e a pasta vai para a lixeira do Drive. Se o Drive falhar, o pedido continua pendente.
     const project = item.project!;
+    try {
+      await drive.trashFolder(project.driveFolderId);
+    } catch (err) {
+      return driveFailed(request, reply, err);
+    }
     await db.transaction(async (tx) => {
       await tx.update(projects).set({ deletedAt: sql`now()` }).where(eq(projects.id, project.id));
       await decide(tx, req, 'approved', actorId);
@@ -534,7 +552,7 @@ export async function filesRoutes(app: FastifyInstance, { db, drive, sessionSecr
         action: 'project.delete',
         entity: 'project',
         entityId: project.id,
-        payload: { name: project.name, clientName: project.clientName, driveFolderId: project.driveFolderId, keptInDrive: true, requestId: req.id },
+        payload: { name: project.name, clientName: project.clientName, driveFolderId: project.driveFolderId, trashedInDrive: true, requestId: req.id },
       });
     });
     return { id: req.id, status: 'approved' };

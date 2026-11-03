@@ -199,7 +199,7 @@ describe('Upload direto no Drive (aceite)', () => {
     expect(s.size).toBe(6 * MB);
     expect(done.statusCode).toBe(201);
     expect(done.json()).toMatchObject({ name: 'planta-baixa.pdf', sizeBytes: 6 * MB, subfolder: 'contracts', source: 'upload', driveFileId, uploadedBy: user.name });
-    expect(done.json().previewUrl).toBe(`https://drive.google.com/file/d/${driveFileId}/preview`);
+    expect(done.json().driveUrl).toBe(`https://drive.google.com/file/d/${driveFileId}/view`);
     const list = (await app.inject({ method: 'GET', url: `/projects/${project.id}/files`, headers })).json();
     expect(list).toHaveLength(1);
     expect(list[0].name).toBe('planta-baixa.pdf');
@@ -457,7 +457,7 @@ describe('Pedidos de exclusão (aceite)', () => {
     expect(f.deletedAt).toBeNull();
   });
 
-  it('aprovar nota apaga só no ERP; aprovar projeto apaga só no ERP e a pasta fica no Drive', async () => {
+  it('aprovar nota apaga só no ERP; aprovar projeto manda a pasta para a lixeira do Drive (Fase 3c)', async () => {
     const admin = await as('admin');
     const member = await as('member');
     const project = await newProject(member.headers);
@@ -466,13 +466,14 @@ describe('Pedidos de exclusão (aceite)', () => {
     const r2 = (await app.inject({ method: 'POST', url: '/deletion-requests', headers: member.headers, payload: { itemType: 'project', itemId: project.id } })).json();
     drive.resetCalls();
     expect((await app.inject({ method: 'POST', url: `/deletion-requests/${r1.id}/approve`, headers: admin.headers })).statusCode).toBe(200);
-    expect((await app.inject({ method: 'POST', url: `/deletion-requests/${r2.id}/approve`, headers: admin.headers })).statusCode).toBe(200);
     expect(drive.calls).toEqual([]);
+    expect((await app.inject({ method: 'POST', url: `/deletion-requests/${r2.id}/approve`, headers: admin.headers })).statusCode).toBe(200);
+    expect(drive.calls).toEqual(['trashFolder']);
     const [n] = await db.select().from(schema.projectNotes);
     expect(n.deletedAt).not.toBeNull();
     const [p] = await db.select().from(schema.projects);
     expect(p.deletedAt).not.toBeNull();
-    expect(drive.folders.get(project.driveFolderId)!.trashed).toBe(false);
+    expect(drive.folders.get(project.driveFolderId)!.trashed).toBe(true);
   });
 
   it('aprovar duas vezes: 409', async () => {
