@@ -16,6 +16,8 @@ const EXTRA: Record<string, string> = {
   'arrow-right': '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
   plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  'grip-vertical':
+    '<circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>',
   'log-out':
     '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
 };

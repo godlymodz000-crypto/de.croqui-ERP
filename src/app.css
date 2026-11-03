@@ -2082,15 +2082,38 @@ a.arrow-link:hover,
   cursor: grab;
   user-select: none;
 }
+/* Quadro "arraste · alça e estados": alça no canto, menu à esquerda dela, nome sem passar por baixo. */
+.board-card.can-drag .board-card__link {
+  padding-right: var(--space-5);
+  cursor: grab;
+}
+.board-card__grip {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  display: flex;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.board-card.can-drag:hover .board-card__grip,
+.board-card--ghost .board-card__grip {
+  color: var(--text-secondary);
+}
+.board-card.can-drag .board-card__menu {
+  right: var(--space-6);
+}
 /* Cópia do cartão que segue o cursor durante o arraste (useCardDrag). */
 .board-card--ghost {
   position: fixed;
   top: 0;
   left: 0;
   z-index: 100;
+  box-shadow: var(--shadow-sm);
   pointer-events: none;
 }
-body.is-card-dragging {
+body.is-card-dragging,
+body.is-card-dragging * {
+  cursor: grabbing !important;
   user-select: none;
 }
 .board-card.is-dragging {

@@ -4,6 +4,7 @@ import { Button, Icon, Toast } from '../../ui/ds';
 import { useSession } from '../../session';
 import { useIsMobile } from '../../ui/useMediaQuery';
 import { LoadError } from '../../ui/LoadError';
+import { AppIcon } from '../../ui/AppIcon';
 import { boardApi, withCardIn, type Board, type BoardCard, type Stage } from '../../api/board';
 import { RowMenu, type RowMenuEntry } from '../collaborators/RowMenu';
 import { ProjectPanel } from '../projects/ProjectPanel';
@@ -231,6 +232,11 @@ export function ProcessesPage() {
                           </span>
                         )}
                       </div>
+                      {draggable && (
+                        <span className="board-card__grip" aria-hidden>
+                          <AppIcon name="grip-vertical" size={16} />
+                        </span>
+                      )}
                       {canMove && (
                         <RowMenu className="board-card__menu" label={`Ações de ${card.name}`} actions={cardMenu(card, stages)} />
                       )}
