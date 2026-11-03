@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigint, date, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, boolean, date, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 export const userRole = pgEnum('user_role', ['admin', 'member', 'viewer']);
 export const userStatus = pgEnum('user_status', ['invited', 'active', 'disabled']);
@@ -232,6 +232,73 @@ export const notifications = pgTable(
   ],
 );
 
+/** Tipo do evento na Agenda. Sem tipo (nulo) é o evento que veio do Google sem essa marca. */
+export const eventKind = pgEnum('event_kind', ['site_visit', 'client_meeting', 'delivery', 'internal_deadline', 'personal']);
+/** Onde o evento nasceu. */
+export const eventSource = pgEnum('event_source', ['erp', 'google']);
+/** synced: igual ao Google; pending: mudança do ERP ainda não enviada; error: o Google recusou e reenviar não resolve. */
+export const eventSyncStatus = pgEnum('event_sync_status', ['synced', 'pending', 'error']);
+
+/**
+ * Eventos da Agenda, espelho do calendário "De.Croqui ERP" no Google (seção 8). Exclusão lógica:
+ * removido no ERP ou cancelado no Google, o evento fica com `deleted_at`.
+ */
+export const events = pgTable(
+  'events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    title: text('title').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    // Fim exclusivo. No dia inteiro, meia-noite (São Paulo) do dia seguinte ao último.
+    endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+    allDay: boolean('all_day').notNull().default(false),
+    location: text('location'),
+    description: text('description'),
+    kind: eventKind('kind'),
+    projectId: uuid('project_id').references(() => projects.id),
+    source: eventSource('source').notNull(),
+    googleEventId: text('google_event_id').unique(),
+    googleEtag: text('google_etag'),
+    // Calendário onde o evento está no Google. Ao conectar outro calendário, o evento é criado de novo nele.
+    googleCalendarId: text('google_calendar_id'),
+    // Série do Google: cada ocorrência aparece, mas o ERP não edita a série nesta fase.
+    recurringEventId: text('recurring_event_id'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    // Horário da última alteração, no ERP (quando a pessoa salvou) ou no Google (`updated`). Decide os conflitos.
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    syncStatus: eventSyncStatus('sync_status').notNull().default('pending'),
+    syncError: text('sync_error'),
+    syncAttempts: integer('sync_attempts').notNull().default(0),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('events_range_idx').on(t.startsAt, t.endsAt),
+    // Fila de envio ao Google.
+    index('events_unsynced_idx').on(t.updatedAt).where(sql`${t.syncStatus} <> 'synced'`),
+  ],
+);
+
+/** connected: sincronizando; reconnect: o token do Google venceu e o administrador precisa entrar de novo. */
+export const calendarStatus = pgEnum('calendar_status', ['connected', 'reconnect']);
+
+/**
+ * Conexão com o calendário "De.Croqui ERP" na conta do administrador. Uma linha só; desconectar apaga a
+ * linha (para a sincronização e esquece o calendário, sem revogar o acesso no Google).
+ */
+export const calendarSyncState = pgTable('calendar_sync_state', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  // Quem conectou (o administrador, dono do token). Fica nulo se essa conta for removida.
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  calendarId: text('calendar_id').notNull(),
+  status: calendarStatus('status').notNull().default('connected'),
+  syncToken: text('sync_token'),
+  // Começo da última consulta ao Google: no máximo uma a cada 2 minutos, para todos.
+  lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type ProjectFile = typeof projectFiles.$inferSelect;
@@ -242,3 +309,6 @@ export type NotificationType = (typeof notificationType.enumValues)[number];
 export type BroadcastAudience = (typeof broadcastAudience.enumValues)[number];
 export type Subfolder = (typeof projectSubfolder.enumValues)[number];
 export type UserRole = (typeof userRole.enumValues)[number];
+export type Event = typeof events.$inferSelect;
+export type EventKind = (typeof eventKind.enumValues)[number];
+export type CalendarSyncState = typeof calendarSyncState.$inferSelect;
