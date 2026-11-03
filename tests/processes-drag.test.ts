@@ -1,9 +1,10 @@
 // Arraste e clique dos cartões em Processos: o gesto do mouse decide entre abrir o projeto e arrastar.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { SessionUser } from '../src/session';
 
 // O design system pede um window global ao ser importado (ver phase4-ui.test.ts).
 (globalThis as { window?: unknown }).window ??= globalThis;
+const { cardMenu } = await import('../src/pages/processes/cards');
 const { canDragCards, createCardGesture, dropDestination, DRAG_THRESHOLD, isCardBackground } = await import('../src/pages/processes/cardDrag');
 
 const user = (role: SessionUser['role']) => ({ id: 'u1', email: 'a@decroqui.test', name: 'A', role }) as SessionUser;
@@ -73,5 +74,31 @@ describe('arraste com o mouse', () => {
     expect(dropDestination('s1', 's1')).toBeNull();
     expect(dropDestination('s1', null)).toBeNull();
     expect(dropDestination('s1', 's2')).toBe('s2');
+  });
+});
+
+describe('"Mover para" continua no menu do cartão', () => {
+  const stages = [
+    { id: 's1', name: 'Briefing', position: 1 },
+    { id: 's2', name: 'Projeto', position: 2 },
+  ];
+  const card = { id: 'p1', name: 'Casa Loureiro', clientName: 'Família Toledo', stageId: 's1', deadline: null, owner: null };
+
+  it('abre o projeto, lista as etapas e move para a escolhida', () => {
+    const open = vi.fn();
+    const move = vi.fn();
+    const entries = cardMenu(card, stages, { open, move });
+    expect(entries.map((e) => ('heading' in e ? `# ${e.heading}` : e.label))).toEqual([
+      'Abrir projeto',
+      '# Mover para',
+      'Briefing · etapa atual',
+      'Projeto',
+    ]);
+    const pick = (label: string) => entries.find((e) => 'label' in e && e.label === label) as { onSelect: () => void; disabled?: boolean };
+    pick('Abrir projeto').onSelect();
+    pick('Projeto').onSelect();
+    expect(open).toHaveBeenCalledOnce();
+    expect(move).toHaveBeenCalledWith('s2');
+    expect(pick('Briefing · etapa atual').disabled).toBe(true);
   });
 });

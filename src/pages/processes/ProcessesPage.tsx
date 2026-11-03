@@ -9,7 +9,7 @@ import { boardApi, withCardIn, type Board, type BoardCard, type Stage } from '..
 import { RowMenu, type RowMenuEntry } from '../collaborators/RowMenu';
 import { ProjectPanel } from '../projects/ProjectPanel';
 import { canWriteProjects } from '../projects/shared';
-import { cardDeadline, initials, STAGE_TONES } from './cards';
+import { cardDeadline, cardMenu, initials, STAGE_TONES } from './cards';
 import { StageForm } from './StageForm';
 import { RemoveStageDialog } from './RemoveStageDialog';
 import { canDragCards, isCardBackground } from './cardDrag';
@@ -149,18 +149,6 @@ export function ProcessesPage() {
   const draggable = canDragCards(me, isMobile);
   const { dragging, dropTarget, cardProps } = useCardDrag({ enabled: draggable, onDrop: (card, stageId) => move(card, stageId) });
 
-  function cardMenu(card: BoardCard, stages: Stage[]): RowMenuEntry[] {
-    return [
-      { label: 'Abrir projeto', onSelect: () => navigate(`/projetos/${card.id}`) },
-      { heading: 'Mover para' },
-      ...stages.map((s) =>
-        s.id === card.stageId
-          ? { label: `${s.name} · etapa atual`, disabled: true, onSelect: () => {} }
-          : { label: s.name, onSelect: () => move(card, s.id) },
-      ),
-    ];
-  }
-
   function stageMenu(stage: Stage, stages: Stage[]): RowMenuEntry[] {
     const entries: RowMenuEntry[] = [{ label: 'Renomear etapa', onSelect: () => setRenaming(stage.id) }];
     // O quadro precisa de ao menos uma etapa: a última não oferece remover.
@@ -238,7 +226,7 @@ export function ProcessesPage() {
                         </span>
                       )}
                       {canMove && (
-                        <RowMenu className="board-card__menu" label={`Ações de ${card.name}`} actions={cardMenu(card, stages)} />
+                        <RowMenu className="board-card__menu" label={`Ações de ${card.name}`} actions={cardMenu(card, stages, { open: () => navigate(`/projetos/${card.id}`), move: (id) => move(card, id) })} />
                       )}
                     </li>
                   );

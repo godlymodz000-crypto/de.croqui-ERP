@@ -1,3 +1,6 @@
+import type { BoardCard, Stage } from '../../api/board';
+import type { RowMenuEntry } from '../collaborators/RowMenu';
+
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
 /** Hoje no fuso de quem usa, como AAAA-MM-DD, para comparar com o prazo sem passar por UTC. */
@@ -36,4 +39,17 @@ export function projectList(names: string[]): string {
   if (names.length > 3) return `Os ${names.length} projetos`;
   if (names.length <= 1) return names[0] ?? '';
   return `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;
+}
+
+/** Menu do cartão: abrir e "Mover para" (a forma de mover no celular e sem arrastar). A etapa atual fica sem ação. */
+export function cardMenu(card: BoardCard, stages: Stage[], on: { open: () => void; move: (stageId: string) => void }): RowMenuEntry[] {
+  return [
+    { label: 'Abrir projeto', onSelect: on.open },
+    { heading: 'Mover para' },
+    ...stages.map((s) =>
+      s.id === card.stageId
+        ? { label: `${s.name} · etapa atual`, disabled: true, onSelect: () => {} }
+        : { label: s.name, onSelect: () => on.move(s.id) },
+    ),
+  ];
 }
