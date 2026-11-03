@@ -1,7 +1,7 @@
 import Fastify, { type FastifyPluginAsync, type FastifyReply, type FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
 import type { Config } from './config.js';
-import type { Db } from './db/client.js';
+import { isDbUnavailable, type Db } from './db/client.js';
 import type { User } from './db/schema.js';
 import { createGoogleClient, GoogleAuthError, type GoogleClient } from './google.js';
 import { randomToken, safeEqual } from './crypto.js';
@@ -58,6 +58,13 @@ export async function buildApp({ config, db, google, drive, logger = false, extr
 
   await app.register(cookie, { secret: config.sessionSecret });
   app.decorateRequest('user', null);
+
+  // Banco sem resposta ou conexão caída: 503 na hora, em vez de deixar a requisição esperar o limite da Vercel.
+  app.setErrorHandler((err, request, reply) => {
+    if (!isDbUnavailable(err)) throw err;
+    request.log.warn({ err: (err as Error).message }, 'banco indisponível');
+    return reply.code(503).header('retry-after', '5').send({ error: 'db_unavailable' });
+  });
 
   await ensureAdmin(db, config.adminEmail);
 

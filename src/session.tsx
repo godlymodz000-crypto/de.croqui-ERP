@@ -28,7 +28,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       async (): Promise<SessionState> => {
         const res = await fetchWithTimeout('/api/me', { credentials: 'same-origin' });
         if (res.status === 401) return { status: 'anonymous' };
-        if (!res.ok) throw new ApiError(res.status, 'unknown');
+        if (!res.ok) throw new ApiError(res.status, res.status === 503 ? 'db_unavailable' : 'unknown');
         return { status: 'authenticated', user: await res.json() };
       },
       { force: attempt > 0 },

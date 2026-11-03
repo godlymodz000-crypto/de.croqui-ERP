@@ -19,7 +19,15 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     appPromise = null;
     throw err;
   });
-  const app = await appPromise;
+  let app: Awaited<ReturnType<typeof start>>;
+  try {
+    app = await appPromise;
+  } catch (err) {
+    // A partida consulta o banco (ensureAdmin). Se ele não responder, 503 na hora; a próxima requisição tenta de novo.
+    console.error('falha ao iniciar a API', err instanceof Error ? err.message : err);
+    res.writeHead(503, { 'content-type': 'application/json', 'retry-after': '5' }).end('{"error":"db_unavailable"}');
+    return;
+  }
   req.url = (req.url ?? '/').replace(/^\/api(?=\/|\?|$)/, '') || '/';
   app.server.emit('request', req, res);
 }

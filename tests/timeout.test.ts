@@ -83,6 +83,7 @@ describe('Tentar de novo', () => {
     expect(loadErrorText(new ApiError(0, 'timeout'), 'genérica')).toBe('O ERP demorou demais para responder.');
     expect(loadErrorText(new ApiError(0, 'network'), 'genérica')).toContain('Sem conexão');
     expect(loadErrorText(new ApiError(500, 'unknown'), 'genérica')).toBe('genérica');
+    expect(loadErrorText(new ApiError(503, 'db_unavailable'), 'genérica')).toBe('O banco de dados não respondeu a tempo. Tente de novo em alguns segundos.');
   });
 
   it('mostra a mensagem e o botão, e o botão chama onRetry', () => {

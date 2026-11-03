@@ -4,6 +4,7 @@ import { ApiError } from '../api/http';
 export function loadErrorText(error: unknown, fallback: string) {
   if (error instanceof ApiError && error.code === 'timeout') return 'O ERP demorou demais para responder.';
   if (error instanceof ApiError && error.code === 'network') return 'Sem conexão com o ERP. Confira a internet.';
+  if (error instanceof ApiError && error.status === 503) return 'O banco de dados não respondeu a tempo. Tente de novo em alguns segundos.';
   return fallback;
 }
 
