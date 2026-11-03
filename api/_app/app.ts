@@ -20,6 +20,7 @@ import { usersRoutes } from './routes/users.js';
 import { projectsRoutes } from './routes/projects.js';
 import { filesRoutes } from './routes/files.js';
 import { notificationsRoutes } from './routes/notifications.js';
+import { stagesRoutes } from './routes/stages.js';
 import { createAdminDrive, type DriveClient } from './drive.js';
 
 export const SESSION_COOKIE = 'decroqui_sid';
@@ -174,6 +175,7 @@ export async function buildApp({ config, db, google, drive, logger = false, extr
       appOrigin: new URL(config.appUrl).origin,
     });
     await protectedRoutes.register(notificationsRoutes, { db });
+    await protectedRoutes.register(stagesRoutes, { db });
     if (extraProtectedRoutes) await protectedRoutes.register(extraProtectedRoutes);
   });
 
