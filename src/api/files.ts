@@ -79,7 +79,7 @@ export const deletionApi = {
     mutate(request<{ id: string }>('POST', '/deletion-requests', { itemType, itemId, reason }), 'notifications'),
   list: (status: RequestStatus) =>
     request<{ requests: DeletionRequest[]; counts: Record<RequestStatus, number> }>('GET', `/deletion-requests?status=${status}`),
-  approve: (id: string) => mutate(request<void>('POST', `/deletion-requests/${id}/approve`), 'notifications', 'projects'),
+  approve: (id: string) => mutate(request<void>('POST', `/deletion-requests/${id}/approve`), 'notifications', 'projects', 'board'),
   reject: (id: string) => mutate(request<void>('POST', `/deletion-requests/${id}/reject`), 'notifications'),
 };
 

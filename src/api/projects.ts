@@ -28,7 +28,8 @@ export const projectsApi = {
   get: (id: string) => request<Project>('GET', `/projects/${id}`),
   /** Tela do projeto numa leitura só: projeto, arquivos e notas. */
   page: (id: string) => request<{ project: Project; files: ProjectFile[]; notes: ProjectNote[] }>('GET', `/projects/${id}/page`),
-  create: (input: ProjectInput) => mutate(request<Project>('POST', '/projects', input), 'projects'),
-  update: (id: string, input: Partial<ProjectInput>) => mutate(request<Project>('PATCH', `/projects/${id}`, input), 'projects'),
-  remove: (id: string) => mutate(request<void>('DELETE', `/projects/${id}`), 'projects'),
+  // O quadro de Processos mostra nome, cliente e prazo: toda gravação de projeto o esquece também.
+  create: (input: ProjectInput) => mutate(request<Project>('POST', '/projects', input), 'projects', 'board'),
+  update: (id: string, input: Partial<ProjectInput>) => mutate(request<Project>('PATCH', `/projects/${id}`, input), 'projects', 'board'),
+  remove: (id: string) => mutate(request<void>('DELETE', `/projects/${id}`), 'projects', 'board'),
 };
