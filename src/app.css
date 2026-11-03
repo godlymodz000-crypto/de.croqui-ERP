@@ -2078,8 +2078,20 @@ a.arrow-link:hover,
   border-radius: var(--radius-xs);
   cursor: pointer;
 }
-.board-card[draggable='true'] {
+.board-card.can-drag {
   cursor: grab;
+  user-select: none;
+}
+/* Cópia do cartão que segue o cursor durante o arraste (useCardDrag). */
+.board-card--ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+body.is-card-dragging {
+  user-select: none;
 }
 .board-card.is-dragging {
   opacity: 0.45;

@@ -1,3 +1,6 @@
+import type { SessionUser } from '../../session';
+import { canWriteProjects } from '../projects/shared';
+
 /** Quanto o cursor anda, com o botão pressionado, para o gesto deixar de ser clique. */
 export const DRAG_THRESHOLD = 5;
 
@@ -41,4 +44,14 @@ const OWN_ACTION = 'a, button, [role="menu"], [role="menuitem"]';
 /** O clique caiu no fundo do cartão (e não no link nem no menu)? */
 export function isCardBackground(target: { closest(selector: string): unknown } | null): boolean {
   return !!target && !target.closest(OWN_ACTION);
+}
+
+/** Arrastar é só no computador e para quem tem projects.move; no celular fica o "Mover para". */
+export function canDragCards(user: SessionUser | null, isMobile: boolean): boolean {
+  return canWriteProjects(user) && !isMobile;
+}
+
+/** Para onde o cartão vai ao soltar. Fora de uma etapa, ou na mesma, não vai a lugar nenhum. */
+export function dropDestination(fromStageId: string, targetStageId: string | null): string | null {
+  return targetStageId && targetStageId !== fromStageId ? targetStageId : null;
 }

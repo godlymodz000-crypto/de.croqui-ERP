@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Button, Icon, Toast } from '../../ui/ds';
 import { useSession } from '../../session';
@@ -11,7 +11,8 @@ import { canWriteProjects } from '../projects/shared';
 import { cardDeadline, initials, STAGE_TONES } from './cards';
 import { StageForm } from './StageForm';
 import { RemoveStageDialog } from './RemoveStageDialog';
-import { createCardGesture, isCardBackground } from './cardDrag';
+import { canDragCards, isCardBackground } from './cardDrag';
+import { useCardDrag } from './useCardDrag';
 
 const LOAD_ERROR = 'Não foi possível carregar os processos.';
 
@@ -42,9 +43,6 @@ export function ProcessesPage() {
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<Stage | null>(null);
   const [creatingProject, setCreatingProject] = useState(false);
-  const [dragging, setDragging] = useState<BoardCard | null>(null);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
-  const gesture = useRef(createCardGesture());
 
   // O ref acompanha o estado para as gravações guardarem no cache o quadro que está na tela.
   const setBoard = useCallback((next: Board | null) => {
@@ -146,40 +144,9 @@ export function ProcessesPage() {
     setNotice({ tone: 'neutral', message: `Etapa ${stage.name} removida.` });
   }
 
-  // Arrastar só no desktop e para quem pode mover.
-  const draggable = canMove && !isMobile;
-
-  function onDragStart(e: DragEvent, card: BoardCard) {
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', card.id);
-    setDragging(card);
-  }
-
-  function onDragEnd() {
-    setDragging(null);
-    setDropTarget(null);
-  }
-
-  function columnDragProps(stage: Stage) {
-    if (!draggable) return {};
-    return {
-      onDragOver: (e: DragEvent) => {
-        if (!dragging) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        if (dropTarget !== stage.id) setDropTarget(stage.id);
-      },
-      onDragLeave: (e: DragEvent) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropTarget((t) => (t === stage.id ? null : t));
-      },
-      onDrop: (e: DragEvent) => {
-        e.preventDefault();
-        const card = dragging;
-        onDragEnd();
-        if (card) move(card, stage.id);
-      },
-    };
-  }
+  // Arrastar só no computador, com o mouse, e para quem pode mover.
+  const draggable = canDragCards(me, isMobile);
+  const { dragging, dropTarget, cardProps } = useCardDrag({ enabled: draggable, onDrop: (card, stageId) => move(card, stageId) });
 
   function cardMenu(card: BoardCard, stages: Stage[]): RowMenuEntry[] {
     return [
@@ -217,7 +184,7 @@ export function ProcessesPage() {
               key={stage.id}
               className={`board-column board-column--tone-${index % STAGE_TONES}${isTarget ? ' is-drop-target' : ''}`}
               aria-labelledby={`etapa-${stage.id}`}
-              {...columnDragProps(stage)}
+              data-stage-id={stage.id}
             >
               {renaming === stage.id ? (
                 <StageForm
@@ -242,19 +209,8 @@ export function ProcessesPage() {
                   return (
                     <li
                       key={card.id}
-                      className={`board-card${dragging?.id === card.id ? ' is-dragging' : ''}`}
-                      draggable={draggable}
-                      onDragStart={draggable ? (e) => onDragStart(e, card) : undefined}
-                      onDragEnd={draggable ? onDragEnd : undefined}
-                      onPointerDown={(e) => e.button === 0 && gesture.current.down({ x: e.clientX, y: e.clientY })}
-                      onPointerMove={(e) => e.buttons & 1 && gesture.current.move({ x: e.clientX, y: e.clientY })}
-                      onClickCapture={(e) => {
-                        // Clique com movimento não abre nada, nem pelo link do nome.
-                        if (!gesture.current.isClick()) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }
-                      }}
+                      className={`board-card${draggable ? ' can-drag' : ''}${dragging?.id === card.id ? ' is-dragging' : ''}`}
+                      {...cardProps(card)}
                       onClick={(e) => isCardBackground(e.target as Element) && navigate(`/projetos/${card.id}`)}
                     >
                       <Link to={`/projetos/${card.id}`} className="board-card__link" draggable={false}>
