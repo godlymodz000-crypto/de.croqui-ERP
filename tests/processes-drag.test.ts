@@ -45,6 +45,14 @@ describe('clique no cartão', () => {
     expect(createCardGesture().isClick()).toBe(true);
   });
 
+  it('arraste solto fora do cartão não bloqueia o próximo Enter', () => {
+    const g = createCardGesture();
+    g.down({ x: 0, y: 0 });
+    g.move({ x: 40, y: 0 });
+    g.reset(); // depois do pointerup, sem click no cartão
+    expect(g.isClick()).toBe(true);
+  });
+
   it('o fundo do cartão abre; o link e o menu têm ação própria', () => {
     expect(isCardBackground(target())).toBe(true);
     expect(isCardBackground(target('a'))).toBe(false);

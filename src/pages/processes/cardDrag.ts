@@ -28,6 +28,11 @@ export function createCardGesture() {
       moved = true;
       return true;
     },
+    /** Esquece o gesto. Chamado depois do click, para um clique sem pointerdown (teclado) não herdar o movimento. */
+    reset() {
+      origin = null;
+      moved = false;
+    },
     /** No click: true se foi clique simples. Sem pointerdown (Enter no link), também é clique. Fecha o gesto. */
     isClick(): boolean {
       const click = !moved;

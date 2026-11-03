@@ -114,9 +114,19 @@ export function useCardDrag({ enabled, onDrop }: { enabled: boolean; onDrop: (ca
       if (gesture.current.move(a.last) && canStart) start(a);
       else if (a.ghost) place(a);
     };
-    const up = (ev: globalThis.PointerEvent) => ev.pointerId === a.pointerId && finish(true);
-    const cancel = () => finish(false);
-    const key = (ev: KeyboardEvent) => ev.key === 'Escape' && finish(false);
+    // O click vem logo depois do pointerup; o setTimeout zera o gesto só depois dele. Se o botão
+    // foi solto fora do cartão, não há click, e o próximo Enter no link ou no menu não herda o movimento.
+    const reset = () => setTimeout(() => gesture.current.reset(), 0);
+    const up = (ev: globalThis.PointerEvent) => {
+      if (ev.pointerId !== a.pointerId) return;
+      finish(true);
+      reset();
+    };
+    const cancel = () => {
+      finish(false);
+      reset();
+    };
+    const key = (ev: KeyboardEvent) => ev.key === 'Escape' && cancel();
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', cancel);
