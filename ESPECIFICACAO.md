@@ -59,8 +59,8 @@ Tabelas principais (nomes em inglês, no código):
 - **stages**: `id`, `name`, `position`, `created_at`. Etapas do Kanban (padrão: Briefing, Levantamento, Projeto, Orçamento, Aprovação, Execução, Entrega).
 - **projects**: `id`, `name`, `client_name`, `stage_id`, `owner_user_id`, `drive_folder_id`, `deadline`, `status`, `created_at`, `updated_at`.
 - **project_stage_history**: `id`, `project_id`, `from_stage_id`, `to_stage_id`, `user_id`, `at`. Registra cada arrasto.
-- **events**: `id`, `title`, `starts_at`, `ends_at`, `location`, `description`, `project_id` (opcional), `source` (`erp` | `google`), `google_event_id` (opcional, único), `google_etag`, `created_by`, `updated_at`, `sync_status` (`synced` | `pending` | `error`).
-- **calendar_sync_state**: `id`, `user_id`, `sync_token`, `last_synced_at`, `last_error`.
+- **events**: `id`, `title`, `starts_at`, `ends_at`, `all_day`, `location`, `description`, `kind` (`site_visit` | `client_meeting` | `delivery` | `internal_deadline` | `personal`, nulo = sem tipo), `project_id` (opcional), `source` (`erp` | `google`), `google_event_id` (opcional, único), `google_etag`, `google_calendar_id`, `recurring_event_id`, `created_by`, `updated_at`, `sync_status` (`synced` | `pending` | `error`), `sync_error`, `sync_attempts`, `deleted_at` (Fase 5, migração 0007).
+- **calendar_sync_state**: `id`, `user_id`, `calendar_id`, `status` (`connected` | `reconnect`), `sync_token`, `last_attempt_at`, `last_synced_at`, `last_error`. Uma linha só; desconectar apaga a linha.
 - **budgets**: `id`, `project_id`, `number`, `status` (`draft` | `sent` | `approved`), `data` (JSON com o conteúdo do editor), `total_cents`, `created_by`, `updated_at`.
 - **presentations**: `id`, `project_id`, `status`, `data` (JSON com o conteúdo do editor), `updated_at`.
 - **audit_log**: `id`, `user_id`, `action`, `entity`, `entity_id`, `payload` (JSON), `at`.
@@ -83,6 +83,7 @@ Regras:
 | Criar e editar projetos | sim | sim | não |
 | Arrastar projeto no Kanban (mudar etapa) | sim | sim | não |
 | Criar e editar eventos (ERP) | sim | sim | não |
+| Conectar e desconectar o Google Agenda do estúdio | sim | não | não |
 | Criar, renomear, remover etapas | sim | não | não |
 | Excluir projeto | sim | não | não |
 | Criar e editar orçamento e apresentação | sim | sim | não |
@@ -98,7 +99,7 @@ Regras:
 
 Regra de implementação: a permissão é verificada no back-end em toda rota de escrita. A interface só esconde botões; não é ela que protege os dados.
 
-Permissões no código (`api/_app/permissions.ts`): `users.read`, `users.manage`, `workspace.read`, `projects.write`, `projects.move`, `events.write`, `stages.manage`, `projects.delete`, `documents.write`, `documents.export`, `content.write`, `deletion.request`, `content.delete`, `deletion.decide`, `notifications.own` (todos os papéis: ler e marcar como lidas as próprias notificações; a de outra pessoa responde 404), `notifications.send` (só administrador: enviar comunicado, ver os enviados e a lista de destinatários).
+Permissões no código (`api/_app/permissions.ts`): `users.read`, `users.manage`, `workspace.read`, `projects.write`, `projects.move`, `events.write`, `calendar.connect` (Fase 5, só administrador), `stages.manage`, `projects.delete`, `documents.write`, `documents.export`, `content.write`, `deletion.request`, `content.delete`, `deletion.decide`, `notifications.own` (todos os papéis: ler e marcar como lidas as próprias notificações; a de outra pessoa responde 404), `notifications.send` (só administrador: enviar comunicado, ver os enviados e a lista de destinatários).
 
 Pedidos de exclusão (Fase 3b):
 - Excluir arquivo, nota ou projeto é só da administração. O colaborador pede a exclusão, com motivo opcional, e a administração aprova ou recusa na tela "Pedidos de exclusão" (menu do avatar).
@@ -185,22 +186,40 @@ Escopo do Drive: `drive` completo, para ver as pastas compartilhadas pelo admini
 
 ## 8. Google Agenda: sincronização de duas vias
 
-Premissa: o app roda em localhost, sem endereço público. Por isso, o Google não consegue enviar notificações (push) para o sistema. A sincronização é feita por consulta periódica.
+Decisões da Fase 5 (3/11/2026). Substituem a proposta inicial desta seção.
 
-Entrada (Google para ERP):
-- Consulta incremental com `syncToken`, a cada 2 minutos enquanto o sistema estiver aberto, e uma vez ao iniciar.
-- Eventos novos e alterados entram com `source = google`. Eventos apagados no Google são marcados como cancelados no ERP.
-- Se o `syncToken` expirar (código 410), faz uma sincronização completa e recomeça.
+Calendário: o ERP cria e usa um calendário próprio, "De.Croqui ERP", na conta do administrador, com o mesmo token do Drive. Não sincroniza o calendário principal. Todos os papéis veem os eventos dele na Agenda.
+
+Conexão:
+- Só a administração conecta e desconecta (`POST /calendar/connect` e `/calendar/disconnect`). Conectar usa o calendário "De.Croqui ERP" que já existe na conta ou cria um.
+- Desconectar para a sincronização e esquece o calendário, sem revogar o acesso no Google: o refresh token é o mesmo do Drive, que continua funcionando. Os eventos ficam no ERP; o que mudar nesse meio-tempo espera na fila até a próxima conexão.
+- O escopo de Agenda continua pedido no login, para todos.
+- Token vencido (no modo de teste, cerca de 7 dias): a Agenda mostra "Reconecte sua conta Google" em vez de falhar em silêncio. O administrador entra de novo por `/auth/google?reconectar=1`, que pede o consentimento outra vez. Recomendação: publicar a tela de consentimento no Google Cloud para sair do modo de teste.
+
+Entrada (Google para ERP), por consulta periódica:
+- Incremental com `syncToken`, dentro da mesma leitura que abre a Agenda (`GET /events`). Enquanto a Agenda estiver aberta e a aba visível, a tela lê de novo a cada 2 minutos.
+- O servidor faz no máximo uma consulta ao Google a cada 2 minutos, para todos. "Tentar de novo", depois de um erro, pode consultar antes (no máximo a cada 10 segundos).
+- Eventos novos e alterados entram com `source = google`. Apagados no Google viram exclusão lógica no ERP.
+- `syncToken` vencido (410): leitura completa e recomeça.
+- Webhook (`events.watch`) fica para depois, se o atraso de 2 minutos deixar de servir.
 
 Saída (ERP para Google):
-- Evento criado ou editado no ERP vai para o Google na hora. Se o Google falhar, fica `sync_status = pending` e é reenviado.
-- Ao criar, guarda o `google_event_id`. Ao editar, usa o `google_etag` para não sobrescrever mudança mais nova (controle otimista).
+- Criar, editar ou remover no ERP vai para o Google na hora, sem convite nem e-mail (`sendUpdates=none`). Se o Google falhar, fica `sync_status = pending` e a próxima sincronização reenvia. Recusa definitiva do Google (dados inválidos, sem acesso) fica `error`.
+- O evento criado no ERP vai com ID fixo (o UUID sem hífens): reenviar depois de uma resposta perdida não duplica.
+- Editar usa o `google_etag` (controle otimista). Remover no ERP manda o evento para a lixeira do Google e é exclusão lógica no ERP.
 
-Conflito (mesmo evento alterado nos dois lados): vence a alteração mais recente, pelo horário de modificação. A perda é registrada no `audit_log` com os dois valores, para conferência.
+Conflito (mesmo evento alterado nos dois lados):
+- Vale o evento inteiro, não campo a campo.
+- Vence o lado que salvou por último: no ERP, o horário em que a pessoa salvou (`updated_at`); no Google, o `updated`. Empate exato: vence o Google.
+- Apagado de um lado e editado do outro: a exclusão vence.
+- O conflito grava `event.conflict` no `audit_log` com os dois valores (ou com a edição perdida).
 
-Calendário usado **[CONFIRMAR]**: proposta de que o ERP sincronize o calendário principal do administrador. Colaboradores que quiserem sincronizar a própria agenda conectam a própria conta depois. Os eventos de cada colaborador ficam visíveis só para ele, salvo quando o evento estiver vinculado a um projeto.
-
-Quando o sistema for para a Vercel, a sincronização pode passar a usar notificações push, em vez de consulta periódica.
+Eventos:
+- Tipo (Visita técnica, Reunião com cliente, Entrega, Prazo interno, Pessoal) em `kind`, e no Google como propriedade privada do evento. Evento do Google sem tipo aparece como "Sem tipo".
+- Participantes ficam fora desta fase.
+- Recorrentes: cada ocorrência aparece; o ERP não edita nem remove a série nesta fase.
+- Dia inteiro: aceito, no fuso de São Paulo.
+- Toda mudança grava no `audit_log`: `event.create`, `event.update`, `event.delete` (pessoa do ERP) e `event.google_create`, `event.google_update`, `event.google_delete`, `event.conflict` (sem pessoa).
 
 ## 9. Telas e arquivos de desenho
 
@@ -295,7 +314,7 @@ Variáveis de ambiente (`.env` no back-end):
 ## 14. Pontos em aberto
 
 1. Dono dos arquivos no Drive (seção 7): administrador ou cada pessoa. Proposta: administrador.
-2. Calendário sincronizado (seção 8): só o do administrador, ou cada pessoa com a própria agenda. Proposta: administrador.
+2. Calendário sincronizado (seção 8): decidido na Fase 5, calendário próprio "De.Croqui ERP" na conta do administrador.
 3. Permissões marcadas com **[CONFIRMAR]** na seção 5.
 4. Lista de funcionalidades dos arquivos offline (seção 10), a ser extraída antes da Fase 6.
 5. Caminho final das referências offline dentro de `erp-decroqui/referencias-offline/`.
