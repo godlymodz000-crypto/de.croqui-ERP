@@ -121,7 +121,7 @@ export function NotificationsPage() {
     load();
   }, [load]);
 
-  // Chegou notificação nova pelo sino (a cada 30 segundos): a lista acompanha.
+  // Chegou notificação nova pelo sino (a cada 60 segundos): a lista acompanha.
   const bellUnread = bell?.unread;
   useEffect(() => {
     if (tab !== 'sent' && bellUnread !== undefined && data && bellUnread !== data.unread) load(true);

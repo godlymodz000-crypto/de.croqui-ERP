@@ -4,6 +4,7 @@ import { broadcastsApi, notificationsApi } from '../src/api/notifications';
 import { projectsApi } from '../src/api/projects';
 import { usersApi } from '../src/api/users';
 import { deletionApi } from '../src/api/files';
+import { BELL_POLL_MS } from '../src/layout/bellPolling';
 
 // Cache em memória das leituras (src/api/http.ts). O fetch é falso e conta as chamadas por rota.
 let calls: string[] = [];
@@ -150,9 +151,9 @@ describe('dados do ERP', () => {
     expect(bell.unread).toBe(page.unread);
   });
 
-  it('a consulta do sino a cada 30 s sempre busca de novo (validade de 25 s)', async () => {
+  it('a consulta do sino a cada 60 s sempre busca de novo (validade de 55 s)', async () => {
     await notificationsApi.list({ limit: 5 });
-    vi.advanceTimersByTime(30_000);
+    vi.advanceTimersByTime(BELL_POLL_MS);
     await notificationsApi.list({ limit: 5 });
     expect(count('GET /notifications?limit=5')).toBe(2);
   });

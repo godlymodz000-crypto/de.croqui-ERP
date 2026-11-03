@@ -106,8 +106,8 @@ export async function mutate<T>(write: Promise<T>, ...prefixes: string[]): Promi
 
 /** Validade de cada tipo de dado no cache. */
 export const TTL = {
-  /** Abaixo do intervalo do sino (30 s), para a consulta seguinte sempre buscar de novo. */
-  notifications: 25_000,
+  /** Abaixo do intervalo do sino (60 s), para a leitura periódica seguinte sempre buscar de novo. */
+  notifications: 55_000,
   projects: 60_000,
   audience: 5 * 60_000,
   broadcasts: 30_000,

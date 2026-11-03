@@ -56,7 +56,7 @@ export function BroadcastPanel({ onClose, onSent }: { onClose: () => void; onSen
   const [audienceError, setAudienceError] = useState<unknown>(null);
   const [sending, setSending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  // A página passa um onClose novo a cada renderização (o sino a renderiza a cada 30 s). Guardado num ref,
+  // A página passa um onClose novo a cada renderização (o sino a renderiza a cada 60 s). Guardado num ref,
   // o efeito abaixo roda só ao abrir: não busca os dados de novo nem tira o cursor do campo em que se escreve.
   const closeRef = useRef(onClose);
   closeRef.current = onClose;

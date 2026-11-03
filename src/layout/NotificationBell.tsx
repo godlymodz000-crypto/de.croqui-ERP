@@ -3,9 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { AppIcon } from '../ui/AppIcon';
 import { BELL_SIZE, notificationsApi, typeLabel, type Notification, type NotificationsState } from '../api/notifications';
 import { formatLastAccess } from '../pages/collaborators/format';
-
-/** O sino se atualiza sozinho neste intervalo, enquanto a página está aberta e visível. */
-const POLL_MS = 30_000;
+import { startBellPolling } from './bellPolling';
 
 interface NotificationsContextValue {
   state: NotificationsState | null;
@@ -28,16 +26,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  useEffect(() => {
-    refresh();
-    const timer = setInterval(() => document.visibilityState === 'visible' && refresh(), POLL_MS);
-    const onVisible = () => document.visibilityState === 'visible' && refresh();
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [refresh]);
+  useEffect(() => startBellPolling(refresh), [refresh]);
 
   const markRead = useCallback(
     async (n: Notification) => {
