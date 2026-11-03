@@ -1,4 +1,4 @@
-import { ApiError, request } from './http';
+import { ApiError, mutate, request } from './http';
 
 export type Subfolder = 'budgets' | 'presentations' | 'contracts' | 'photos' | 'files';
 
@@ -74,12 +74,13 @@ export const notesApi = {
 };
 
 export const deletionApi = {
+  // Pedidos geram notificações, e aprovar pode excluir um projeto.
   request: (itemType: ItemType, itemId: string, reason: string) =>
-    request<{ id: string }>('POST', '/deletion-requests', { itemType, itemId, reason }),
+    mutate(request<{ id: string }>('POST', '/deletion-requests', { itemType, itemId, reason }), 'notifications'),
   list: (status: RequestStatus) =>
     request<{ requests: DeletionRequest[]; counts: Record<RequestStatus, number> }>('GET', `/deletion-requests?status=${status}`),
-  approve: (id: string) => request<void>('POST', `/deletion-requests/${id}/approve`),
-  reject: (id: string) => request<void>('POST', `/deletion-requests/${id}/reject`),
+  approve: (id: string) => mutate(request<void>('POST', `/deletion-requests/${id}/approve`), 'notifications', 'projects'),
+  reject: (id: string) => mutate(request<void>('POST', `/deletion-requests/${id}/reject`), 'notifications'),
 };
 
 /** Erro no envio direto ao Drive (rede, cancelamento ou resposta do Google). */

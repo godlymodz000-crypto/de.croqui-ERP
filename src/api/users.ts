@@ -1,4 +1,4 @@
-import { request } from './http';
+import { mutate, request } from './http';
 
 export { ApiError } from './http';
 
@@ -26,10 +26,11 @@ export interface InviteInput {
 
 export const usersApi = {
   list: () => request<Collaborator[]>('GET', '/users'),
-  invite: (input: InviteInput) => request<Collaborator>('POST', '/users', input),
-  changeRole: (id: string, role: Role) => request<Collaborator>('PATCH', `/users/${id}/role`, { role }),
-  disable: (id: string) => request<Collaborator>('POST', `/users/${id}/disable`),
-  remove: (id: string) => request<void>('DELETE', `/users/${id}`),
+  // Quem recebe comunicado depende de papel e situação: essas gravações esquecem a lista de destinatários.
+  invite: (input: InviteInput) => mutate(request<Collaborator>('POST', '/users', input), 'broadcasts/audience'),
+  changeRole: (id: string, role: Role) => mutate(request<Collaborator>('PATCH', `/users/${id}/role`, { role }), 'broadcasts/audience'),
+  disable: (id: string) => mutate(request<Collaborator>('POST', `/users/${id}/disable`), 'broadcasts/audience'),
+  remove: (id: string) => mutate(request<void>('DELETE', `/users/${id}`), 'broadcasts/audience'),
   /** Tenta de novo compartilhar (ou revogar) a pasta do Drive. */
   retryDrive: (id: string) => request<Collaborator>('POST', `/users/${id}/drive-access`),
 };

@@ -54,15 +54,19 @@ export function BroadcastPanel({ onClose, onSent }: { onClose: () => void; onSen
   const [failed, setFailed] = useState(false);
   const [sending, setSending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  // A página passa um onClose novo a cada renderização (o sino a renderiza a cada 30 s). Guardado num ref,
+  // o efeito abaixo roda só ao abrir: não busca os dados de novo nem tira o cursor do campo em que se escreve.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
 
   useEffect(() => {
     broadcastsApi.audience().then(setInfo, () => setFailed(true));
     projectsApi.list().then(setProjects, () => {});
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current();
     window.addEventListener('keydown', esc);
     formRef.current?.querySelector('input')?.focus();
     return () => window.removeEventListener('keydown', esc);
-  }, [onClose]);
+  }, []);
 
   const count = useMemo(() => {
     if (!info) return 0;

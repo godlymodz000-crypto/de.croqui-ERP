@@ -1,4 +1,4 @@
-import { request } from './http';
+import { cached, mutate, prime, request, TTL } from './http';
 
 export type NotificationType = 'deletion.requested' | 'deletion.approved' | 'deletion.rejected' | 'drive.failed' | 'announcement';
 /** Opções do seletor "Tipo" da página. */
@@ -77,23 +77,40 @@ export function typeLabel(type: string | null | undefined) {
   return (type && TYPE_LABEL[type as NotificationType]) || 'Aviso';
 }
 
+const BELL_KEY = `notifications?limit=${BELL_SIZE}`;
+
 export const notificationsApi = {
-  list: (q: { view?: View; type?: TypeFilter; page?: number; limit?: number } = {}) => {
+  /** `force` ignora o cache, para quando se sabe que mudou (o sino trouxe outra contagem, por exemplo). */
+  list: (q: { view?: View; type?: TypeFilter; page?: number; limit?: number } = {}, opts: { force?: boolean } = {}) => {
     const qs = new URLSearchParams();
     if (q.view && q.view !== 'all') qs.set('view', q.view);
     if (q.type && q.type !== 'all') qs.set('type', q.type);
     if (q.page && q.page > 1) qs.set('page', String(q.page));
     if (q.limit) qs.set('limit', String(q.limit));
     const s = qs.toString();
-    return request<NotificationsState>('GET', `/notifications${s ? `?${s}` : ''}`);
+    const key = `notifications${s ? `?${s}` : ''}`;
+    return cached(
+      key,
+      TTL.notifications,
+      async () => {
+        const data = await request<NotificationsState>('GET', `/${key}`);
+        // A primeira página de "Todas" já tem tudo o que o sino mostra: o sino não precisa buscar de novo.
+        if (!s) prime<NotificationsState>(BELL_KEY, { ...data, items: data.items.slice(0, BELL_SIZE), pageSize: BELL_SIZE });
+        return data;
+      },
+      opts,
+    );
   },
-  read: (id: string) => request<void>('POST', `/notifications/${id}/read`),
-  readAll: () => request<void>('POST', '/notifications/read-all'),
+  read: (id: string) => mutate(request<void>('POST', `/notifications/${id}/read`), 'notifications'),
+  readAll: () => mutate(request<void>('POST', '/notifications/read-all'), 'notifications'),
 };
 
 export const broadcastsApi = {
-  audience: () => request<AudienceInfo>('GET', '/broadcasts/audience'),
-  send: (input: BroadcastInput) => request<{ id: string; recipientCount: number }>('POST', '/broadcasts', input),
+  audience: () => cached('broadcasts/audience', TTL.audience, () => request<AudienceInfo>('GET', '/broadcasts/audience')),
+  send: (input: BroadcastInput) =>
+    mutate(request<{ id: string; recipientCount: number }>('POST', '/broadcasts', input), 'notifications', 'broadcasts?'),
   list: (page = 1) =>
-    request<{ items: SentBroadcast[]; total: number; page: number; pageSize: number }>('GET', `/broadcasts${page > 1 ? `?page=${page}` : ''}`),
+    cached(`broadcasts?page=${page}`, TTL.broadcasts, () =>
+      request<{ items: SentBroadcast[]; total: number; page: number; pageSize: number }>('GET', `/broadcasts${page > 1 ? `?page=${page}` : ''}`),
+    ),
 };

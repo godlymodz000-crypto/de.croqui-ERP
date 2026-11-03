@@ -106,10 +106,10 @@ export function NotificationsPage() {
   const [composing, setComposing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     try {
       if (tab === 'sent') setSent(await broadcastsApi.list(page));
-      else setData(await notificationsApi.list({ view: tab, type, page }));
+      else setData(await notificationsApi.list({ view: tab, type, page }, { force }));
       setLoadFailed(false);
     } catch {
       setLoadFailed(true);
@@ -123,7 +123,7 @@ export function NotificationsPage() {
   // Chegou notificação nova pelo sino (a cada 30 segundos): a lista acompanha.
   const bellUnread = bell?.unread;
   useEffect(() => {
-    if (tab !== 'sent' && bellUnread !== undefined && data && bellUnread !== data.unread) load();
+    if (tab !== 'sent' && bellUnread !== undefined && data && bellUnread !== data.unread) load(true);
   }, [bellUnread]);
 
   useEffect(() => {

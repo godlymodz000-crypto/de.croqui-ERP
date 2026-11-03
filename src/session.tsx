@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { cached, clearCache } from './api/http';
 
 export interface SessionUser {
   id: string;
@@ -16,11 +17,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/me', { credentials: 'same-origin' })
-      .then(async (res) => {
-        if (cancelled) return;
-        setState(res.ok ? { status: 'authenticated', user: await res.json() } : { status: 'anonymous' });
-      })
+    // Uma busca por carga da página; a sessão não muda sem recarregar (entrar e sair recarregam).
+    cached('me', Infinity, async () => {
+      const res = await fetch('/api/me', { credentials: 'same-origin' });
+      return res.ok ? ({ status: 'authenticated', user: await res.json() } as const) : ({ status: 'anonymous' } as const);
+    })
+      .then((next) => !cancelled && setState(next))
       .catch(() => !cancelled && setState({ status: 'anonymous' }));
     return () => {
       cancelled = true;
@@ -36,5 +38,6 @@ export function useSession() {
 
 export async function logout() {
   await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+  clearCache();
   window.location.assign('/entrar');
 }
