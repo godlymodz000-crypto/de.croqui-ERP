@@ -82,6 +82,27 @@ export const projects = pgTable(
   (t) => [index('projects_stage_id_idx').on(t.stageId), index('projects_updated_at_idx').on(t.updatedAt)],
 );
 
+/** Cada mudança de etapa de um projeto: arrasto no Kanban, "Mover para" ou remoção da etapa de origem. */
+export const projectStageHistory = pgTable(
+  'project_stage_history',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id),
+    fromStageId: uuid('from_stage_id')
+      .notNull()
+      .references(() => stages.id),
+    toStageId: uuid('to_stage_id')
+      .notNull()
+      .references(() => stages.id),
+    // Quem moveu. Fica nulo se essa conta for removida; o histórico continua.
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('project_stage_history_project_at_idx').on(t.projectId, t.at)],
+);
+
 /** Configurações do sistema guardadas no banco, como os IDs das pastas raiz do Drive. */
 export const appSettings = pgTable('app_settings', {
   key: text('key').primaryKey(),

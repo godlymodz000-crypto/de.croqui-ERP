@@ -43,6 +43,13 @@
       "when": 1793673633649,
       "tag": "0005_comunicados",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793724112523,
+      "tag": "0006_historico_etapas",
+      "breakpoints": true
     }
   ]
 }
