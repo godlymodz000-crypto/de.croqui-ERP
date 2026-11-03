@@ -3,6 +3,7 @@ import { and, asc, eq } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { sessions, userRole, users, type User, type UserRole } from '../db/schema.js';
 import { audit } from '../audit.js';
+import { forgetUserSessions } from '../auth.js';
 import { ensureRootFolder, type DriveClient } from '../drive.js';
 import { notifyAdmins } from '../notifications-service.js';
 
@@ -180,6 +181,8 @@ export async function usersRoutes(app: FastifyInstance, { db, drive, adminEmail 
           });
           return u;
         });
+        // O papel novo vale já na próxima requisição desta pessoa.
+        forgetUserSessions(db, updated.id);
         return dto(updated);
       } catch (err) {
         return sendConflict(reply, err);
@@ -211,6 +214,7 @@ export async function usersRoutes(app: FastifyInstance, { db, drive, adminEmail 
           });
           return u;
         });
+        forgetUserSessions(db, updated.id);
         // A conta já está desativada no ERP; se o Drive falhar, a administração recebe o aviso para tentar de novo.
         const revoked = await revokeDrive(updated, actor.id, request);
         if (!revoked) await notifyAdmins(db, driveFailedNotice(updated, 'revoke'));
@@ -249,6 +253,7 @@ export async function usersRoutes(app: FastifyInstance, { db, drive, adminEmail 
             payload: { email: target.email, name: target.name, role: target.role, status: target.status },
           });
         });
+        forgetUserSessions(db, request.params.id);
         return reply.code(204).send();
       } catch (err) {
         return sendConflict(reply, err);

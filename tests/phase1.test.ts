@@ -5,7 +5,7 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { eq } from 'drizzle-orm';
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT, type JWTPayload } from 'jose';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp, SESSION_COOKIE } from '../api/_app/app.js';
 import type { Config } from '../api/_app/config.js';
@@ -131,10 +131,17 @@ describe('Fase 1 — critérios de aceite', () => {
     const headers = { cookie: `${SESSION_COOKIE}=${cookie.value}` };
     expect((await app.inject({ method: 'GET', url: '/me', headers })).statusCode).toBe(200);
 
-    await db.update(schema.sessions).set({ expiresAt: new Date(Date.now() - 1000) });
-    const expired = await app.inject({ method: 'GET', url: '/me', headers });
-    expect(expired.statusCode).toBe(401);
-    expect(await db.select().from(schema.sessions)).toHaveLength(0);
+    // O relógio passa de expires_at logo depois de a sessão entrar no cache de 30 s: o cache não a esconde.
+    const [row] = await db.select().from(schema.sessions);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(row.expiresAt.getTime() + 1000);
+      const expired = await app.inject({ method: 'GET', url: '/me', headers });
+      expect(expired.statusCode).toBe(401);
+      expect(await db.select().from(schema.sessions)).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('rota protegida recusa acesso sem sessão', async () => {
