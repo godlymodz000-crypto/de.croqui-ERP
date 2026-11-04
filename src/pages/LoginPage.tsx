@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { Button } from '../ui/ds';
 import { AppIcon } from '../ui/AppIcon';
 import logo from '../design-system/assets/logo/decroqui-imagotipo-horizontal-escuro.svg';
@@ -63,6 +63,10 @@ export function LoginPage() {
           </Button>
 
           <p className="login__hint">O acesso é feito apenas por contas autorizadas.</p>
+
+          <footer className="login__footer">
+            <Link to="/privacidade">Política de Privacidade</Link>
+          </footer>
         </div>
       </section>
     </main>

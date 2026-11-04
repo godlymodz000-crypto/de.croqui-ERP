@@ -62,6 +62,16 @@
   font: var(--type-small);
   color: var(--text-secondary);
 }
+.login__footer {
+  margin-top: var(--space-8);
+  font: var(--type-small);
+}
+.login__footer a {
+  color: var(--text-secondary);
+}
+.login__footer a:hover {
+  color: var(--text-link-hover);
+}
 
 @media (max-width: 960px) {
   .login {
