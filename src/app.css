@@ -16,16 +16,6 @@
   width: min(420px, 100%);
   height: auto;
 }
-.login__art-label {
-  font: var(--type-label);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
-  fill: var(--ardosia-700);
-}
-.login__art-caption {
-  font: var(--weight-light) var(--text-lg) / 1 var(--font-display);
-  fill: var(--ardosia-600);
-}
 .login__panel {
   display: grid;
   align-items: center;

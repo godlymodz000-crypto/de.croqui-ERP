@@ -94,12 +94,6 @@ function InteriorPlaceholder() {
       <rect x="70" y="436" width="240" height="34" rx="1" style={{ fill: 'var(--ardosia-500)' }} />
       <rect x="332" y="424" width="48" height="3" style={{ fill: 'var(--latao-500)' }} />
       <rect x="354" y="427" width="4" height="43" style={{ fill: 'var(--latao-500)' }} />
-      <text x="210" y="522" textAnchor="middle" className="login__art-label">
-        Imagem a definir
-      </text>
-      <text x="210" y="550" textAnchor="middle" className="login__art-caption">
-        Ambiente de interior
-      </text>
     </svg>
   );
 }
