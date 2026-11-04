@@ -75,6 +75,61 @@
   }
 }
 
+/* ---------- Política de Privacidade (página pública) ---------- */
+.privacy {
+  min-height: 100vh;
+  background: var(--surface-page);
+  padding: var(--space-9) var(--gutter);
+}
+.privacy__content {
+  max-width: 720px;
+  margin: 0 auto;
+  font: var(--type-body);
+  color: var(--text-primary);
+}
+.privacy__logo {
+  display: block;
+  width: 150px;
+  margin-bottom: var(--space-8);
+}
+.privacy__title {
+  font: var(--type-h1);
+  color: var(--text-primary);
+  text-wrap: balance;
+  margin-bottom: var(--space-3);
+}
+.privacy__updated {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-7);
+}
+.privacy__intro {
+  font: var(--type-lead);
+  margin-bottom: var(--space-8);
+}
+.privacy__section {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border-hairline);
+  margin-bottom: var(--space-7);
+}
+.privacy__heading {
+  font: var(--type-h3);
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+.privacy__text {
+  overflow-wrap: anywhere;
+}
+.privacy__list {
+  display: grid;
+  gap: var(--space-3);
+  padding-left: var(--space-5);
+  list-style: disc;
+}
+.privacy__list li::marker {
+  color: var(--text-secondary);
+}
+
 /* ---------- Alerta ---------- */
 .alert {
   display: flex;
@@ -2299,6 +2354,17 @@ body.is-card-dragging * {
   }
   .login__title {
     margin-bottom: var(--space-6);
+  }
+
+  /* ---------- Política de Privacidade ---------- */
+  .privacy {
+    padding: var(--space-7) var(--space-4);
+  }
+  .privacy__logo {
+    margin-bottom: var(--space-6);
+  }
+  .privacy__title {
+    font: var(--weight-light) var(--text-3xl) / var(--leading-tight) var(--font-display);
   }
 
   /* ---------- Moldura: menu lateral vira gaveta ---------- */
