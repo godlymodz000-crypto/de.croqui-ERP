@@ -9,7 +9,7 @@ import { useSession } from '../../session';
 import { ApiError } from '../../api/http';
 import { budgetsApi, type BudgetData, type BudgetWithData } from '../../api/budgets';
 import { addRoom, applyToAll, removeRoom, toggleOption } from '../../shared/budget-calc';
-import { FittedBudgetSheets } from '../../budget/BudgetSheets';
+import { FittedBudgetSheets, PROPERTY_MAX_LINES, usePropertyLines } from '../../budget/BudgetSheets';
 import logo from '../../design-system/assets/logo/decroqui-imagotipo-horizontal-escuro.svg';
 import { canExportBudgets, canWriteBudgets, clock } from './shared';
 import './budgets.css';
@@ -335,6 +335,17 @@ function TextField({
   );
 }
 
+/** Aviso quando o imóvel passa de três linhas na folha: só as três primeiras aparecem nas folhas e no PDF. */
+function PropertyLinesHint({ text }: { text: string }) {
+  const lines = usePropertyLines(text);
+  if (lines <= PROPERTY_MAX_LINES) return null;
+  return (
+    <span className="bpanel__hint bpanel__hint--warning" role="status">
+      O texto do imóvel ocupa {lines} linhas na folha. Só as três primeiras aparecem no orçamento; resuma o texto.
+    </span>
+  );
+}
+
 /** Campo de valor em reais. Vazio conta como zero, como no arquivo. */
 function MoneyInput({
   value,
@@ -419,6 +430,7 @@ function BudgetPanel({
           <TextField label="Válida até" type="date" {...text('validade')} />
         </div>
         <TextField label="Imóvel" multiline {...text('imovel')} />
+        <PropertyLinesHint text={data.imovel} />
       </Section>
 
       <Section title="Ambientes" aside="Valor · opção 02">

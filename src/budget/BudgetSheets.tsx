@@ -272,3 +272,37 @@ export function FittedBudgetSheets({ data, logoSrc, onFit }: { data: BudgetData;
     </div>
   );
 }
+
+/** O imóvel ocupa no máximo três linhas na folha, como no arquivo original (textarea de 3 linhas). */
+export const PROPERTY_MAX_LINES = 3;
+
+/**
+ * Conta as linhas que o texto do imóvel ocupa na folha, medindo um elemento invisível com a mesma
+ * largura e a mesma letra do quadro Imóvel. Serve para o painel avisar quando o texto passa de três
+ * linhas, mesmo no celular, onde as folhas podem estar escondidas.
+ */
+export function usePropertyLines(text: string): number {
+  const [lines, setLines] = useState(0);
+  useLayoutEffect(() => {
+    if (!text.trim()) {
+      setLines(0);
+      return;
+    }
+    const el = document.createElement('span');
+    el.className = 'bsheet__property-text bsheet__property-text--measure';
+    el.textContent = text;
+    document.body.appendChild(el);
+    const measure = () => {
+      const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 1;
+      setLines(Math.round(el.scrollHeight / lineHeight));
+    };
+    measure();
+    let alive = true;
+    void document.fonts?.ready.then(() => alive && measure());
+    return () => {
+      alive = false;
+      el.remove();
+    };
+  }, [text]);
+  return lines;
+}
