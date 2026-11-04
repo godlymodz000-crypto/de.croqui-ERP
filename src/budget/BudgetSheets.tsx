@@ -1,11 +1,11 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { budgetView, ROOMS_PER_SHEET, type BudgetData, type RoomsPerSheet } from '../shared/budget-calc';
-import './sheets.css';
 
 /**
  * Folhas A4 do orçamento, iguais às do arquivo offline (templates/orcamento no design system).
  * Os textos fixos (observações, inclusos, nota) não são editáveis na folha: só o painel muda o documento.
- * O mesmo componente monta a prévia do editor e a página que vira PDF.
+ * O mesmo componente monta a prévia do editor e a página que vira PDF (api/_app/budget-pdf.ts).
+ * Por isso o CSS (sheets.css) é importado por quem usa: o servidor lê o arquivo e o embute no HTML do PDF.
  */
 export function BudgetSheets({ data, logoSrc, cap = ROOMS_PER_SHEET }: { data: BudgetData; logoSrc: string; cap?: RoomsPerSheet }) {
   const v = budgetView(data, cap);

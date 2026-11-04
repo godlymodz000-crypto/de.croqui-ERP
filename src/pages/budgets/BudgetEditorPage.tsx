@@ -10,6 +10,7 @@ import { ApiError } from '../../api/http';
 import { budgetsApi, type BudgetData, type BudgetWithData } from '../../api/budgets';
 import { addRoom, applyToAll, removeRoom, toggleOption } from '../../shared/budget-calc';
 import { FittedBudgetSheets, PROPERTY_MAX_LINES, usePropertyLines } from '../../budget/BudgetSheets';
+import '../../budget/sheets.css';
 import logo from '../../design-system/assets/logo/decroqui-imagotipo-horizontal-escuro.svg';
 import { canExportBudgets, canWriteBudgets, clock } from './shared';
 import './budgets.css';

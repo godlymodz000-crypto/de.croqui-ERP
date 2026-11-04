@@ -4,6 +4,11 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "regions": ["gru1"],
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "src/{budget/sheets.css,design-system/tokens/*.css,design-system/fonts/*.woff2,design-system/assets/logo/decroqui-imagotipo-horizontal-escuro.svg}"
+    }
+  },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
