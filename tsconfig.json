@@ -6,6 +6,7 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "types": ["node", "vite/client"],
+    "typeRoots": ["./node_modules/@types", "./node_modules"],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
