@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigint, boolean, date, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, boolean, check, date, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 export const userRole = pgEnum('user_role', ['admin', 'member', 'viewer']);
 export const userStatus = pgEnum('user_status', ['invited', 'active', 'disabled']);
@@ -299,6 +299,37 @@ export const calendarSyncState = pgTable('calendar_sync_state', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** draft: em edição; sent: enviado ao cliente. Só draft é usado na Fase 6a. */
+export const budgetStatus = pgEnum('budget_status', ['draft', 'sent']);
+
+/**
+ * Orçamentos (Fase 6a). O conteúdo do editor (campos e ambientes) fica em `data`, em JSON. Projeto
+ * opcional: sem projeto é o orçamento avulso, que poderá ser vinculado depois. `total_cents` guarda o
+ * maior total do documento, em centavos, para listas e buscas.
+ */
+export const budgets = pgTable(
+  'budgets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id').references(() => projects.id),
+    name: text('name').notNull(),
+    // Número sequencial do orçamento no ERP, exibido como "Orçamento nº".
+    number: integer('number').notNull().generatedAlwaysAsIdentity(),
+    status: budgetStatus('status').notNull().default('draft'),
+    data: jsonb('data').$type<Record<string, unknown>>().notNull().default({}),
+    totalCents: bigint('total_cents', { mode: 'number' }).notNull().default(0),
+    // Quem criou. Fica nulo se essa conta for removida; o orçamento continua.
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('budgets_number_idx').on(t.number),
+    index('budgets_project_updated_idx').on(t.projectId, t.updatedAt),
+    // Nome obrigatório também no banco: vazio ou só espaços é recusado.
+    check('budgets_name_not_blank', sql`length(btrim(${t.name})) > 0`),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type ProjectFile = typeof projectFiles.$inferSelect;
@@ -312,3 +343,5 @@ export type UserRole = (typeof userRole.enumValues)[number];
 export type Event = typeof events.$inferSelect;
 export type EventKind = (typeof eventKind.enumValues)[number];
 export type CalendarSyncState = typeof calendarSyncState.$inferSelect;
+export type Budget = typeof budgets.$inferSelect;
+export type BudgetStatus = (typeof budgetStatus.enumValues)[number];
