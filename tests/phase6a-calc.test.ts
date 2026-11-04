@@ -17,7 +17,7 @@ import {
   toCents,
   toggleOption,
   type BudgetData,
-} from '../api/_app/budget-calc.js';
+} from '../src/shared/budget-calc.js';
 
 interface Case {
   id: string;

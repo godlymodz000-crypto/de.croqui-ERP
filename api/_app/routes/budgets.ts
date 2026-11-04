@@ -3,7 +3,7 @@ import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { auditLog, budgets, projects, users, type Budget } from '../db/schema.js';
 import { audit } from '../audit.js';
-import { budgetHeadlineCents, emptyBudget, parseBudgetData, type BudgetData } from '../budget-calc.js';
+import { budgetHeadlineCents, emptyBudget, parseBudgetData, type BudgetData } from '../../../src/shared/budget-calc.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_NAME = 120;

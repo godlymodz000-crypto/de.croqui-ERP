@@ -13,7 +13,7 @@ import type { Db } from '../api/_app/db/client.js';
 import * as schema from '../api/_app/db/schema.js';
 import { createSession } from '../api/_app/auth.js';
 import { randomToken } from '../api/_app/crypto.js';
-import { emptyBudget, type BudgetData } from '../api/_app/budget-calc.js';
+import { emptyBudget, type BudgetData } from '../src/shared/budget-calc.js';
 import { FakeDrive } from './fake-drive.js';
 import { FakeCalendar } from './fake-calendar.js';
 

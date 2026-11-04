@@ -192,17 +192,30 @@ const pad = (n: number) => String(n).padStart(2, '0');
 export interface RoomsPerSheet {
   first: number;
   next: number;
+  /**
+   * Limites menores por folha (índice 0 = primeira folha da Opção 02), medidos na folha renderizada quando
+   * nomes longos ou o texto do imóvel ocupam mais de uma linha. Ver useFittedSheets.
+   */
+  limits?: number[];
 }
 /**
- * Valores provisórios. Com 10 ambientes o arquivo passou de 297 mm (329 mm), então a primeira folha fica
- * com até 8. Os números finais são medidos na folha A4 do editor, no passo da tela.
+ * Medido no arquivo original: a folha da Opção 02 cabe em 297 mm com 6 ambientes de uma linha e passa
+ * com 7 ou mais (10 deram 329 mm, cerca de 10 mm por linha). A folha de continuação, sem imóvel nem
+ * colunas, cabe 18. Textos mais longos reduzem esses números pela medição (limits).
  */
-export const ROOMS_PER_SHEET: RoomsPerSheet = { first: 8, next: 22 };
+export const ROOMS_PER_SHEET: RoomsPerSheet = { first: 6, next: 18 };
 
 /** Divide a lista de ambientes da Opção 02 em folhas A4, para nenhuma folha passar de 297 mm. */
 export function splitRooms<T>(list: T[], cap: RoomsPerSheet = ROOMS_PER_SHEET): T[][] {
-  const out: T[][] = [list.slice(0, cap.first)];
-  for (let i = cap.first; i < list.length; i += cap.next) out.push(list.slice(i, i + cap.next));
+  const out: T[][] = [];
+  let i = 0;
+  do {
+    const k = out.length;
+    const base = k === 0 ? cap.first : cap.next;
+    const size = Math.max(1, Math.min(base, cap.limits?.[k] ?? base));
+    out.push(list.slice(i, i + size));
+    i += size;
+  } while (i < list.length);
   return out;
 }
 
@@ -248,6 +261,8 @@ export function budgetView(d: BudgetData, cap: RoomsPerSheet = ROOMS_PER_SHEET) 
       ? {
           sobretitulo: both ? `Opção 01 · ${SUBTITLE}` : SUBTITLE,
           porAmbiente: `${brl(t.op1PerCents)} por ambiente`,
+          valorPorAmbiente: brl(t.op1PerCents),
+          valorExecutivo: brl(t.op1ExecCents),
           linhaRender: `Render 3D (${rooms(t.rooms)} × ${brl(t.op1PerCents)})`,
           valorRender: brl(t.op1RenderCents),
           executivo: `${brl(t.op1ExecCents)} para o projeto`,

@@ -14,6 +14,7 @@ import { NotesSection } from './NotesSection';
 import { UploadPanel } from './UploadPanel';
 import { FilePreview, isImage } from './FilePreview';
 import { ConfirmDeleteDialog, RequestDeletionDialog } from './DeletionDialogs';
+import { NewBudgetPanel } from '../budgets/NewBudgetPanel';
 import { canDeleteProjects, canWriteProjects, deadlineLabel, folderName, formatDate, SituationBadge } from './shared';
 
 type Pending =
@@ -47,6 +48,7 @@ export function ProjectPage() {
   const [notes, setNotes] = useState<ProjectNote[] | null>(null);
   const [notesError, setNotesError] = useState<unknown>(null);
   const [editing, setEditing] = useState(false);
+  const [creatingBudget, setCreatingBudget] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewing, setPreviewing] = useState<ProjectFile | null>(null);
   const [deletingProject, setDeletingProject] = useState(false);
@@ -204,6 +206,11 @@ export function ProjectPage() {
         </div>
         {(canWrite || canDeleteProjects(me)) && (
           <div className="project__actions">
+            {canWrite && (
+              <Button variant="outline" onClick={() => setCreatingBudget(true)}>
+                Novo orçamento
+              </Button>
+            )}
             {canDeleteProjects(me) && (
               <button type="button" className="text-button" onClick={() => setDeletingProject(true)}>
                 Excluir projeto
@@ -287,6 +294,17 @@ export function ProjectPage() {
           onSaved={(p) => {
             setEditing(false);
             setProject(p);
+          }}
+        />
+      )}
+
+      {creatingBudget && (
+        <NewBudgetPanel
+          project={project}
+          onClose={() => setCreatingBudget(false)}
+          onCreated={(b) => {
+            setCreatingBudget(false);
+            navigate(`/orcamentos/${b.id}`);
           }}
         />
       )}

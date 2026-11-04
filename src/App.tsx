@@ -14,13 +14,10 @@ import { AgendaPage } from './pages/agenda/AgendaPage';
 import { DeletionRequestsPage } from './pages/deletion/DeletionRequestsPage';
 import { NotificationsPage } from './pages/notifications/NotificationsPage';
 import { PrivacyPage } from './pages/privacy/PrivacyPage';
+import { BudgetsPage } from './pages/budgets/BudgetsPage';
+import { BudgetEditorPage } from './pages/budgets/BudgetEditorPage';
 
 const PAGES = [
-  {
-    path: '/orcamentos',
-    title: 'Orçamentos',
-    text: 'Aqui você vai criar e acompanhar os orçamentos de cada projeto. Esta tela chega na fase do orçamento.',
-  },
   {
     path: '/apresentacoes',
     title: 'Apresentação',
@@ -33,6 +30,14 @@ function Protected() {
   if (session.status === 'loading') return <AppLoading />;
   if (session.status === 'anonymous') return <Navigate to="/entrar" replace />;
   return <AppShell user={session.user} />;
+}
+
+/** Telas de tela cheia, sem o menu lateral (editor de orçamento), com a mesma exigência de sessão. */
+function ProtectedFull({ children }: { children: ReactNode }) {
+  const session = useSession();
+  if (session.status === 'loading') return <AppLoading />;
+  if (session.status === 'anonymous') return <Navigate to="/entrar" replace />;
+  return <ErrorBoundary fallback={(error) => <RecoveryScreen error={error} fullPage />}>{children}</ErrorBoundary>;
 }
 
 /** A API já responde 403 para quem não é administrador; aqui só evitamos mostrar a tela vazia. */
@@ -78,6 +83,14 @@ function SessionRoutes() {
     <SessionProvider>
       <Routes>
         <Route path="/entrar" element={<LoginRoute />} />
+        <Route
+          path="/orcamentos/:id"
+          element={
+            <ProtectedFull>
+              <BudgetEditorPage />
+            </ProtectedFull>
+          }
+        />
         <Route element={<Protected />}>
           <Route
             index
@@ -92,6 +105,7 @@ function SessionRoutes() {
           {PAGES.map((p) => (
             <Route key={p.path} path={p.path} element={<PlaceholderPage title={p.title} text={p.text} />} />
           ))}
+          <Route path="/orcamentos" element={<BudgetsPage />} />
           <Route path="/agenda" element={<AgendaPage />} />
           <Route path="/processos" element={<ProcessesPage />} />
           <Route path="/projetos" element={<ProjectsPage />} />
