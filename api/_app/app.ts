@@ -25,6 +25,7 @@ import { createAdminDrive, type DriveClient } from './drive.js';
 import { createAdminCalendar, type CalendarClient } from './calendar.js';
 import { createCalendarSync } from './calendar-sync.js';
 import { eventsRoutes } from './routes/events.js';
+import { budgetsRoutes } from './routes/budgets.js';
 
 export const SESSION_COOKIE = 'decroqui_sid';
 const FLOW_COOKIE = 'decroqui_oauth';
@@ -185,6 +186,7 @@ export async function buildApp({ config, db, google, drive, calendar, logger = f
     await protectedRoutes.register(stagesRoutes, { db });
     const sync = createCalendarSync({ db, calendar: calendar ?? createAdminCalendar({ config, db }) });
     await protectedRoutes.register(eventsRoutes, { db, sync });
+    await protectedRoutes.register(budgetsRoutes, { db });
     if (extraProtectedRoutes) await protectedRoutes.register(extraProtectedRoutes);
   });
 
