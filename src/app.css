@@ -144,6 +144,7 @@
 }
 .alert--danger {
   background: var(--feedback-danger-bg);
+  color: var(--feedback-danger);
 }
 .alert--danger .alert__icon {
   color: var(--feedback-danger);
@@ -550,12 +551,12 @@
 }
 .recovery__title {
   font: var(--weight-light) var(--text-3xl) / var(--leading-tight) var(--font-display);
-  color: var(--text-primary);
+  color: var(--feedback-danger);
   margin-bottom: var(--space-4);
 }
 .recovery__text {
   font: var(--type-lead);
-  color: var(--ardosia-500);
+  color: var(--feedback-danger);
   margin-bottom: var(--space-6);
 }
 .recovery__button {
@@ -721,7 +722,7 @@ a.user-menu__item {
 /* Falha no compartilhamento ou na revogação da pasta do Drive, com o botão para tentar de novo. */
 .drive-warning {
   font: var(--weight-regular) var(--text-xs) / 1.4 var(--font-body);
-  color: var(--text-brand);
+  color: var(--feedback-danger);
 }
 .drive-warning__retry {
   padding: 0;
@@ -742,6 +743,10 @@ a.user-menu__item {
   padding-top: var(--space-6);
   font: var(--weight-light) var(--text-base) / 1.8 var(--font-body);
   color: var(--text-secondary);
+}
+/* Falha de carga (LoadError): o texto em terracota; o "Tentar de novo" segue a cor do link. */
+.load-error {
+  color: var(--feedback-danger);
 }
 
 /* Menu da linha */
@@ -3054,8 +3059,8 @@ body.is-card-dragging * {
   background: var(--ardosia-100);
 }
 .agenda-connection--danger {
-  background: var(--terracota-200);
-  color: var(--terracota-600);
+  background: var(--feedback-danger-bg);
+  color: var(--feedback-danger);
 }
 .agenda-connection--quiet {
   padding-left: 0;
@@ -3449,7 +3454,7 @@ body.is-card-dragging * {
   margin-top: 3px;
 }
 .event-panel__origin.is-danger {
-  color: var(--terracota-600);
+  color: var(--feedback-danger);
 }
 .event-panel__rule {
   margin: 0;
