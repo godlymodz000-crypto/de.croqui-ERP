@@ -13,6 +13,7 @@ import { ProcessesPage } from './pages/processes/ProcessesPage';
 import { AgendaPage } from './pages/agenda/AgendaPage';
 import { DeletionRequestsPage } from './pages/deletion/DeletionRequestsPage';
 import { NotificationsPage } from './pages/notifications/NotificationsPage';
+import { PrivacyPage } from './pages/privacy/PrivacyPage';
 
 const PAGES = [
   {
@@ -52,50 +53,69 @@ function LoginRoute() {
 export function App() {
   return (
     <ErrorBoundary fallback={(error) => <RecoveryScreen error={error} fullPage />}>
-      <SessionProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/entrar" element={<LoginRoute />} />
-            <Route element={<Protected />}>
-              <Route
-                index
-                element={
-                  <PlaceholderPage
-                    title="Dashboard"
-                    soon
-                    text="Aqui você verá o resumo do estúdio: projetos em andamento, prazos, compromissos e orçamentos. O dashboard chega depois das outras telas."
-                  />
-                }
-              />
-              {PAGES.map((p) => (
-                <Route key={p.path} path={p.path} element={<PlaceholderPage title={p.title} text={p.text} />} />
-              ))}
-              <Route path="/agenda" element={<AgendaPage />} />
-              <Route path="/processos" element={<ProcessesPage />} />
-              <Route path="/projetos" element={<ProjectsPage />} />
-              <Route path="/projetos/:id" element={<ProjectPage />} />
-              <Route path="/notificacoes" element={<NotificationsPage />} />
-              <Route
-                path="/colaboradores"
-                element={
-                  <AdminOnly title="Colaboradores">
-                    <CollaboratorsPage />
-                  </AdminOnly>
-                }
-              />
-              <Route
-                path="/pedidos-de-exclusao"
-                element={
-                  <AdminOnly title="Pedidos de exclusão">
-                    <DeletionRequestsPage />
-                  </AdminOnly>
-                }
-              />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </SessionProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
     </ErrorBoundary>
+  );
+}
+
+/**
+ * /privacidade é pública: fica fora do SessionProvider, então não consulta /api/me, não passa pelo
+ * bloqueio de login nem pela moldura com o menu lateral. O resto do ERP continua atrás da sessão.
+ */
+export function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/privacidade" element={<PrivacyPage />} />
+      <Route path="*" element={<SessionRoutes />} />
+    </Routes>
+  );
+}
+
+function SessionRoutes() {
+  return (
+    <SessionProvider>
+      <Routes>
+        <Route path="/entrar" element={<LoginRoute />} />
+        <Route element={<Protected />}>
+          <Route
+            index
+            element={
+              <PlaceholderPage
+                title="Dashboard"
+                soon
+                text="Aqui você verá o resumo do estúdio: projetos em andamento, prazos, compromissos e orçamentos. O dashboard chega depois das outras telas."
+              />
+            }
+          />
+          {PAGES.map((p) => (
+            <Route key={p.path} path={p.path} element={<PlaceholderPage title={p.title} text={p.text} />} />
+          ))}
+          <Route path="/agenda" element={<AgendaPage />} />
+          <Route path="/processos" element={<ProcessesPage />} />
+          <Route path="/projetos" element={<ProjectsPage />} />
+          <Route path="/projetos/:id" element={<ProjectPage />} />
+          <Route path="/notificacoes" element={<NotificationsPage />} />
+          <Route
+            path="/colaboradores"
+            element={
+              <AdminOnly title="Colaboradores">
+                <CollaboratorsPage />
+              </AdminOnly>
+            }
+          />
+          <Route
+            path="/pedidos-de-exclusao"
+            element={
+              <AdminOnly title="Pedidos de exclusão">
+                <DeletionRequestsPage />
+              </AdminOnly>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </SessionProvider>
   );
 }
