@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { budgets, projects, users, type Budget } from '../db/schema.js';
+import { auditLog, budgets, projects, users, type Budget } from '../db/schema.js';
 import { audit } from '../audit.js';
 import { budgetHeadlineCents, emptyBudget, parseBudgetData, type BudgetData } from '../budget-calc.js';
 
@@ -50,24 +50,52 @@ export async function budgetsRoutes(app: FastifyInstance, { db }: { db: Db }) {
     return b;
   }
 
-  async function dto(b: Budget, withData: boolean) {
-    const project = b.projectId ? await activeProject(b.projectId) : null;
-    const [author] = b.createdBy
-      ? await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, b.createdBy))
+  /** Resposta da API. A lista vem sem o conteúdo (`data`); cliente e quem alterou por último vêm junto. */
+  async function dtos(rows: Budget[], withData: boolean) {
+    if (!rows.length) return [];
+    const ids = rows.map((b) => b.id);
+    const projectIds = [...new Set(rows.map((b) => b.projectId).filter((id): id is string => !!id))];
+    const projectRows = projectIds.length
+      ? await db
+          .select({ id: projects.id, name: projects.name, clientName: projects.clientName })
+          .from(projects)
+          .where(and(inArray(projects.id, projectIds), isNull(projects.deletedAt)))
       : [];
-    return {
-      id: b.id,
-      number: b.number,
-      name: b.name,
-      status: b.status,
-      projectId: b.projectId,
-      project: project ? { id: project.id, name: project.name, clientName: project.clientName } : null,
-      totalCents: b.totalCents,
-      createdBy: author ? (author.name ?? author.email) : null,
-      updatedAt: b.updatedAt.toISOString(),
-      ...(withData ? { data: { ...emptyBudget(), ...(b.data as Partial<BudgetData>) } } : {}),
-    };
+    const projectById = new Map(projectRows.map((p) => [p.id, p]));
+    const authorIds = [...new Set(rows.map((b) => b.createdBy).filter((id): id is string => !!id))];
+    const authorRows = authorIds.length
+      ? await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(inArray(users.id, authorIds))
+      : [];
+    const authorById = new Map(authorRows.map((u) => [u.id, u.name ?? u.email]));
+    const lastEdits = await db
+      .selectDistinctOn([auditLog.entityId], { budgetId: auditLog.entityId, userName: users.name, userEmail: users.email })
+      .from(auditLog)
+      .leftJoin(users, eq(users.id, auditLog.userId))
+      .where(and(eq(auditLog.entity, 'budget'), inArray(auditLog.entityId, ids)))
+      .orderBy(auditLog.entityId, desc(auditLog.at));
+    const editorById = new Map(lastEdits.map((e) => [e.budgetId, e.userName ?? e.userEmail ?? null]));
+
+    return rows.map((b) => {
+      const project = b.projectId ? (projectById.get(b.projectId) ?? null) : null;
+      const data = { ...emptyBudget(), ...(b.data as Partial<BudgetData>) };
+      return {
+        id: b.id,
+        number: b.number,
+        name: b.name,
+        status: b.status,
+        projectId: b.projectId,
+        project,
+        // Cliente do orçamento: o que foi preenchido no editor; sem isso, o cliente do projeto.
+        clientName: data.cliente.trim() || project?.clientName || null,
+        totalCents: b.totalCents,
+        createdBy: b.createdBy ? (authorById.get(b.createdBy) ?? null) : null,
+        updatedAt: b.updatedAt.toISOString(),
+        updatedBy: editorById.get(b.id) ?? null,
+        ...(withData ? { data } : {}),
+      };
+    });
   }
+  const dto = async (b: Budget, withData: boolean) => (await dtos([b], withData))[0];
 
   // Lista: ?projectId=<id> traz os orçamentos do projeto; ?semProjeto=1, os avulsos. Sem filtro, todos.
   app.get<{ Querystring: { projectId?: string; semProjeto?: string } }>(
@@ -89,7 +117,7 @@ export async function budgetsRoutes(app: FastifyInstance, { db }: { db: Db }) {
                 isNull(projects.deletedAt),
         )
         .orderBy(desc(budgets.updatedAt));
-      return Promise.all(rows.map((r) => dto(r.budget, false)));
+      return dtos(rows.map((r) => r.budget), false);
     },
   );
 

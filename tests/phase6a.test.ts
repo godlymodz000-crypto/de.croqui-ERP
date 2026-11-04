@@ -185,6 +185,17 @@ describe('salvamento', () => {
     expect(reopened.json().updatedAt).toBe(save.json().updatedAt);
   });
 
+  it('a lista traz o cliente (do orçamento ou do projeto) e quem alterou por último', async () => {
+    const p = await project();
+    const doProjeto = (await create({ name: 'Do projeto', projectId: p.id })).json();
+    const avulso = (await create({ name: 'Avulso' })).json();
+    await app.inject({ method: 'PATCH', url: `/budgets/${avulso.id}`, headers: admin, payload: { data: filled } });
+    const list = (await app.inject({ method: 'GET', url: '/budgets', headers: viewer })).json() as { id: string; clientName: string | null; updatedBy: string | null }[];
+    const byId = new Map(list.map((b) => [b.id, b]));
+    expect(byId.get(doProjeto.id)).toMatchObject({ clientName: 'Cliente Exemplo', updatedBy: 'member' });
+    expect(byId.get(avulso.id)).toMatchObject({ clientName: 'Cliente Exemplo', updatedBy: ADMIN_EMAIL });
+  });
+
   it('total_cents guarda o maior total, somando as linhas arredondadas', async () => {
     const b = (await create({ name: 'Orçamento' })).json();
     const res = await app.inject({ method: 'PATCH', url: `/budgets/${b.id}`, headers: member, payload: { data: filled } });
