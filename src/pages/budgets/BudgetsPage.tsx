@@ -124,7 +124,8 @@ export function BudgetsPage() {
                 <span className="project-cell__text">
                   <span className="project-cell__name">{b.name}</span>
                   <span className="project-cell__sub">
-                    Nº {b.number} · {b.project ? b.project.name : 'Sem projeto'}
+                    {/* No celular a coluna Cliente some; o cliente vem nesta linha, como no quadro de 390. */}
+                    Nº {b.number} · {isMobile ? (b.clientName ?? (b.project ? b.project.name : 'Sem projeto')) : b.project ? b.project.name : 'Sem projeto'}
                   </span>
                 </span>
               </span>

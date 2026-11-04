@@ -2678,6 +2678,13 @@ body.is-card-dragging * {
   .project__actions > :only-child {
     margin-left: auto;
   }
+  /* Com "Novo orçamento" (Fase 6a) são três ações: ele ocupa a primeira linha e as outras ficam embaixo. */
+  .project__actions {
+    flex-wrap: wrap;
+  }
+  .project__actions > :first-child:not(:only-child):not(.text-button) {
+    flex: 1 0 100%;
+  }
   .project-details__list > div {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-1);
