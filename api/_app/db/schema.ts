@@ -321,6 +321,13 @@ export const budgets = pgTable(
     // Quem criou. Fica nulo se essa conta for removida; o orçamento continua.
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    // PDF mais recente salvo no Drive. Vale para avulsos (pasta Avulsos) e de projeto (que também
+    // aparecem nos arquivos do projeto). Cada exportação cria um arquivo novo; pdf_version conta as
+    // exportações e entra no nome a partir da segunda (-v2, -v3). Não muda updated_at.
+    pdfDriveFileId: text('pdf_drive_file_id'),
+    pdfName: text('pdf_name'),
+    pdfVersion: integer('pdf_version').notNull().default(0),
+    pdfExportedAt: timestamp('pdf_exported_at', { withTimezone: true }),
   },
   (t) => [
     uniqueIndex('budgets_number_idx').on(t.number),

@@ -1,5 +1,5 @@
-// Fase 6a: migração 0008 (tabela budgets) aplicada no banco de teste em memória (PGlite).
-// Confere que a migração só cria a tabela nova e não muda nenhuma tabela existente.
+// Fase 6a: migrações 0008 (tabela budgets) e 0009 (PDF do orçamento) aplicadas no banco de teste em memória
+// (PGlite). Confere que elas só mexem na tabela budgets e não mudam nenhuma tabela existente.
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
@@ -9,19 +9,24 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import * as schema from '../api/_app/db/schema.js';
 
-const BUDGETS_TAG = '0008_orcamentos';
+const tmp: string[] = [];
+afterAll(() => tmp.forEach((d) => rmSync(d, { recursive: true, force: true })));
 
-/** Cópia da pasta de migrações só até a anterior à de orçamentos. */
-function migrationsBeforeBudgets(): string {
+const BUDGETS_TAG = '0008_orcamentos';
+const PDF_TAG = '0009_orcamento_pdf';
+
+/** Cópia da pasta de migrações só até a anterior a `tag`. */
+function migrationsBefore(tag: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'erp-mig-'));
+  tmp.push(dir);
   cpSync('./drizzle', dir, { recursive: true });
   const journalPath = join(dir, 'meta', '_journal.json');
   const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as { entries: { tag: string }[] };
-  const at = journal.entries.findIndex((e) => e.tag === BUDGETS_TAG);
+  const at = journal.entries.findIndex((e) => e.tag === tag);
   expect(at).toBeGreaterThan(0);
+  for (const e of journal.entries.slice(at)) rmSync(join(dir, `${e.tag}.sql`));
   journal.entries = journal.entries.slice(0, at);
   writeFileSync(journalPath, JSON.stringify(journal));
-  rmSync(join(dir, `${BUDGETS_TAG}.sql`));
   return dir;
 }
 
@@ -48,13 +53,11 @@ async function snapshot(pg: PGlite) {
   };
 }
 
-const tmp: string[] = [];
-afterAll(() => tmp.forEach((d) => rmSync(d, { recursive: true, force: true })));
 
-describe('migração 0008: orçamentos', () => {
+
+describe('migrações 0008 e 0009: orçamentos', () => {
   it('cria só a tabela budgets e o tipo budget_status; as tabelas existentes não mudam', async () => {
-    const before = migrationsBeforeBudgets();
-    tmp.push(before);
+    const before = migrationsBefore(BUDGETS_TAG);
     const old = await snapshot(await database(before));
     const now = await snapshot(await database('./drizzle'));
 
@@ -72,6 +75,10 @@ describe('migração 0008: orçamentos', () => {
       ['id', 'NO'],
       ['name', 'NO'],
       ['number', 'NO'],
+      ['pdf_drive_file_id', 'YES'],
+      ['pdf_exported_at', 'YES'],
+      ['pdf_name', 'YES'],
+      ['pdf_version', 'NO'],
       ['project_id', 'YES'],
       ['status', 'NO'],
       ['total_cents', 'NO'],
@@ -95,5 +102,21 @@ describe('migração 0008: orçamentos', () => {
     ]);
     expect(rows[1].number).toBe(rows[0].number + 1);
     await expect(pg.query(`insert into budgets (name, number) values ('C', 1)`)).rejects.toThrow();
+  });
+
+  it('0009 só acrescenta as colunas do PDF em budgets, sem mudar o que já existe', async () => {
+    const old = await snapshot(await database(migrationsBefore(PDF_TAG)));
+    const now = await snapshot(await database('./drizzle'));
+    const pdfCols = ['pdf_drive_file_id', 'pdf_name', 'pdf_version', 'pdf_exported_at'];
+    expect(now.columns.filter((c) => !pdfCols.includes(c.column_name as string))).toEqual(old.columns);
+    // O NOT NULL de pdf_version aparece como restrição própria no PGlite.
+    expect(now.constraints.filter((c) => c.conname !== 'budgets_pdf_version_not_null')).toEqual(old.constraints);
+    expect(now.indexes).toEqual(old.indexes);
+    expect(now.rls).toEqual(old.rls);
+    expect(now.enums).toEqual(old.enums);
+    expect(now.rows).toEqual(old.rows);
+    const pg = await database('./drizzle');
+    const { rows } = await pg.query(`insert into budgets (name) values ('A') returning pdf_drive_file_id, pdf_name, pdf_version, pdf_exported_at`);
+    expect(rows).toEqual([{ pdf_drive_file_id: null, pdf_name: null, pdf_version: 0, pdf_exported_at: null }]);
   });
 });
