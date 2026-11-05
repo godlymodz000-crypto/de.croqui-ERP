@@ -15,6 +15,16 @@ export interface Budget {
   createdBy: string | null;
   updatedAt: string;
   updatedBy: string | null;
+  /** PDF mais recente salvo no Drive. Os anteriores continuam no Drive, com versão menor no nome. */
+  pdf: BudgetPdf | null;
+}
+
+export interface BudgetPdf {
+  driveFileId: string;
+  name: string;
+  version: number;
+  exportedAt: string;
+  url: string;
 }
 
 export interface BudgetWithData extends Budget {
@@ -28,4 +38,6 @@ export const budgetsApi = {
   /** Salvamento automático. `baseUpdatedAt` é a versão que a tela tem; outra mais nova responde 409. */
   save: (id: string, input: { data?: BudgetData; name?: string; baseUpdatedAt?: string }) =>
     mutate(request<BudgetWithData>('PATCH', `/budgets/${id}`, input), 'budgets'),
+  /** "Salvar em PDF": o servidor gera com o que está gravado e envia ao Drive. Cada chamada cria uma versão nova. */
+  exportPdf: (id: string) => mutate(request<{ file: BudgetPdf & { pages: number }; budget: BudgetWithData }>('POST', `/budgets/${id}/pdf`), 'budgets'),
 };

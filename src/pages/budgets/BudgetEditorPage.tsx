@@ -23,6 +23,10 @@ const RETRY_MS = 10_000;
 const SHEET_PX = 794;
 
 type SaveState = { kind: 'saved'; at: Date | null } | { kind: 'saving' } | { kind: 'error' } | { kind: 'conflict' };
+/** "Salvar em PDF": `unsaved` quando as alterações não foram gravadas e o PDF não foi gerado. */
+type PdfState = { kind: 'idle' } | { kind: 'working' } | { kind: 'error'; reason: 'unsaved' | 'failed' };
+/** Quanto o PDF espera um salvamento em andamento terminar antes de desistir. */
+const PDF_SAVE_WAIT_MS = 15_000;
 
 /**
  * Editor de orçamento (quadros "ERP · Editor de orçamento"): painel à esquerda, folhas A4 à direita.
@@ -41,6 +45,7 @@ export function BudgetEditorPage() {
   const [save, setSave] = useState<SaveState>({ kind: 'saved', at: null });
   const [mobileTab, setMobileTab] = useState<'fill' | 'sheets'>('fill');
   const [removing, setRemoving] = useState<number | null>(null);
+  const [pdf, setPdf] = useState<PdfState>({ kind: 'idle' });
 
   const dataRef = useRef<BudgetData | null>(null);
   const baseRef = useRef<string>('');
@@ -128,6 +133,28 @@ export function BudgetEditorPage() {
   // Sair do editor pelo "Voltar" salva o que estiver pendente.
   useEffect(() => () => void flush(), [flush]);
 
+  /**
+   * Salva o que estiver pendente e pede o PDF ao servidor, que gera com o que está gravado. O editor
+   * continua livre enquanto isso: só o botão mostra "Gerando PDF".
+   */
+  const exportPdf = useCallback(async () => {
+    setPdf({ kind: 'working' });
+    const started = Date.now();
+    while (inFlightRef.current && Date.now() - started < PDF_SAVE_WAIT_MS) await new Promise((r) => setTimeout(r, 150));
+    await flush();
+    if (dirtyRef.current || inFlightRef.current || blockedRef.current) {
+      setPdf({ kind: 'error', reason: 'unsaved' });
+      return;
+    }
+    try {
+      const { budget: saved } = await budgetsApi.exportPdf(id);
+      setBudget((b) => (b ? { ...b, pdf: saved.pdf } : b));
+      setPdf({ kind: 'idle' });
+    } catch {
+      setPdf({ kind: 'error', reason: 'failed' });
+    }
+  }, [flush, id]);
+
   if (state === 'loading') return <AppLoading />;
   if (state !== 'ready' || !budget || !data) {
     return (
@@ -151,11 +178,17 @@ export function BudgetEditorPage() {
   const eyebrow = `Orçamento nº ${budget.number} · ${budget.project ? budget.project.name : 'Sem projeto'}`;
 
   const status = canWrite ? <SaveStatus save={save} /> : <span className="beditor__status">Somente leitura</span>;
+  const working = pdf.kind === 'working';
   const pdfButton = canExportBudgets(me) ? (
-    // A geração do PDF entra no passo seguinte, depois da aprovação das bibliotecas.
-    <Button variant="primary" disabled fullWidth={isMobile}>
-      Salvar em PDF
+    <Button variant="primary" disabled={working} aria-busy={working} fullWidth={isMobile} onClick={() => void exportPdf()}>
+      {working ? 'Gerando PDF' : 'Salvar em PDF'}
     </Button>
+  ) : null;
+  // O PDF mais recente fica à vista, com a versão e a hora, e abre no Drive.
+  const lastPdf = budget.pdf ? (
+    <a className="beditor__pdf" href={budget.pdf.url} target="_blank" rel="noreferrer" title={budget.pdf.name}>
+      PDF{budget.pdf.version > 1 ? ` v${budget.pdf.version}` : ''} às {clock(new Date(budget.pdf.exportedAt))}
+    </a>
   ) : null;
 
   const panel = (
@@ -188,6 +221,7 @@ export function BudgetEditorPage() {
         {!isMobile && (
           <div className="beditor__actions">
             {status}
+            {lastPdf}
             {pdfButton}
           </div>
         )}
@@ -209,26 +243,48 @@ export function BudgetEditorPage() {
         {(!isMobile || mobileTab === 'sheets') && sheets}
       </div>
 
-      {isMobile && pdfButton && <div className="beditor__bottom">{pdfButton}</div>}
-
-      {save.kind === 'error' && (
-        <div className="toast-slot beditor__toast">
-          <div className="save-alert save-alert--danger" role="alert">
-            <p>Não foi possível salvar as últimas alterações. Elas continuam aqui e o ERP tenta de novo sozinho.</p>
-            <button type="button" className="link-button" onClick={() => void flush()}>
-              Tentar agora
-            </button>
-          </div>
+      {isMobile && pdfButton && (
+        <div className="beditor__bottom">
+          {lastPdf}
+          {pdfButton}
         </div>
       )}
-      {save.kind === 'conflict' && (
+
+      {(save.kind === 'error' || save.kind === 'conflict' || pdf.kind === 'error') && (
         <div className="toast-slot beditor__toast">
-          <div className="save-alert save-alert--warning" role="alert">
-            <p>Este orçamento foi alterado em outra aba ou por outra pessoa. Recarregue para ver a versão atual antes de continuar.</p>
-            <button type="button" className="link-button" onClick={() => void load()}>
-              Recarregar orçamento
-            </button>
-          </div>
+          {save.kind === 'error' && (
+            <div className="save-alert save-alert--danger" role="alert">
+              <p>Não foi possível salvar as últimas alterações. Elas continuam aqui e o ERP tenta de novo sozinho.</p>
+              <button type="button" className="link-button" onClick={() => void flush()}>
+                Tentar agora
+              </button>
+            </div>
+          )}
+          {save.kind === 'conflict' && (
+            <div className="save-alert save-alert--warning" role="alert">
+              <p>Este orçamento foi alterado em outra aba ou por outra pessoa. Recarregue para ver a versão atual antes de continuar.</p>
+              <button type="button" className="link-button" onClick={() => void load()}>
+                Recarregar orçamento
+              </button>
+            </div>
+          )}
+          {pdf.kind === 'error' && (
+            <div className="save-alert save-alert--danger" role="alert">
+              <p>
+                {pdf.reason === 'unsaved'
+                  ? 'O PDF não foi gerado porque as últimas alterações ainda não foram salvas. Tente de novo quando aparecer "Salvo".'
+                  : 'Não foi possível salvar o PDF no Drive. O orçamento continua salvo; tente de novo em instantes.'}
+              </p>
+              <div className="save-alert__actions">
+                <button type="button" className="link-button" onClick={() => void exportPdf()}>
+                  Tentar de novo
+                </button>
+                <button type="button" className="link-button" onClick={() => setPdf({ kind: 'idle' })}>
+                  Fechar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

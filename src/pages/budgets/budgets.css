@@ -133,6 +133,23 @@
 .beditor__status.is-warning {
   color: var(--feedback-warning);
 }
+/* PDF mais recente: versão e hora, abre no Drive. */
+.beditor__pdf {
+  font: var(--weight-regular) 13px / 1.2 var(--font-body);
+  color: var(--text-brand);
+  white-space: nowrap;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.beditor__toast {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.save-alert__actions {
+  display: flex;
+  gap: var(--space-5);
+}
 .beditor__body {
   flex: 1;
   min-height: 0;
@@ -490,8 +507,15 @@
     padding: var(--space-4);
     background: var(--surface-page);
     border-top: 1px solid var(--border-hairline);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
   }
   .beditor__toast {
     bottom: 92px;
+  }
+  .beditor__bottom:has(.beditor__pdf) ~ .beditor__toast {
+    bottom: 116px;
   }
 }
