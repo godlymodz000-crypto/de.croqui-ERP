@@ -33,7 +33,7 @@ export interface DriveClient {
    */
   createUploadSession(input: { name: string; mimeType: string; size: number; parentId: string; origin: string }): Promise<string>;
   getFile(id: string): Promise<DriveFile | null>;
-  /** Envia um arquivo gerado no servidor (PDF do orçamento) para a pasta, numa chamada só. */
+  /** Envia um arquivo gerado no servidor (PDF do orçamento) para a pasta, por sessão retomável (abre e envia num PUT só). */
   uploadFile(input: { name: string; mimeType: string; parentId: string; body: Uint8Array }): Promise<DriveFile>;
   /** Move o arquivo para a lixeira do Drive (recuperável por 30 dias). */
   trashFile(id: string): Promise<void>;
@@ -171,21 +171,23 @@ export function createAdminDrive({ config, db, fetch: doFetch = fetch }: { confi
     },
 
     async uploadFile({ name, mimeType, parentId, body }) {
-      // Upload multipart: metadados e conteúdo no mesmo pedido. Serve para arquivos de até 5 MB.
-      const boundary = `erp-${crypto.randomUUID()}`;
-      const head = `--${boundary}
-content-type: application/json; charset=UTF-8
-
-${JSON.stringify({ name, mimeType, parents: [parentId] })}
---${boundary}
-content-type: ${mimeType}
-
-`;
-      const res = await call(`${UPLOAD_ENDPOINT}?uploadType=multipart&fields=id,name,mimeType,size,parents,trashed`, {
+      // Sessão retomável, como nas subidas do navegador: abre a sessão com os metadados e depois envia
+      // o conteúdo num PUT só. Se o PUT falhar, a sessão não se completa e nenhum arquivo fica no Drive.
+      const session = await call(`${UPLOAD_ENDPOINT}?uploadType=resumable&fields=id,name,mimeType,size,parents,trashed`, {
         method: 'POST',
-        headers: { 'content-type': `multipart/related; boundary=${boundary}` },
-        body: new Blob([head, body as Uint8Array<ArrayBuffer>, `
---${boundary}--`]),
+        headers: {
+          'content-type': 'application/json; charset=UTF-8',
+          'x-upload-content-type': mimeType,
+          'x-upload-content-length': String(body.byteLength),
+        },
+        body: JSON.stringify({ name, mimeType, parents: [parentId] }),
+      });
+      const location = session.headers.get('location');
+      if (!session.ok || !location) throw new DriveError(`Abertura da sessão de upload falhou (${session.status}).`);
+      const res = await call(location, {
+        method: 'PUT',
+        headers: { 'content-type': mimeType },
+        body: body as Uint8Array<ArrayBuffer>,
       });
       if (!res.ok) throw new DriveError(`Envio do arquivo falhou (${res.status}).`);
       const f = (await res.json()) as Omit<DriveFile, 'size'> & { size?: string };
