@@ -31,3 +31,20 @@ PASSOU  390: editor sem rolagem lateral
 PASSOU  390: folhas cabem na largura
 PASSOU  390: página do projeto com "Novo orçamento" sem rolagem lateral
 PASSOU  1440: ações do projeto numa linha só
+
+Salvar em PDF (Edge local, Drive simulado)
+PASSOU  1440: editor abre com o botão Salvar em PDF ativo
+PASSOU  1440: durante a geração o botão mostra "Gerando PDF" e o painel segue editável ({"label":"Gerando PDF","disabled":true,"panel":false})
+PASSOU  1440: depois de gerar aparece o link do PDF
+PASSOU  1440: link mostra a hora e o nome do arquivo (PDF às 21:02 | Orcamento-4-Casa-com-vinte-ambientes-2026-11-04.pdf)
+PASSOU  1440: falha no envio mostra o aviso em terracota
+PASSOU  1440: depois do erro o editor e o botão seguem livres ({"label":"Salvar em PDF","disabled":false,"panel":false})
+PASSOU  1440: "Tentar de novo" cria a versão 2 e o link mostra v2
+PASSOU  390: editor abre com o botão fixo embaixo
+PASSOU  390: o link do PDF mais recente aparece acima do botão
+PASSOU  390: falha no envio mostra o aviso acima da barra
+PASSOU  390: o aviso não cobre o botão
+PASSOU  390: sem rolagem lateral
+PASSOU  leitor: editor sem botão de PDF
+PASSOU  leitor: chamando a rota direto recebe 403 (403)
+PASSOU  Drive simulado: os PDFs estão na pasta Orçamentos do projeto
