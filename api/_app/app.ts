@@ -22,7 +22,7 @@ import { filesRoutes } from './routes/files.js';
 import { notificationsRoutes } from './routes/notifications.js';
 import { stagesRoutes } from './routes/stages.js';
 import { createAdminDrive, type DriveClient } from './drive.js';
-import { createPdfRenderer, type BudgetPdfRenderer } from './budget-pdf.js';
+import type { BudgetPdfRenderer } from './budget-pdf.js';
 import { createAdminCalendar, type CalendarClient } from './calendar.js';
 import { createCalendarSync } from './calendar-sync.js';
 import { eventsRoutes } from './routes/events.js';
@@ -189,9 +189,30 @@ export async function buildApp({ config, db, google, drive, pdf, calendar, logge
     await protectedRoutes.register(stagesRoutes, { db });
     const sync = createCalendarSync({ db, calendar: calendar ?? createAdminCalendar({ config, db }) });
     await protectedRoutes.register(eventsRoutes, { db, sync });
-    await protectedRoutes.register(budgetsRoutes, { db, drive: driveClient, pdf: pdf ?? createPdfRenderer(config.pdfBrowserPath) });
+    await protectedRoutes.register(budgetsRoutes, { db, drive: driveClient, pdf: pdf ?? lazyPdfRenderer(config.pdfBrowserPath) });
     if (extraProtectedRoutes) await protectedRoutes.register(extraProtectedRoutes);
   });
 
   return app;
+}
+
+/**
+ * Gerador de PDF carregado só no primeiro pedido de PDF. O módulo traz o React do servidor e as folhas
+ * (src/budget/BudgetSheets.tsx); se algo nele falhar, só o "Salvar em PDF" responde erro, e login,
+ * projetos e orçamentos seguem funcionando. Uma falha ao carregar não fica guardada: o próximo pedido tenta de novo.
+ */
+export function lazyPdfRenderer(executablePath?: string, load = () => import('./budget-pdf.js')): BudgetPdfRenderer {
+  let renderer: Promise<BudgetPdfRenderer> | null = null;
+  return {
+    async render(data) {
+      renderer ??= load().then(
+        (m) => m.createPdfRenderer(executablePath),
+        (err) => {
+          renderer = null;
+          throw err;
+        },
+      );
+      return (await renderer).render(data);
+    },
+  };
 }
