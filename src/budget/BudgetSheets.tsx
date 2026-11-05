@@ -1,3 +1,6 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
+// O JSX automático fica fixo aqui porque este arquivo também roda no servidor (PDF), compilado fora do Vite.
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { budgetView, ROOMS_PER_SHEET, type BudgetData, type RoomsPerSheet } from '../shared/budget-calc';
 

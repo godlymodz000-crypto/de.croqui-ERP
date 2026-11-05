@@ -22,6 +22,7 @@ import { filesRoutes } from './routes/files.js';
 import { notificationsRoutes } from './routes/notifications.js';
 import { stagesRoutes } from './routes/stages.js';
 import { createAdminDrive, type DriveClient } from './drive.js';
+import { createPdfRenderer, type BudgetPdfRenderer } from './budget-pdf.js';
 import { createAdminCalendar, type CalendarClient } from './calendar.js';
 import { createCalendarSync } from './calendar-sync.js';
 import { eventsRoutes } from './routes/events.js';
@@ -46,6 +47,8 @@ export interface AppDeps {
   google?: GoogleClient;
   /** Drive usado nas escritas (token do administrador). Substituível nos testes. */
   drive?: DriveClient;
+  /** Gerador do PDF do orçamento. Nos testes, um falso que não abre navegador. */
+  pdf?: BudgetPdfRenderer;
   /** Google Agenda (token do administrador). Substituível nos testes. */
   calendar?: CalendarClient;
   logger?: boolean;
@@ -53,7 +56,7 @@ export interface AppDeps {
   extraProtectedRoutes?: FastifyPluginAsync;
 }
 
-export async function buildApp({ config, db, google, drive, calendar, logger = false, extraProtectedRoutes }: AppDeps) {
+export async function buildApp({ config, db, google, drive, pdf, calendar, logger = false, extraProtectedRoutes }: AppDeps) {
   const app = Fastify({ logger, trustProxy: true });
   const googleClient =
     google ??
@@ -186,7 +189,7 @@ export async function buildApp({ config, db, google, drive, calendar, logger = f
     await protectedRoutes.register(stagesRoutes, { db });
     const sync = createCalendarSync({ db, calendar: calendar ?? createAdminCalendar({ config, db }) });
     await protectedRoutes.register(eventsRoutes, { db, sync });
-    await protectedRoutes.register(budgetsRoutes, { db });
+    await protectedRoutes.register(budgetsRoutes, { db, drive: driveClient, pdf: pdf ?? createPdfRenderer(config.pdfBrowserPath) });
     if (extraProtectedRoutes) await protectedRoutes.register(extraProtectedRoutes);
   });
 

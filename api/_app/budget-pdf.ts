@@ -97,3 +97,30 @@ export async function launchPdfBrowser(executablePath?: string): Promise<Browser
   const { default: chromium } = await import('@sparticuz/chromium');
   return puppeteer.launch({ executablePath: await chromium.executablePath(), headless: true, args: chromium.args });
 }
+
+/** Quem gera o PDF a partir dos dados. Substituível nos testes, que não abrem navegador. */
+export interface BudgetPdfRenderer {
+  render(data: BudgetData): Promise<BudgetPdf>;
+}
+
+/**
+ * Gerador com um navegador por instância da função: abre no primeiro PDF e fica aberto para os seguintes.
+ * Se o navegador cair, o próximo pedido abre outro.
+ */
+export function createPdfRenderer(executablePath?: string): BudgetPdfRenderer {
+  let browser: Promise<Browser> | null = null;
+  const open = () => {
+    browser ??= launchPdfBrowser(executablePath).then(
+      (b) => {
+        b.on('disconnected', () => (browser = null));
+        return b;
+      },
+      (err) => {
+        browser = null;
+        throw err;
+      },
+    );
+    return browser;
+  };
+  return { render: async (data) => renderBudgetPdf(await open(), data) };
+}

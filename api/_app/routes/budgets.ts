@@ -1,8 +1,11 @@
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { auditLog, budgets, projects, users, type Budget } from '../db/schema.js';
+import { auditLog, budgets, projectFiles, projects, users, type Budget } from '../db/schema.js';
 import { audit } from '../audit.js';
+import { ensureRootFolder, fileViewUrl, projectSubfolderId, type DriveClient } from '../drive.js';
+import type { BudgetPdfRenderer } from '../budget-pdf.js';
+import { budgetPdfName, LOOSE_BUDGETS_FOLDER, todayInStudio } from '../budget-files.js';
 import { budgetHeadlineCents, emptyBudget, parseBudgetData, type BudgetData } from '../../../src/shared/budget-calc.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -31,11 +34,14 @@ interface UpdateBody {
   baseUpdatedAt?: unknown;
 }
 
-export async function budgetsRoutes(app: FastifyInstance, { db }: { db: Db }) {
+/** Ações do histórico que contam como "alterado por" na lista. Exportar o PDF não conta. */
+const EDIT_ACTIONS = ['budget.create', 'budget.update'];
+
+export async function budgetsRoutes(app: FastifyInstance, { db, drive, pdf }: { db: Db; drive: DriveClient; pdf: BudgetPdfRenderer }) {
   async function activeProject(id: string) {
     if (!UUID_RE.test(id)) return undefined;
     const [p] = await db
-      .select({ id: projects.id, name: projects.name, clientName: projects.clientName })
+      .select({ id: projects.id, name: projects.name, clientName: projects.clientName, driveFolderId: projects.driveFolderId })
       .from(projects)
       .where(and(eq(projects.id, id), isNull(projects.deletedAt)));
     return p;
@@ -71,7 +77,7 @@ export async function budgetsRoutes(app: FastifyInstance, { db }: { db: Db }) {
       .selectDistinctOn([auditLog.entityId], { budgetId: auditLog.entityId, userName: users.name, userEmail: users.email })
       .from(auditLog)
       .leftJoin(users, eq(users.id, auditLog.userId))
-      .where(and(eq(auditLog.entity, 'budget'), inArray(auditLog.entityId, ids)))
+      .where(and(eq(auditLog.entity, 'budget'), inArray(auditLog.entityId, ids), inArray(auditLog.action, EDIT_ACTIONS)))
       .orderBy(auditLog.entityId, desc(auditLog.at));
     const editorById = new Map(lastEdits.map((e) => [e.budgetId, e.userName ?? e.userEmail ?? null]));
 
@@ -91,6 +97,17 @@ export async function budgetsRoutes(app: FastifyInstance, { db }: { db: Db }) {
         createdBy: b.createdBy ? (authorById.get(b.createdBy) ?? null) : null,
         updatedAt: b.updatedAt.toISOString(),
         updatedBy: editorById.get(b.id) ?? null,
+        // PDF mais recente no Drive. Os anteriores continuam no Drive, com versão menor no nome.
+        pdf: b.pdfDriveFileId
+          ? {
+              driveFileId: b.pdfDriveFileId,
+              name: b.pdfName,
+              // A versão do arquivo vem do nome: pdf_version pode estar reservado por uma exportação em andamento.
+              version: Number(/-v(\d+)\.pdf$/.exec(b.pdfName ?? '')?.[1] ?? 1),
+              exportedAt: b.pdfExportedAt?.toISOString() ?? null,
+              url: fileViewUrl(b.pdfDriveFileId),
+            }
+          : null,
         ...(withData ? { data } : {}),
       };
     });
@@ -221,4 +238,121 @@ export async function budgetsRoutes(app: FastifyInstance, { db }: { db: Db }) {
       return dto(updated, true);
     },
   );
+
+  /**
+   * "Salvar em PDF": o servidor gera o PDF com o que está gravado e o envia ao Drive, na pasta
+   * Orçamentos do projeto ou em "De.Croqui ERP/Avulsos". Cada exportação cria um arquivo novo
+   * (-v2, -v3 no nome) e o orçamento aponta para o mais recente. A permissão é conferida aqui,
+   * não só no botão.
+   */
+  app.post<{ Params: { id: string } }>('/budgets/:id/pdf', { config: { permission: 'documents.export' } }, async (request, reply) => {
+    const budget = await find(request.params.id);
+    if (!budget) return reply.code(404).send({ error: 'not_found' });
+    const data = parseBudgetData({ ...emptyBudget(), ...(budget.data as object) });
+    if (!data) return reply.code(422).send({ error: 'invalid_data' });
+    const project = budget.projectId ? await activeProject(budget.projectId) : null;
+    if (budget.projectId && !project) return reply.code(404).send({ error: 'not_found' });
+
+    // Reserva a versão antes de gerar: duas exportações ao mesmo tempo nunca recebem o mesmo nome.
+    const [reserved] = await db
+      .update(budgets)
+      .set({ pdfVersion: sql`${budgets.pdfVersion} + 1` })
+      .where(eq(budgets.id, budget.id))
+      .returning({ version: budgets.pdfVersion });
+    const version = reserved.version;
+    // Se der errado, devolve o número quando nenhuma outra exportação passou na frente, para não pular versão.
+    const giveBack = () =>
+      db
+        .update(budgets)
+        .set({ pdfVersion: sql`${budgets.pdfVersion} - 1` })
+        .where(
+          and(
+            eq(budgets.id, budget.id),
+            eq(budgets.pdfVersion, version),
+            sql`${budgets.pdfDriveFileId} is not distinct from ${budget.pdfDriveFileId}`,
+          ),
+        )
+        .then(
+          () => undefined,
+          () => undefined,
+        );
+
+    const name = budgetPdfName({ name: budget.name, number: budget.number, issueDate: data.data || todayInStudio(new Date()), version });
+    let rendered;
+    try {
+      rendered = await pdf.render(data);
+    } catch (err) {
+      await giveBack();
+      request.log.error({ err: (err as Error)?.message ?? err }, 'falha ao gerar o PDF do orçamento');
+      return reply.code(502).send({ error: 'pdf_failed' });
+    }
+
+    let file;
+    try {
+      const folderId = project ? await projectSubfolderId(drive, project.driveFolderId, 'budgets') : await looseFolderId();
+      file = await drive.uploadFile({ name, mimeType: 'application/pdf', parentId: folderId, body: rendered.pdf });
+    } catch (err) {
+      await giveBack();
+      request.log.error({ err: (err as Error)?.message ?? err }, 'falha no Google Drive');
+      return reply.code(502).send({ error: 'drive_failed' });
+    }
+
+    const actor = request.user!;
+    const exportedAt = new Date();
+    try {
+      const updated = await db.transaction(async (tx) => {
+        // Só vira o "mais recente" se nenhuma exportação mais nova foi reservada depois desta.
+        const [b] = await tx
+          .update(budgets)
+          .set({ pdfDriveFileId: file.id, pdfName: file.name, pdfExportedAt: exportedAt })
+          .where(and(eq(budgets.id, budget.id), eq(budgets.pdfVersion, version)))
+          .returning();
+        if (project) {
+          // Também aparece nos arquivos do projeto, como os outros PDFs exportados.
+          await tx.insert(projectFiles).values({
+            projectId: project.id,
+            driveFileId: file.id,
+            name: file.name,
+            mimeType: 'application/pdf',
+            sizeBytes: file.size,
+            subfolder: 'budgets',
+            source: 'pdf_export',
+            uploadedBy: actor.id,
+          });
+        }
+        await audit(tx, {
+          userId: actor.id,
+          action: 'budget.export',
+          entity: 'budget',
+          entityId: budget.id,
+          payload: {
+            number: budget.number,
+            fileName: file.name,
+            version,
+            driveFileId: file.id,
+            sizeBytes: file.size,
+            pages: rendered.pages,
+            folder: project ? 'projeto' : 'avulsos',
+            projectId: project?.id ?? null,
+          },
+        });
+        return b ?? (await tx.select().from(budgets).where(eq(budgets.id, budget.id)))[0];
+      });
+      return reply.code(201).send({
+        file: { driveFileId: file.id, name: file.name, version, exportedAt: exportedAt.toISOString(), url: fileViewUrl(file.id), pages: rendered.pages },
+        budget: await dto(updated, true),
+      });
+    } catch (err) {
+      // O banco falhou depois do envio: o arquivo vai para a lixeira do Drive, para não ficar solto.
+      await drive.trashFile(file.id).catch(() => {});
+      await giveBack();
+      throw err;
+    }
+  });
+
+  /** "De.Croqui ERP/Avulsos": criada na primeira exportação de um orçamento sem projeto, ou de novo se foi apagada. */
+  async function looseFolderId(): Promise<string> {
+    const rootId = await ensureRootFolder(db, drive);
+    return (await drive.findChildFolder(rootId, LOOSE_BUDGETS_FOLDER)) ?? drive.createFolder(LOOSE_BUDGETS_FOLDER, rootId);
+  }
 }
