@@ -1,0 +1,2405 @@
+{
+  "descricao": "Casos de teste dos cálculos dos arquivos offline de Orçamento e de Apresentação. Todas as saídas foram geradas abrindo o próprio arquivo original no Edge sem interface, sem internet, em 04/11/2026. Nenhum valor foi recalculado à parte.",
+  "observacoes": [
+    "Os valores em reais usam o espaço não separável (U+00A0) entre \"R$\" e o número, como o formatador do navegador (toLocaleString pt-BR) produz.",
+    "No Orçamento, cada caso grava o estado na chave do próprio arquivo (localStorage \"decroqui-orcamento-v1\") e recarrega a página; os casos marcados em \"como\" usam os campos e botões do painel.",
+    "Na Apresentação, o documento entra pela cópia de segurança que o arquivo lê (\"decroqui-apresentacao-backup-v1\") e as imagens pelo banco local dele (IndexedDB \"decroqui-apresentacao\"). Escala, cota, importação e folha-modelo passam pelos campos, botões e cliques do próprio arquivo.",
+    "As medidas que dependem da área da página (areaMm, \"cabe a partir de 1:N\") foram medidas com a janela de 1440 × 900 px e o formato A4.",
+    "Nenhum erro no console e nenhuma requisição externa durante a geração."
+  ],
+  "arquivos": {
+    "orcamento": {
+      "caminho": "referencias-offline/Orcamento De.Croqui (offline).html",
+      "sha256": "d0606cf03f9bd795764bc4515ee548f834b9ce8e558ff8b4980c0be87be616bf"
+    },
+    "apresentacao": {
+      "caminho": "referencias-offline/Apresentacao De.Croqui (offline).html",
+      "sha256": "0935aecd63aee90ece07411b85b5c65721f73ca542f3d128e9f4000f5dea2c3f"
+    }
+  },
+  "orcamento": [
+    {
+      "id": "orc-01",
+      "calculo": "opcao01_render_e_total",
+      "descricao": "Exemplo do arquivo: 6 ambientes, R$ 150 por ambiente, executivo R$ 350",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 350
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 350
+          },
+          {
+            "nome": "Ambiente 3",
+            "valor": 350
+          },
+          {
+            "nome": "Ambiente 4",
+            "valor": 350
+          },
+          {
+            "nome": "Ambiente 5",
+            "valor": 350
+          },
+          {
+            "nome": "Ambiente 6",
+            "valor": 350
+          }
+        ],
+        "op1Por": 150,
+        "op1Exec": 350
+      },
+      "saida": {
+        "resumo": {
+          "etiqueta": "Opção 01",
+          "nome": "Com parceria em marcenaria",
+          "total": "R$ 1.250,00",
+          "descricao": "R$ 150,00 por ambiente em 3D + R$ 350,00 do executivo detalhado geral"
+        },
+        "opcao01": {
+          "sobretitulo": "Opção 01 · Orçamento design de interiores residencial",
+          "porAmbiente": "R$ 150,00 por ambiente",
+          "linhaRender": "Render 3D (6 ambientes × R$ 150,00)",
+          "valorRender": "R$ 900,00",
+          "executivo": "R$ 350,00 para o projeto",
+          "total": "R$ 1.250,00",
+          "nota": true,
+          "pagina": "02 / 03"
+        }
+      }
+    },
+    {
+      "id": "orc-02",
+      "calculo": "opcao01_render_e_total",
+      "descricao": "3 ambientes, R$ 275,50 por ambiente, executivo R$ 1.200",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 400
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 400
+          },
+          {
+            "nome": "Ambiente 3",
+            "valor": 400
+          }
+        ],
+        "op1Por": 275.5,
+        "op1Exec": 1200
+      },
+      "saida": {
+        "resumo": {
+          "etiqueta": "Opção 01",
+          "nome": "Com parceria em marcenaria",
+          "total": "R$ 2.026,50",
+          "descricao": "R$ 275,50 por ambiente em 3D + R$ 1.200,00 do executivo detalhado geral"
+        },
+        "opcao01": {
+          "sobretitulo": "Opção 01 · Orçamento design de interiores residencial",
+          "porAmbiente": "R$ 275,50 por ambiente",
+          "linhaRender": "Render 3D (3 ambientes × R$ 275,50)",
+          "valorRender": "R$ 826,50",
+          "executivo": "R$ 1.200,00 para o projeto",
+          "total": "R$ 2.026,50",
+          "nota": true,
+          "pagina": "02 / 03"
+        }
+      }
+    },
+    {
+      "id": "orc-03",
+      "calculo": "opcao01_render_e_total",
+      "descricao": "Arredondamento: 3 × R$ 33,335 (render 100,005)",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 1
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 1
+          },
+          {
+            "nome": "Ambiente 3",
+            "valor": 1
+          }
+        ],
+        "op1Por": 33.335,
+        "op1Exec": 0.005
+      },
+      "saida": {
+        "resumo": {
+          "etiqueta": "Opção 01",
+          "nome": "Com parceria em marcenaria",
+          "total": "R$ 100,01",
+          "descricao": "R$ 33,34 por ambiente em 3D + R$ 0,01 do executivo detalhado geral"
+        },
+        "opcao01": {
+          "sobretitulo": "Opção 01 · Orçamento design de interiores residencial",
+          "porAmbiente": "R$ 33,34 por ambiente",
+          "linhaRender": "Render 3D (3 ambientes × R$ 33,34)",
+          "valorRender": "R$ 100,01",
+          "executivo": "R$ 0,01 para o projeto",
+          "total": "R$ 100,01",
+          "nota": true,
+          "pagina": "02 / 03"
+        }
+      }
+    },
+    {
+      "id": "orc-04",
+      "calculo": "opcao01_render_e_total",
+      "descricao": "Campos vazios contam como zero",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 100
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 100
+          }
+        ],
+        "op1Por": "",
+        "op1Exec": ""
+      },
+      "saida": {
+        "resumo": {
+          "etiqueta": "Opção 01",
+          "nome": "Com parceria em marcenaria",
+          "total": "R$ 0,00",
+          "descricao": "R$ 0,00 por ambiente em 3D + R$ 0,00 do executivo detalhado geral"
+        },
+        "opcao01": {
+          "sobretitulo": "Opção 01 · Orçamento design de interiores residencial",
+          "porAmbiente": "R$ 0,00 por ambiente",
+          "linhaRender": "Render 3D (2 ambientes × R$ 0,00)",
+          "valorRender": "R$ 0,00",
+          "executivo": "R$ 0,00 para o projeto",
+          "total": "R$ 0,00",
+          "nota": true,
+          "pagina": "02 / 03"
+        }
+      }
+    },
+    {
+      "id": "orc-05",
+      "calculo": "opcao02_total_e_resumo",
+      "descricao": "Exemplo do arquivo: 6 ambientes a R$ 350 (valores iguais)",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 350
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 350
+          },
+          {
+            "nome": "Ambiente 3",
+            "valor": 350
+          },
+          {
+            "nome": "Ambiente 4",
+            "valor": 350
+          },
+          {
+            "nome": "Ambiente 5",
+            "valor": 350
+          },
+          {
+            "nome": "Ambiente 6",
+            "valor": 350
+          }
+        ]
+      },
+      "saida": {
+        "resumo": {
+          "etiqueta": "Opção 02",
+          "nome": "Projeto completo",
+          "total": "R$ 2.100,00",
+          "descricao": "R$ 350,00 por ambiente, com detalhamento completo incluso em todos"
+        },
+        "opcao02": {
+          "sobretitulo": "Opção 02 · Orçamento design de interiores residencial",
+          "porAmbiente": "R$ 350,00 por ambiente",
+          "contagem": "6 ambientes no total",
+          "linhas": [
+            "Ambiente 1",
+            "R$ 350,00",
+            "Ambiente 2",
+            "R$ 350,00",
+            "Ambiente 3",
+            "R$ 350,00",
+            "Ambiente 4",
+            "R$ 350,00",
+            "Ambiente 5",
+            "R$ 350,00",
+            "Ambiente 6",
+            "R$ 350,00"
+          ],
+          "total": "R$ 2.100,00",
+          "pagina": "03 / 03"
+        }
+      }
+    },
+    {
+      "id": "orc-06",
+      "calculo": "opcao02_total_e_resumo",
+      "descricao": "Valores diferentes: 500 + 420,50 + 380 + 0",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 500
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 420.5
+          },
+          {
+            "nome": "Ambiente 3",
+            "valor": 380
+          },
+          {
+            "nome": "Ambiente 4",
+            "valor": 0
+          }
+        ]
+      },
+      "saida": {
+        "resumo": {
+          "etiqueta": "Opção 02",
+          "nome": "Projeto completo",
+          "total": "R$ 1.300,50",
+          "descricao": "Valor por ambiente com detalhamento completo incluso — ver página 03"
+        },
+        "opcao02": {
+          "sobretitulo": "Opção 02 · Orçamento design de interiores residencial",
+          "porAmbiente": "Conforme o ambiente",
+          "contagem": "4 ambientes no total",
+          "linhas": [
+            "Ambiente 1",
+            "R$ 500,00",
+            "Ambiente 2",
+            "R$ 420,50",
+            "Ambiente 3",
+            "R$ 380,00",
+            "Ambiente 4",
+            "R$ 0,00"
+          ],
+          "total": "R$ 1.300,50",
+          "pagina": "03 / 03"
+        }
+      }
+    },
+    {
+      "id": "orc-07",
+      "calculo": "opcao02_total_e_resumo",
+      "descricao": "Valor vazio conta como zero (e quebra a uniformidade)",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 300
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": ""
+          },
+          {
+            "nome": "Ambiente 3",
+            "valor": 300
+          }
+        ]
+      },
+      "saida": {
+        "resumo": {
+          "etiqueta": "Opção 02",
+          "nome": "Projeto completo",
+          "total": "R$ 600,00",
+          "descricao": "Valor por ambiente com detalhamento completo incluso — ver página 03"
+        },
+        "opcao02": {
+          "sobretitulo": "Opção 02 · Orçamento design de interiores residencial",
+          "porAmbiente": "Conforme o ambiente",
+          "contagem": "3 ambientes no total",
+          "linhas": [
+            "Ambiente 1",
+            "R$ 300,00",
+            "Ambiente 2",
+            "R$ 0,00",
+            "Ambiente 3",
+            "R$ 300,00"
+          ],
+          "total": "R$ 600,00",
+          "pagina": "03 / 03"
+        }
+      }
+    },
+    {
+      "id": "orc-08",
+      "calculo": "opcao02_total_e_resumo",
+      "descricao": "Valores altos: formatação de milhar",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 1234567.891
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 0.004
+          }
+        ]
+      },
+      "saida": {
+        "resumo": {
+          "etiqueta": "Opção 02",
+          "nome": "Projeto completo",
+          "total": "R$ 1.234.567,90",
+          "descricao": "Valor por ambiente com detalhamento completo incluso — ver página 03"
+        },
+        "opcao02": {
+          "sobretitulo": "Opção 02 · Orçamento design de interiores residencial",
+          "porAmbiente": "Conforme o ambiente",
+          "contagem": "2 ambientes no total",
+          "linhas": [
+            "Ambiente 1",
+            "R$ 1.234.567,89",
+            "Ambiente 2",
+            "R$ 0,00"
+          ],
+          "total": "R$ 1.234.567,90",
+          "pagina": "03 / 03"
+        }
+      }
+    },
+    {
+      "id": "orc-09",
+      "calculo": "opcoes_titulos_e_paginas",
+      "descricao": "As duas opções",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "op1": true,
+        "op2": true,
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 350
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 350
+          }
+        ]
+      },
+      "saida": {
+        "folhas": [
+          "01 Resumo",
+          "02 Opção 01",
+          "03 Opção 02"
+        ],
+        "resumo": {
+          "tituloInvestimento": "Opções de investimento",
+          "cartoes": [
+            {
+              "etiqueta": "Opção 01",
+              "nome": "Com parceria em marcenaria",
+              "total": "R$ 650,00",
+              "descricao": "R$ 150,00 por ambiente em 3D + R$ 350,00 do executivo detalhado geral"
+            },
+            {
+              "etiqueta": "Opção 02",
+              "nome": "Projeto completo",
+              "total": "R$ 700,00",
+              "descricao": "R$ 350,00 por ambiente, com detalhamento completo incluso em todos"
+            }
+          ],
+          "pagina": "01 / 03"
+        },
+        "paginaOpcao01": "02 / 03",
+        "sobretituloOpcao01": "Opção 01 · Orçamento design de interiores residencial",
+        "paginaOpcao02": "03 / 03",
+        "sobretituloOpcao02": "Opção 02 · Orçamento design de interiores residencial"
+      }
+    },
+    {
+      "id": "orc-10",
+      "calculo": "opcoes_titulos_e_paginas",
+      "descricao": "Só a Opção 01",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "op1": true,
+        "op2": false,
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 350
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 350
+          }
+        ]
+      },
+      "saida": {
+        "folhas": [
+          "01 Resumo",
+          "02 Opção 01"
+        ],
+        "resumo": {
+          "tituloInvestimento": "Investimento",
+          "cartoes": [
+            {
+              "etiqueta": "Sua proposta",
+              "nome": "Com parceria em marcenaria",
+              "total": "R$ 650,00",
+              "descricao": "R$ 150,00 por ambiente em 3D + R$ 350,00 do executivo detalhado geral"
+            }
+          ],
+          "pagina": "01 / 02"
+        },
+        "paginaOpcao01": "02 / 02",
+        "sobretituloOpcao01": "Orçamento design de interiores residencial",
+        "paginaOpcao02": null,
+        "sobretituloOpcao02": null
+      }
+    },
+    {
+      "id": "orc-11",
+      "calculo": "opcoes_titulos_e_paginas",
+      "descricao": "Só a Opção 02 (a referência de página do resumo vira 02)",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "op1": false,
+        "op2": true,
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 300
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 200
+          }
+        ]
+      },
+      "saida": {
+        "folhas": [
+          "01 Resumo",
+          "03 Opção 02"
+        ],
+        "resumo": {
+          "tituloInvestimento": "Investimento",
+          "cartoes": [
+            {
+              "etiqueta": "Sua proposta",
+              "nome": "Projeto completo",
+              "total": "R$ 500,00",
+              "descricao": "Valor por ambiente com detalhamento completo incluso — ver página 02"
+            }
+          ],
+          "pagina": "01 / 02"
+        },
+        "paginaOpcao01": null,
+        "sobretituloOpcao01": null,
+        "paginaOpcao02": "02 / 02",
+        "sobretituloOpcao02": "Orçamento design de interiores residencial"
+      }
+    },
+    {
+      "id": "orc-12",
+      "calculo": "contagem_de_ambientes",
+      "descricao": "1 ambiente",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 500
+          }
+        ]
+      },
+      "saida": {
+        "resumo": "1 ambiente",
+        "opcao02": "1 ambiente no total",
+        "linhaRender": "Render 3D (1 ambientes × R$ 150,00)",
+        "totalOpcao01": "R$ 500,00",
+        "porAmbienteOpcao02": "R$ 500,00 por ambiente",
+        "totalOpcao02": "R$ 500,00"
+      }
+    },
+    {
+      "id": "orc-13",
+      "calculo": "contagem_de_ambientes",
+      "descricao": "Nenhum ambiente",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "ambientes": []
+      },
+      "saida": {
+        "resumo": "0 ambientes",
+        "opcao02": "0 ambientes no total",
+        "linhaRender": "Render 3D (0 ambientes × R$ 150,00)",
+        "totalOpcao01": "R$ 350,00",
+        "porAmbienteOpcao02": "Conforme o ambiente",
+        "totalOpcao02": "R$ 0,00"
+      }
+    },
+    {
+      "id": "orc-14",
+      "calculo": "contagem_de_ambientes",
+      "descricao": "2 ambientes",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 500
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 500
+          }
+        ]
+      },
+      "saida": {
+        "resumo": "2 ambientes",
+        "opcao02": "2 ambientes no total",
+        "linhaRender": "Render 3D (2 ambientes × R$ 150,00)",
+        "totalOpcao01": "R$ 650,00",
+        "porAmbienteOpcao02": "R$ 500,00 por ambiente",
+        "totalOpcao02": "R$ 1.000,00"
+      }
+    },
+    {
+      "id": "orc-15",
+      "calculo": "formatacao_de_datas",
+      "descricao": "Datas preenchidas",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "data": "2026-09-17",
+        "validade": "2026-10-17"
+      },
+      "saida": {
+        "data": "17/09/2026",
+        "validade": "Esta proposta é válida até 17/10/2026."
+      }
+    },
+    {
+      "id": "orc-16",
+      "calculo": "formatacao_de_datas",
+      "descricao": "Datas vazias",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "data": "",
+        "validade": ""
+      },
+      "saida": {
+        "data": "—",
+        "validade": "Esta proposta é válida até —."
+      }
+    },
+    {
+      "id": "orc-17",
+      "calculo": "formatacao_de_datas",
+      "descricao": "Virada de ano",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "data": "2026-12-31",
+        "validade": "2027-01-30"
+      },
+      "saida": {
+        "data": "31/12/2026",
+        "validade": "Esta proposta é válida até 30/01/2027."
+      }
+    },
+    {
+      "id": "orc-18",
+      "calculo": "nota_marcenaria",
+      "descricao": "Nota ligada",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "nota": true
+      },
+      "saida": {
+        "notaNaOpcao01": true
+      }
+    },
+    {
+      "id": "orc-19",
+      "calculo": "nota_marcenaria",
+      "descricao": "Nota desligada",
+      "como": "estado gravado na chave do arquivo e página recarregada",
+      "entrada": {
+        "nota": false
+      },
+      "saida": {
+        "notaNaOpcao01": false
+      }
+    },
+    {
+      "id": "orc-20",
+      "calculo": "aplicar_valor_a_todos",
+      "descricao": "Valor 410 aplicado a 3 ambientes de valores diferentes",
+      "como": "campo e botão \"Aplicar\" do painel",
+      "entrada": {
+        "ambientes": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 500
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 420.5
+          },
+          {
+            "nome": "Ambiente 3",
+            "valor": 380
+          }
+        ],
+        "aplicarATodos": 410
+      },
+      "saida": {
+        "ambientesGravados": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 410
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 410
+          },
+          {
+            "nome": "Ambiente 3",
+            "valor": 410
+          }
+        ],
+        "opcao02": {
+          "sobretitulo": "Opção 02 · Orçamento design de interiores residencial",
+          "porAmbiente": "R$ 410,00 por ambiente",
+          "contagem": "3 ambientes no total",
+          "linhas": [
+            "Ambiente 1",
+            "R$ 410,00",
+            "Ambiente 2",
+            "R$ 410,00",
+            "Ambiente 3",
+            "R$ 410,00"
+          ],
+          "total": "R$ 1.230,00",
+          "pagina": "03 / 03"
+        }
+      }
+    },
+    {
+      "id": "orc-21",
+      "calculo": "adicionar_ambiente",
+      "descricao": "Novo ambiente entra com o valor do campo \"Aplicar valor a todos\"",
+      "como": "botão \"Adicionar ambiente\" do painel",
+      "entrada": {
+        "op2Todos": 410,
+        "ambientesAntes": 3
+      },
+      "saida": {
+        "ambientesGravados": [
+          {
+            "nome": "Ambiente 1",
+            "valor": 410
+          },
+          {
+            "nome": "Ambiente 2",
+            "valor": 410
+          },
+          {
+            "nome": "Ambiente 3",
+            "valor": 410
+          },
+          {
+            "nome": "Novo ambiente",
+            "valor": 410
+          }
+        ],
+        "contagem": "4 ambientes"
+      }
+    },
+    {
+      "id": "orc-22",
+      "calculo": "remover_ambiente",
+      "descricao": "Remover o primeiro ambiente, sem confirmação",
+      "como": "botão \"×\" do primeiro ambiente",
+      "entrada": {
+        "ambientesAntes": 4
+      },
+      "saida": {
+        "ambientesGravados": [
+          {
+            "nome": "Ambiente 2",
+            "valor": 410
+          },
+          {
+            "nome": "Ambiente 3",
+            "valor": 410
+          },
+          {
+            "nome": "Novo ambiente",
+            "valor": 410
+          }
+        ],
+        "total": "R$ 1.230,00"
+      }
+    },
+    {
+      "id": "orc-23",
+      "calculo": "trava_das_opcoes",
+      "descricao": "Desmarcar a única opção marcada não tem efeito",
+      "como": "clique na caixa \"Opção 01\" do painel",
+      "entrada": {
+        "op1": true,
+        "op2": false,
+        "acao": "desmarcar Opção 01"
+      },
+      "saida": {
+        "gravado": {
+          "op1": true,
+          "op2": false
+        },
+        "folhas": [
+          "01 Resumo",
+          "02 Opção 01"
+        ]
+      }
+    },
+    {
+      "id": "orc-24",
+      "calculo": "campo_numerico_vazio",
+      "descricao": "Apagar \"Render 3D / ambiente\" no painel",
+      "como": "campo do painel",
+      "entrada": {
+        "op1Por": "(apagado)"
+      },
+      "saida": {
+        "gravado": "",
+        "opcao01": {
+          "valorRender": "R$ 0,00",
+          "total": "R$ 350,00"
+        }
+      }
+    },
+    {
+      "id": "orc-25",
+      "calculo": "restaurar_exemplo",
+      "descricao": "Restaurar exemplo depois de editar",
+      "como": "botão do painel",
+      "entrada": {
+        "acao": "Restaurar exemplo, confirmando"
+      },
+      "saida": {
+        "confirmacao": "Voltar ao exemplo e apagar os dados preenchidos?",
+        "gravado": {
+          "cliente": "Adriana Gregorio",
+          "op1Por": 150,
+          "op1Exec": 350,
+          "op2Todos": 350
+        },
+        "ambientes": 6
+      }
+    },
+    {
+      "id": "orc-26",
+      "calculo": "pdf_paginas_a4",
+      "descricao": "Impressão com as duas opções e 6 ambientes",
+      "como": "Page.printToPDF com o CSS de impressão do arquivo",
+      "entrada": {
+        "op1": true,
+        "op2": true,
+        "ambientes": 6
+      },
+      "saida": {
+        "paginas": 3,
+        "tamanhoPt": [
+          [
+            594.95996,
+            841.91998
+          ],
+          [
+            594.95996,
+            841.91998
+          ],
+          [
+            594.95996,
+            841.91998
+          ]
+        ],
+        "tamanhoMm": [
+          [
+            210,
+            297
+          ],
+          [
+            210,
+            297
+          ],
+          [
+            210,
+            297
+          ]
+        ]
+      }
+    },
+    {
+      "id": "orc-27",
+      "calculo": "pdf_paginas_a4",
+      "descricao": "10 ambientes: a folha da Opção 02 passa da altura A4?",
+      "como": "Page.printToPDF com o CSS de impressão do arquivo",
+      "entrada": {
+        "op1": true,
+        "op2": true,
+        "ambientes": 10
+      },
+      "saida": {
+        "paginasNoPdf": 4,
+        "alturaDasFolhasMm": [
+          297,
+          297,
+          329
+        ]
+      }
+    },
+    {
+      "id": "orc-28",
+      "calculo": "pdf_paginas_a4",
+      "descricao": "20 ambientes: a folha da Opção 02 passa da altura A4?",
+      "como": "Page.printToPDF com o CSS de impressão do arquivo",
+      "entrada": {
+        "op1": true,
+        "op2": true,
+        "ambientes": 20
+      },
+      "saida": {
+        "paginasNoPdf": 4,
+        "alturaDasFolhasMm": [
+          297,
+          297,
+          433
+        ]
+      }
+    },
+    {
+      "id": "orc-29",
+      "calculo": "textos_fixos_editaveis",
+      "descricao": "Editar a frase final direto na página, mudar outro campo e recarregar",
+      "como": "edição na própria página (contentEditable) e recarga",
+      "entrada": {
+        "textoDigitado": "TEXTO EDITADO NA PAGINA"
+      },
+      "saida": {
+        "logoDepoisDeEditar": "TEXTO EDITADO NA PAGINA",
+        "depoisDeMudarOutroCampo": "TEXTO EDITADO NA PAGINA",
+        "gravadoNoLocalStorage": false,
+        "depoisDeRecarregar": "Por favor, entre em contato para esclarecimentos ou aprovação. Estamos ansiosos para trabalhar juntos.",
+        "clienteDepoisDeRecarregar": "Outra Cliente"
+      }
+    }
+  ],
+  "apresentacao": [
+    {
+      "id": "apr-01",
+      "calculo": "escala_por_dpi",
+      "descricao": "Desenho 3000 × 2000 px exportado a 300 dpi em 1:25, composição \"Um desenho\"",
+      "como": "campos \"Resolução (DPI)\" e \"Exportado em\" do painel",
+      "entrada": {
+        "larguraPx": 3000,
+        "alturaPx": 2000,
+        "composicao": "1",
+        "dpi": "300",
+        "exportadoEm": "1:25"
+      },
+      "saida": {
+        "gravado": {
+          "dpi": "300",
+          "src": "1:25",
+          "esc": 50
+        },
+        "painel": {
+          "nota": "Referência: 300 dpi · arquivo em 1:25. Tamanho real 6,35 m × 4,23 m. Nesta área cabe inteiro a partir de 1:50. No PDF, imprima em “Tamanho real” (100%).",
+          "escalaSelecionada": "1:50 · maior que cabe",
+          "opcaoMaiorQueCabe": "1:50 · maior que cabe"
+        },
+        "desenho": {
+          "rotuloEscala": "Esc. 1:50",
+          "barraMm": "20",
+          "barraLarguraCss": "20mm",
+          "barraRotulo": "1 m",
+          "aviso": null,
+          "areaMm": [
+            264.4,
+            131.2
+          ]
+        },
+        "carimbo": {
+          "escala": "1:50",
+          "folha": "02 / 02"
+        }
+      }
+    },
+    {
+      "id": "apr-02",
+      "calculo": "escala_de_impressao_e_barra",
+      "descricao": "Desenho 3000 × 2000 px exportado a 300 dpi em 1:25, composição \"Um desenho\", escala de impressão trocada para 1:100",
+      "como": "seletor \"Escala de impressão\" do painel",
+      "entrada": {
+        "larguraPx": 3000,
+        "alturaPx": 2000,
+        "composicao": "1",
+        "dpi": "300",
+        "exportadoEm": "1:25",
+        "escalaDeImpressao": "1:100"
+      },
+      "saida": {
+        "painel": {
+          "nota": "Referência: 300 dpi · arquivo em 1:25. Tamanho real 6,35 m × 4,23 m. Nesta área cabe inteiro a partir de 1:50. No PDF, imprima em “Tamanho real” (100%).",
+          "escalaSelecionada": "1:100",
+          "opcaoMaiorQueCabe": "1:50 · maior que cabe"
+        },
+        "desenho": {
+          "rotuloEscala": "Esc. 1:100",
+          "barraMm": "25",
+          "barraLarguraCss": "25mm",
+          "barraRotulo": "2,5 m",
+          "aviso": null,
+          "areaMm": [
+            264.4,
+            131.2
+          ]
+        },
+        "carimbo": {
+          "escala": "1:100",
+          "folha": "02 / 02"
+        }
+      }
+    },
+    {
+      "id": "apr-03",
+      "calculo": "escala_de_impressao_e_barra",
+      "descricao": "Desenho 3000 × 2000 px exportado a 300 dpi em 1:25, composição \"Um desenho\", escala de impressão trocada para 1:20",
+      "como": "seletor \"Escala de impressão\" do painel",
+      "entrada": {
+        "larguraPx": 3000,
+        "alturaPx": 2000,
+        "composicao": "1",
+        "dpi": "300",
+        "exportadoEm": "1:25",
+        "escalaDeImpressao": "1:20"
+      },
+      "saida": {
+        "painel": {
+          "nota": "Referência: 300 dpi · arquivo em 1:25. Tamanho real 6,35 m × 4,23 m. Nesta área cabe inteiro a partir de 1:50. No PDF, imprima em “Tamanho real” (100%).",
+          "escalaSelecionada": "1:20",
+          "opcaoMaiorQueCabe": "1:50 · maior que cabe"
+        },
+        "desenho": {
+          "rotuloEscala": "Esc. 1:20",
+          "barraMm": "25",
+          "barraLarguraCss": "25mm",
+          "barraRotulo": "50 cm",
+          "aviso": "Em 1:20 o desenho não cabe inteiro nesta área · cabe em 1:50. Arraste para escolher o trecho.",
+          "areaMm": [
+            264.4,
+            131.2
+          ]
+        },
+        "carimbo": {
+          "escala": "1:20",
+          "folha": "02 / 02"
+        }
+      }
+    },
+    {
+      "id": "apr-04",
+      "calculo": "escala_por_dpi",
+      "descricao": "Desenho 3000 × 2000 px a 300 dpi em 1:25, composição \"Quatro desenhos\" (área menor)",
+      "como": "campos \"Resolução (DPI)\" e \"Exportado em\" do painel",
+      "entrada": {
+        "larguraPx": 3000,
+        "alturaPx": 2000,
+        "composicao": "4",
+        "dpi": "300",
+        "exportadoEm": "1:25"
+      },
+      "saida": {
+        "gravado": {
+          "dpi": "300",
+          "src": "1:25",
+          "esc": 75
+        },
+        "painel": {
+          "nota": "Referência: 300 dpi · arquivo em 1:25. Tamanho real 6,35 m × 4,23 m. Nesta área cabe inteiro a partir de 1:75. No PDF, imprima em “Tamanho real” (100%).",
+          "escalaSelecionada": "1:75 · maior que cabe",
+          "opcaoMaiorQueCabe": "1:75 · maior que cabe"
+        },
+        "desenho": {
+          "rotuloEscala": "Esc. 1:75",
+          "barraMm": "26.667",
+          "barraLarguraCss": "26.667mm",
+          "barraRotulo": "2 m",
+          "aviso": null,
+          "areaMm": [
+            129.4,
+            59.9
+          ]
+        },
+        "carimbo": {
+          "escala": "1:75",
+          "folha": "02 / 02"
+        }
+      }
+    },
+    {
+      "id": "apr-05",
+      "calculo": "escala_de_impressao_e_barra",
+      "descricao": "Desenho 3000 × 2000 px a 300 dpi em 1:25, composição \"Quatro desenhos\" (área menor), escala de impressão trocada para 1:100",
+      "como": "seletor \"Escala de impressão\" do painel",
+      "entrada": {
+        "larguraPx": 3000,
+        "alturaPx": 2000,
+        "composicao": "4",
+        "dpi": "300",
+        "exportadoEm": "1:25",
+        "escalaDeImpressao": "1:100"
+      },
+      "saida": {
+        "painel": {
+          "nota": "Referência: 300 dpi · arquivo em 1:25. Tamanho real 6,35 m × 4,23 m. Nesta área cabe inteiro a partir de 1:75. No PDF, imprima em “Tamanho real” (100%).",
+          "escalaSelecionada": "1:100",
+          "opcaoMaiorQueCabe": "1:75 · maior que cabe"
+        },
+        "desenho": {
+          "rotuloEscala": "Esc. 1:100",
+          "barraMm": "25",
+          "barraLarguraCss": "25mm",
+          "barraRotulo": "2,5 m",
+          "aviso": null,
+          "areaMm": [
+            129.4,
+            59.9
+          ]
+        },
+        "carimbo": {
+          "escala": "1:100",
+          "folha": "02 / 02"
+        }
+      }
+    },
+    {
+      "id": "apr-06",
+      "calculo": "escala_de_impressao_e_barra",
+      "descricao": "Desenho 3000 × 2000 px a 300 dpi em 1:25, composição \"Quatro desenhos\" (área menor), escala de impressão trocada para 1:20",
+      "como": "seletor \"Escala de impressão\" do painel",
+      "entrada": {
+        "larguraPx": 3000,
+        "alturaPx": 2000,
+        "composicao": "4",
+        "dpi": "300",
+        "exportadoEm": "1:25",
+        "escalaDeImpressao": "1:20"
+      },
+      "saida": {
+        "painel": {
+          "nota": "Referência: 300 dpi · arquivo em 1:25. Tamanho real 6,35 m × 4,23 m. Nesta área cabe inteiro a partir de 1:75. No PDF, imprima em “Tamanho real” (100%).",
+          "escalaSelecionada": "1:20",
+          "opcaoMaiorQueCabe": "1:75 · maior que cabe"
+        },
+        "desenho": {
+          "rotuloEscala": "Esc. 1:20",
+          "barraMm": "25",
+          "barraLarguraCss": "25mm",
+          "barraRotulo": "50 cm",
+          "aviso": "Em 1:20 o desenho não cabe inteiro nesta área · cabe em 1:75. Arraste para escolher o trecho.",
+          "areaMm": [
+            129.4,
+            59.9
+          ]
+        },
+        "carimbo": {
+          "escala": "1:20",
+          "folha": "02 / 02"
+        }
+      }
+    },
+    {
+      "id": "apr-07",
+      "calculo": "escala_por_dpi",
+      "descricao": "Desenho 2400 × 1600 px a 150 dpi em 1:50, \"Um desenho\"",
+      "como": "campos \"Resolução (DPI)\" e \"Exportado em\" do painel",
+      "entrada": {
+        "larguraPx": 2400,
+        "alturaPx": 1600,
+        "composicao": "1",
+        "dpi": "150",
+        "exportadoEm": "50"
+      },
+      "saida": {
+        "gravado": {
+          "dpi": "150",
+          "src": "50",
+          "esc": 125
+        },
+        "painel": {
+          "nota": "Referência: 150 dpi · arquivo em 1:50. Tamanho real 20,32 m × 13,55 m. Nesta área cabe inteiro a partir de 1:125. No PDF, imprima em “Tamanho real” (100%).",
+          "escalaSelecionada": "1:125 · maior que cabe",
+          "opcaoMaiorQueCabe": "1:125 · maior que cabe"
+        },
+        "desenho": {
+          "rotuloEscala": "Esc. 1:125",
+          "barraMm": "20",
+          "barraLarguraCss": "20mm",
+          "barraRotulo": "2,5 m",
+          "aviso": null,
+          "areaMm": [
+            264.4,
+            131.2
+          ]
+        },
+        "carimbo": {
+          "escala": "1:125",
+          "folha": "02 / 02"
+        }
+      }
+    },
+    {
+      "id": "apr-08",
+      "calculo": "escala_de_impressao_e_barra",
+      "descricao": "Desenho 2400 × 1600 px a 150 dpi em 1:50, \"Um desenho\", escala de impressão trocada para 1:100",
+      "como": "seletor \"Escala de impressão\" do painel",
+      "entrada": {
+        "larguraPx": 2400,
+        "alturaPx": 1600,
+        "composicao": "1",
+        "dpi": "150",
+        "exportadoEm": "50",
+        "escalaDeImpressao": "1:100"
+      },
+      "saida": {
+        "painel": {
+          "nota": "Referência: 150 dpi · arquivo em 1:50. Tamanho real 20,32 m × 13,55 m. Nesta área cabe inteiro a partir de 1:125. No PDF, imprima em “Tamanho real” (100%).",
+          "escalaSelecionada": "1:100",
+          "opcaoMaiorQueCabe": "1:125 · maior que cabe"
+        },
+        "desenho": {
+          "rotuloEscala": "Esc. 1:100",
+          "barraMm": "25",
+          "barraLarguraCss": "25mm",
+          "barraRotulo": "2,5 m",
+          "aviso": "Em 1:100 o desenho não cabe inteiro nesta área · cabe em 1:125. Arraste para escolher o trecho.",
+          "areaMm": [
+            264.4,
+            131.2
+          ]
+        },
+        "carimbo": {
+          "escala": "1:100",
+          "folha": "02 / 02"
+        }
+      }
+    },
+    {
+      "id": "apr-09",
+      "calculo": "escala_de_impressao_e_barra",
+      "descricao": "Desenho 2400 × 1600 px a 150 dpi em 1:50, \"Um desenho\", escala de impressão trocada para 1:20",
+      "como": "seletor \"Escala de impressão\" do painel",
+      "entrada": {
+        "larguraPx": 2400,
+        "alturaPx": 1600,
+        "composicao": "1",
+        "dpi": "150",
+        "exportadoEm": "50",
+        "escalaDeImpressao": "1:20"
+      },
+      "saida": {
+        "painel": {
+          "nota": "Referência: 150 dpi · arquivo em 1:50. Tamanho real 20,32 m × 13,55 m. Nesta área cabe inteiro a partir de 1:125. No PDF, imprima em “Tamanho real” (100%).",
+          "escalaSelecionada": "1:20",
+          "opcaoMaiorQueCabe": "1:125 · maior que cabe"
+        },
+        "desenho": {
+          "rotuloEscala": "Esc. 1:20",
+          "barraMm": "25",
+          "barraLarguraCss": "25mm",
+          "barraRotulo": "50 cm",
+          "aviso": "Em 1:20 o desenho não cabe inteiro nesta área · cabe em 1:125. Arraste para escolher o trecho.",
+          "areaMm": [
+            264.4,
+            131.2
+          ]
+        },
+        "carimbo": {
+          "escala": "1:20",
+          "folha": "02 / 02"
+        }
+      }
+    },
+    {
+      "id": "apr-10",
+      "calculo": "escala_por_cota",
+      "descricao": "Linha de 1000 px medida como 600 (unidade padrão mm)",
+      "como": "botão \"Medir uma cota no desenho\" e dois cliques sobre o desenho",
+      "entrada": {
+        "larguraPx": 3000,
+        "alturaPx": 2000,
+        "distanciaEntreCliquesPx": 1000,
+        "respostaDigitada": "600",
+        "unidadeDaPagina": "(vazia)"
+      },
+      "saida": {
+        "pergunta": "Qual é a medida real entre os dois pontos?\nEx.: 600 (em mm), 60 cm ou 0,6 m",
+        "aviso": "Referência definida: 60 cm. Desenho em 1:10 — a maior escala padrão que cabe nesta área.",
+        "gravado": {
+          "cal": 1.6713673874438526,
+          "calMm": 600,
+          "esc": 10
+        },
+        "painel": {
+          "nota": "Referência: cota de 60 cm. Tamanho real 1,8 m × 1,2 m. Nesta área cabe inteiro a partir de 1:10. No PDF, imprima em “Tamanho real” (100%).",
+          "escalaSelecionada": "1:10 · maior que cabe",
+          "opcaoMaiorQueCabe": "1:10 · maior que cabe"
+        },
+        "desenho": {
+          "rotuloEscala": "Esc. 1:10",
+          "barraMm": "25",
+          "barraLarguraCss": "25mm",
+          "barraRotulo": "25 cm",
+          "aviso": null,
+          "areaMm": [
+            264.4,
+            131.2
+          ]
+        },
+        "carimbo": {
+          "escala": "1:10",
+          "folha": "02 / 02"
+        }
+      }
+    },
+    {
+      "id": "apr-11",
+      "calculo": "escala_por_cota",
+      "descricao": "Mesma linha medida como \"60 cm\"",
+      "como": "botão \"Medir uma cota no desenho\" e dois cliques sobre o desenho",
+      "entrada": {
+        "larguraPx": 3000,
+        "alturaPx": 2000,
+        "distanciaEntreCliquesPx": 1000,
+        "respostaDigitada": "60 cm",
+        "unidadeDaPagina": "(vazia)"
+      },
+      "saida": {
+        "pergunta": "Qual é a medida real entre os dois pontos?\nEx.: 600 (em mm), 60 cm ou 0,6 m",
+        "aviso": "Referência definida: 60 cm. Desenho em 1:10 — a maior escala padrão que cabe nesta área.",
+        "gravado": {
+          "cal": 1.6713673874438526,
+          "calMm": 600,
+          "esc": 10
+        },
+        "painel": {
+          "nota": "Referência: cota de 60 cm. Tamanho real 1,8 m × 1,2 m. Nesta área cabe inteiro a partir de 1:10. No PDF, imprima em “Tamanho real” (100%).",
+          "escalaSelecionada": "1:10 · maior que cabe",
+          "opcaoMaiorQueCabe": "1:10 · maior que cabe"
+        },
+        "desenho": {
+          "rotuloEscala": "Esc. 1:10",
+          "barraMm": "25",
+          "barraLarguraCss": "25mm",
+          "barraRotulo": "25 cm",
+          "aviso": null,
+          "areaMm": [
+            264.4,
+            131.2
+          ]
+        },
+        "carimbo": {
+          "escala": "1:10",
+          "folha": "02 / 02"
+        }
+      }
+    },
+    {
+      "id": "apr-12",
+      "calculo": "escala_por_cota",
+      "descricao": "Mesma linha medida como \"6\" com a unidade da página em m",
+      "como": "botão \"Medir uma cota no desenho\" e dois cliques sobre o desenho",
+      "entrada": {
+        "larguraPx": 3000,
+        "alturaPx": 2000,
+        "distanciaEntreCliquesPx": 1000,
+        "respostaDigitada": "6",
+        "unidadeDaPagina": "m"
+      },
+      "saida": {
+        "pergunta": "Qual é a medida real entre os dois pontos?\nEx.: 600 (em m), 60 cm ou 0,6 m",
+        "aviso": "Referência definida: 6 m. Desenho em 1:100 — a maior escala padrão que cabe nesta área.",
+        "gravado": {
+          "cal": 0.16713673874438525,
+          "calMm": 6000,
+          "esc": 100
+        },
+        "painel": {
+          "nota": "Referência: cota de 6 m. Tamanho real 17,95 m × 11,97 m. Nesta área cabe inteiro a partir de 1:100. No PDF, imprima em “Tamanho real” (100%).",
+          "escalaSelecionada": "1:100 · maior que cabe",
+          "opcaoMaiorQueCabe": "1:100 · maior que cabe"
+        },
+        "desenho": {
+          "rotuloEscala": "Esc. 1:100",
+          "barraMm": "25",
+          "barraLarguraCss": "25mm",
+          "barraRotulo": "2,5 m",
+          "aviso": null,
+          "areaMm": [
+            264.4,
+            131.2
+          ]
+        },
+        "carimbo": {
+          "escala": "1:100",
+          "folha": "02 / 02"
+        }
+      }
+    },
+    {
+      "id": "apr-13",
+      "calculo": "escala_do_carimbo",
+      "descricao": "Dois desenhos em 1:50",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "desenhos": [
+          {
+            "dpi": 300,
+            "exportadoEm": "1:25",
+            "escala": "1:50"
+          },
+          {
+            "dpi": 300,
+            "exportadoEm": "1:25",
+            "escala": "1:50"
+          }
+        ]
+      },
+      "saida": {
+        "carimbo": {
+          "escala": "1:50",
+          "folha": "02 / 02"
+        },
+        "desenho1": "Esc. 1:50",
+        "desenho2": "Esc. 1:50"
+      }
+    },
+    {
+      "id": "apr-14",
+      "calculo": "escala_do_carimbo",
+      "descricao": "Um desenho em 1:50 e outro em 1:25",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "desenhos": [
+          {
+            "dpi": 300,
+            "exportadoEm": "1:25",
+            "escala": "1:50"
+          },
+          {
+            "dpi": 300,
+            "exportadoEm": "1:25",
+            "escala": "1:25"
+          }
+        ]
+      },
+      "saida": {
+        "carimbo": {
+          "escala": "Indicada",
+          "folha": "02 / 02"
+        },
+        "desenho1": "Esc. 1:50",
+        "desenho2": "Esc. 1:25"
+      }
+    },
+    {
+      "id": "apr-15",
+      "calculo": "escala_do_carimbo",
+      "descricao": "Desenho sem referência de medida: vale o texto digitado no campo Escala",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "desenhos": [
+          {
+            "referencia": "nenhuma"
+          }
+        ],
+        "campoEscala": "1:75 (indicada à mão)"
+      },
+      "saida": {
+        "carimbo": {
+          "escala": "1:75 (indicada à mão)",
+          "folha": "02 / 02"
+        },
+        "desenho1": null
+      }
+    },
+    {
+      "id": "apr-16",
+      "calculo": "rodape_da_prancha",
+      "descricao": "Data por extenso e três pranchas",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "data": "27 de outubro de 2026",
+        "contato": "decroqui.arts@gmail.com · (85) 9 9704-4540",
+        "localizacao": "Fortaleza",
+        "pranchas": 3,
+        "paginasAntes": 2
+      },
+      "saida": {
+        "rodapes": [
+          [
+            "decroqui.arts@gmail.com",
+            "(85) 9 9704-4540",
+            "Fortaleza",
+            "Prancha 1",
+            "Executivo",
+            "Projeto Teste",
+            "Cliente Teste",
+            "27.10.2026",
+            "01/03"
+          ],
+          [
+            "decroqui.arts@gmail.com",
+            "(85) 9 9704-4540",
+            "Fortaleza",
+            "Prancha 2",
+            "Executivo",
+            "Projeto Teste",
+            "Cliente Teste",
+            "27.10.2026",
+            "02/03"
+          ],
+          [
+            "decroqui.arts@gmail.com",
+            "(85) 9 9704-4540",
+            "Fortaleza",
+            "Prancha 3",
+            "Executivo",
+            "Projeto Teste",
+            "Cliente Teste",
+            "27.10.2026",
+            "03/03"
+          ]
+        ],
+        "ordemDosCampos": [
+          "contato 1",
+          "contato 2",
+          "contato 3 e demais + localização",
+          "ambiente",
+          "fase",
+          "projeto",
+          "cliente",
+          "data",
+          "folha"
+        ]
+      }
+    },
+    {
+      "id": "apr-17",
+      "calculo": "rodape_da_prancha",
+      "descricao": "Dia com um dígito e duas pranchas",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "data": "4 de novembro de 2026",
+        "contato": "a@b.c · (85) 1 · site.com · outro",
+        "localizacao": "",
+        "pranchas": 2,
+        "paginasAntes": 2
+      },
+      "saida": {
+        "rodapes": [
+          [
+            "a@b.c",
+            "(85) 1",
+            "site.com · outro",
+            "Prancha 1",
+            "Executivo",
+            "Projeto Teste",
+            "Cliente Teste",
+            "04.11.2026",
+            "01/02"
+          ],
+          [
+            "a@b.c",
+            "(85) 1",
+            "site.com · outro",
+            "Prancha 2",
+            "Executivo",
+            "Projeto Teste",
+            "Cliente Teste",
+            "04.11.2026",
+            "02/02"
+          ]
+        ],
+        "ordemDosCampos": [
+          "contato 1",
+          "contato 2",
+          "contato 3 e demais + localização",
+          "ambiente",
+          "fase",
+          "projeto",
+          "cliente",
+          "data",
+          "folha"
+        ]
+      }
+    },
+    {
+      "id": "apr-18",
+      "calculo": "rodape_da_prancha",
+      "descricao": "Data em outro formato fica como está",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "data": "27/10/2026",
+        "contato": "",
+        "localizacao": "Cotia",
+        "pranchas": 1,
+        "paginasAntes": 2
+      },
+      "saida": {
+        "rodapes": [
+          [
+            "Cotia",
+            "Prancha 1",
+            "Executivo",
+            "Projeto Teste",
+            "Cliente Teste",
+            "27/10/2026",
+            "01/01"
+          ]
+        ],
+        "ordemDosCampos": [
+          "contato 1",
+          "contato 2",
+          "contato 3 e demais + localização",
+          "ambiente",
+          "fase",
+          "projeto",
+          "cliente",
+          "data",
+          "folha"
+        ]
+      }
+    },
+    {
+      "id": "apr-19",
+      "calculo": "rodape_da_prancha",
+      "descricao": "Mês inválido fica como está",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "data": "27 de brumário de 2026",
+        "contato": "x",
+        "localizacao": "",
+        "pranchas": 1,
+        "paginasAntes": 2
+      },
+      "saida": {
+        "rodapes": [
+          [
+            "x",
+            "Prancha 1",
+            "Executivo",
+            "Projeto Teste",
+            "Cliente Teste",
+            "27 de brumário de 2026",
+            "01/01"
+          ]
+        ],
+        "ordemDosCampos": [
+          "contato 1",
+          "contato 2",
+          "contato 3 e demais + localização",
+          "ambiente",
+          "fase",
+          "projeto",
+          "cliente",
+          "data",
+          "folha"
+        ]
+      }
+    },
+    {
+      "id": "apr-20",
+      "calculo": "numeracao_de_paginas",
+      "descricao": "Quatro páginas (capa sem número)",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "paginas": [
+          "capa",
+          "notas",
+          "tecnico",
+          "notas"
+        ],
+        "cliente": "Ana",
+        "data": "1 de maio de 2026"
+      },
+      "saida": {
+        "paginas": [
+          {
+            "rodape": [
+              "02 / 04"
+            ],
+            "esquerda": "Ana · 1 de maio de 2026"
+          },
+          {
+            "rodape": [
+              "03 / 04",
+              "03 / 04"
+            ],
+            "esquerda": "Ana · 1 de maio de 2026"
+          },
+          {
+            "rodape": [
+              "04 / 04"
+            ],
+            "esquerda": "Ana · 1 de maio de 2026"
+          }
+        ],
+        "folhaDoCarimbo": "03 / 04"
+      }
+    },
+    {
+      "id": "apr-21",
+      "calculo": "numeracao_de_paginas",
+      "descricao": "Onze páginas, sem cliente nem data",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "paginas": 11,
+        "cliente": "",
+        "data": ""
+      },
+      "saida": {
+        "ultimaPagina": [
+          "11 / 11"
+        ],
+        "esquerdaVazia": true
+      }
+    },
+    {
+      "id": "apr-22",
+      "calculo": "colunas_do_moodboard",
+      "descricao": "1 materiais",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "materiais": 1
+      },
+      "saida": {
+        "colunas": "1"
+      }
+    },
+    {
+      "id": "apr-23",
+      "calculo": "colunas_do_moodboard",
+      "descricao": "3 materiais",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "materiais": 3
+      },
+      "saida": {
+        "colunas": "3"
+      }
+    },
+    {
+      "id": "apr-24",
+      "calculo": "colunas_do_moodboard",
+      "descricao": "4 materiais",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "materiais": 4
+      },
+      "saida": {
+        "colunas": "4"
+      }
+    },
+    {
+      "id": "apr-25",
+      "calculo": "colunas_do_moodboard",
+      "descricao": "5 materiais",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "materiais": 5
+      },
+      "saida": {
+        "colunas": "3"
+      }
+    },
+    {
+      "id": "apr-26",
+      "calculo": "colunas_do_moodboard",
+      "descricao": "6 materiais",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "materiais": 6
+      },
+      "saida": {
+        "colunas": "3"
+      }
+    },
+    {
+      "id": "apr-27",
+      "calculo": "colunas_do_moodboard",
+      "descricao": "7 materiais",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "materiais": 7
+      },
+      "saida": {
+        "colunas": "4"
+      }
+    },
+    {
+      "id": "apr-28",
+      "calculo": "colunas_do_moodboard",
+      "descricao": "8 materiais",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "materiais": 8
+      },
+      "saida": {
+        "colunas": "4"
+      }
+    },
+    {
+      "id": "apr-29",
+      "calculo": "colunas_do_moodboard",
+      "descricao": "9 materiais",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "materiais": 9
+      },
+      "saida": {
+        "colunas": "5"
+      }
+    },
+    {
+      "id": "apr-30",
+      "calculo": "colunas_do_moodboard",
+      "descricao": "10 materiais",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "materiais": 10
+      },
+      "saida": {
+        "colunas": "5"
+      }
+    },
+    {
+      "id": "apr-31",
+      "calculo": "colunas_do_moodboard",
+      "descricao": "11 materiais",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "materiais": 11
+      },
+      "saida": {
+        "colunas": "6"
+      }
+    },
+    {
+      "id": "apr-32",
+      "calculo": "colunas_do_moodboard",
+      "descricao": "12 materiais",
+      "como": "documento carregado pelo arquivo",
+      "entrada": {
+        "materiais": 12
+      },
+      "saida": {
+        "colunas": "6"
+      }
+    },
+    {
+      "id": "apr-33",
+      "calculo": "grade_de_imagens",
+      "descricao": "1 imagem(ns) na composição \"Várias imagens\"",
+      "como": "documento carregado pelo arquivo (o arquivo completa a grade até 4 espaços)",
+      "entrada": {
+        "imagens": 1
+      },
+      "saida": {
+        "colunas": "2",
+        "linhas": "2",
+        "espacosDesenhados": 4
+      }
+    },
+    {
+      "id": "apr-34",
+      "calculo": "grade_de_imagens",
+      "descricao": "2 imagem(ns) na composição \"Várias imagens\"",
+      "como": "documento carregado pelo arquivo (o arquivo completa a grade até 4 espaços)",
+      "entrada": {
+        "imagens": 2
+      },
+      "saida": {
+        "colunas": "2",
+        "linhas": "2",
+        "espacosDesenhados": 4
+      }
+    },
+    {
+      "id": "apr-35",
+      "calculo": "grade_de_imagens",
+      "descricao": "3 imagem(ns) na composição \"Várias imagens\"",
+      "como": "documento carregado pelo arquivo (o arquivo completa a grade até 4 espaços)",
+      "entrada": {
+        "imagens": 3
+      },
+      "saida": {
+        "colunas": "2",
+        "linhas": "2",
+        "espacosDesenhados": 4
+      }
+    },
+    {
+      "id": "apr-36",
+      "calculo": "grade_de_imagens",
+      "descricao": "4 imagem(ns) na composição \"Várias imagens\"",
+      "como": "documento carregado pelo arquivo (o arquivo completa a grade até 4 espaços)",
+      "entrada": {
+        "imagens": 4
+      },
+      "saida": {
+        "colunas": "2",
+        "linhas": "2",
+        "espacosDesenhados": 4
+      }
+    },
+    {
+      "id": "apr-37",
+      "calculo": "grade_de_imagens",
+      "descricao": "5 imagem(ns) na composição \"Várias imagens\"",
+      "como": "documento carregado pelo arquivo (o arquivo completa a grade até 4 espaços)",
+      "entrada": {
+        "imagens": 5
+      },
+      "saida": {
+        "colunas": "3",
+        "linhas": "2",
+        "espacosDesenhados": 5
+      }
+    },
+    {
+      "id": "apr-38",
+      "calculo": "grade_de_imagens",
+      "descricao": "6 imagem(ns) na composição \"Várias imagens\"",
+      "como": "documento carregado pelo arquivo (o arquivo completa a grade até 4 espaços)",
+      "entrada": {
+        "imagens": 6
+      },
+      "saida": {
+        "colunas": "3",
+        "linhas": "2",
+        "espacosDesenhados": 6
+      }
+    },
+    {
+      "id": "apr-39",
+      "calculo": "grade_de_imagens",
+      "descricao": "7 imagem(ns) na composição \"Várias imagens\"",
+      "como": "documento carregado pelo arquivo (o arquivo completa a grade até 4 espaços)",
+      "entrada": {
+        "imagens": 7
+      },
+      "saida": {
+        "colunas": "4",
+        "linhas": "2",
+        "espacosDesenhados": 7
+      }
+    },
+    {
+      "id": "apr-40",
+      "calculo": "grade_de_imagens",
+      "descricao": "8 imagem(ns) na composição \"Várias imagens\"",
+      "como": "documento carregado pelo arquivo (o arquivo completa a grade até 4 espaços)",
+      "entrada": {
+        "imagens": 8
+      },
+      "saida": {
+        "colunas": "4",
+        "linhas": "2",
+        "espacosDesenhados": 8
+      }
+    },
+    {
+      "id": "apr-41",
+      "calculo": "grade_de_imagens",
+      "descricao": "9 imagem(ns) na composição \"Várias imagens\"",
+      "como": "documento carregado pelo arquivo (o arquivo completa a grade até 4 espaços)",
+      "entrada": {
+        "imagens": 9
+      },
+      "saida": {
+        "colunas": "3",
+        "linhas": "3",
+        "espacosDesenhados": 9
+      }
+    },
+    {
+      "id": "apr-42",
+      "calculo": "grade_de_imagens",
+      "descricao": "10 imagem(ns) na composição \"Várias imagens\"",
+      "como": "documento carregado pelo arquivo (o arquivo completa a grade até 4 espaços)",
+      "entrada": {
+        "imagens": 10
+      },
+      "saida": {
+        "colunas": "4",
+        "linhas": "3",
+        "espacosDesenhados": 10
+      }
+    },
+    {
+      "id": "apr-43",
+      "calculo": "grade_de_imagens",
+      "descricao": "12 imagem(ns) na composição \"Várias imagens\"",
+      "como": "documento carregado pelo arquivo (o arquivo completa a grade até 4 espaços)",
+      "entrada": {
+        "imagens": 12
+      },
+      "saida": {
+        "colunas": "4",
+        "linhas": "3",
+        "espacosDesenhados": 12
+      }
+    },
+    {
+      "id": "apr-44",
+      "calculo": "grade_de_imagens",
+      "descricao": "16 imagem(ns) na composição \"Várias imagens\"",
+      "como": "documento carregado pelo arquivo (o arquivo completa a grade até 4 espaços)",
+      "entrada": {
+        "imagens": 16
+      },
+      "saida": {
+        "colunas": "4",
+        "linhas": "4",
+        "espacosDesenhados": 16
+      }
+    },
+    {
+      "id": "apr-45",
+      "calculo": "importacao_da_prancha",
+      "descricao": "Prancha A4 em 3508 × 2480 px (300 dpi)",
+      "como": "arquivo PNG solto sobre a prancha (evento de soltar do próprio arquivo)",
+      "entrada": {
+        "folha": "A4",
+        "larguraPx": 3508,
+        "alturaPx": 2480
+      },
+      "saida": {
+        "aviso": null,
+        "imagemGuardadaPx": [
+          3508,
+          2480
+        ],
+        "larguraOriginalGravada": 3508
+      }
+    },
+    {
+      "id": "apr-46",
+      "calculo": "importacao_da_prancha",
+      "descricao": "Prancha A4 em 1754 × 1240 px (150 dpi)",
+      "como": "arquivo PNG solto sobre a prancha (evento de soltar do próprio arquivo)",
+      "entrada": {
+        "folha": "A4",
+        "larguraPx": 1754,
+        "alturaPx": 1240
+      },
+      "saida": {
+        "aviso": "Resolução baixa (150 dpi) para impressão. Exporte em 300 dpi.",
+        "imagemGuardadaPx": [
+          1754,
+          1240
+        ],
+        "larguraOriginalGravada": 1754
+      }
+    },
+    {
+      "id": "apr-47",
+      "calculo": "importacao_da_prancha",
+      "descricao": "Prancha A4 quadrada 2480 × 2480 px",
+      "como": "arquivo PNG solto sobre a prancha (evento de soltar do próprio arquivo)",
+      "entrada": {
+        "folha": "A4",
+        "larguraPx": 2480,
+        "alturaPx": 2480
+      },
+      "saida": {
+        "aviso": "A imagem não tem a proporção de uma folha A4. Exporte a página inteira, sem margens, para manter a escala.",
+        "imagemGuardadaPx": [
+          2480,
+          2480
+        ],
+        "larguraOriginalGravada": 2480
+      }
+    },
+    {
+      "id": "apr-48",
+      "calculo": "importacao_da_prancha",
+      "descricao": "Prancha A4 em retrato 2480 × 3508 px",
+      "como": "arquivo PNG solto sobre a prancha (evento de soltar do próprio arquivo)",
+      "entrada": {
+        "folha": "A4",
+        "larguraPx": 2480,
+        "alturaPx": 3508
+      },
+      "saida": {
+        "aviso": "A prancha está em retrato. Exporte a folha em paisagem para manter a escala.",
+        "imagemGuardadaPx": [
+          2480,
+          3508
+        ],
+        "larguraOriginalGravada": 2480
+      }
+    },
+    {
+      "id": "apr-49",
+      "calculo": "importacao_da_prancha",
+      "descricao": "Prancha A3 em 4961 × 3508 px (300 dpi)",
+      "como": "arquivo PNG solto sobre a prancha (evento de soltar do próprio arquivo)",
+      "entrada": {
+        "folha": "A3",
+        "larguraPx": 4961,
+        "alturaPx": 3508
+      },
+      "saida": {
+        "aviso": null,
+        "imagemGuardadaPx": [
+          4961,
+          3508
+        ],
+        "larguraOriginalGravada": 4961
+      }
+    },
+    {
+      "id": "apr-50",
+      "calculo": "importacao_da_prancha",
+      "descricao": "Prancha A3 em 3508 × 2480 px (212 dpi)",
+      "como": "arquivo PNG solto sobre a prancha (evento de soltar do próprio arquivo)",
+      "entrada": {
+        "folha": "A3",
+        "larguraPx": 3508,
+        "alturaPx": 2480
+      },
+      "saida": {
+        "aviso": null,
+        "imagemGuardadaPx": [
+          3508,
+          2480
+        ],
+        "larguraOriginalGravada": 3508
+      }
+    },
+    {
+      "id": "apr-51",
+      "calculo": "importacao_da_prancha",
+      "descricao": "Prancha A4 em 8000 × 5657 px (maior que 7200 px)",
+      "como": "arquivo PNG solto sobre a prancha (evento de soltar do próprio arquivo)",
+      "entrada": {
+        "folha": "A4",
+        "larguraPx": 8000,
+        "alturaPx": 5657
+      },
+      "saida": {
+        "aviso": null,
+        "imagemGuardadaPx": [
+          7200,
+          5091
+        ],
+        "larguraOriginalGravada": 8000
+      }
+    },
+    {
+      "id": "apr-52",
+      "calculo": "importacao_de_imagem",
+      "descricao": "Imagem de 5000 × 2500 px num espaço comum",
+      "como": "arquivo solto sobre o espaço de imagem",
+      "entrada": {
+        "larguraPx": 5000,
+        "alturaPx": 2500,
+        "tipo": "image/png",
+        "nome": "render.png"
+      },
+      "saida": {
+        "aviso": null,
+        "imagemGuardadaPx": [
+          4000,
+          2000
+        ],
+        "larguraOriginalGravada": 5000
+      }
+    },
+    {
+      "id": "apr-53",
+      "calculo": "importacao_de_imagem",
+      "descricao": "Imagem de 3000 × 2000 px num espaço comum",
+      "como": "arquivo solto sobre o espaço de imagem",
+      "entrada": {
+        "larguraPx": 3000,
+        "alturaPx": 2000,
+        "tipo": "image/png",
+        "nome": "render.png"
+      },
+      "saida": {
+        "aviso": null,
+        "imagemGuardadaPx": [
+          3000,
+          2000
+        ],
+        "larguraOriginalGravada": 3000
+      }
+    },
+    {
+      "id": "apr-54",
+      "calculo": "importacao_de_imagem",
+      "descricao": "Arquivo GIF",
+      "como": "arquivo solto sobre o espaço de imagem",
+      "entrada": {
+        "larguraPx": 400,
+        "alturaPx": 300,
+        "tipo": "image/gif",
+        "nome": "anim.gif"
+      },
+      "saida": {
+        "aviso": "“anim.gif” não é um formato compatível. Use PNG, JPG ou WebP.",
+        "imagemGuardadaPx": null,
+        "larguraOriginalGravada": null
+      }
+    },
+    {
+      "id": "apr-55",
+      "calculo": "folha_modelo",
+      "descricao": "Folha-modelo A4 em PNG",
+      "como": "botão \"Baixar PNG\" do painel (download bloqueado no teste)",
+      "entrada": {
+        "folha": "A4",
+        "tipo": "PNG"
+      },
+      "saida": {
+        "notaDoPainel": "A4 · 3508 × 2480 px · 300 dpi. Prefira PNG: o JPEG borra linhas finas e cotas.",
+        "aviso": "Folha-modelo A4 baixada · 3508 × 2480 px, 300 dpi."
+      }
+    },
+    {
+      "id": "apr-56",
+      "calculo": "folha_modelo",
+      "descricao": "Folha-modelo A3 em PNG",
+      "como": "botão \"Baixar PNG\" do painel (download bloqueado no teste)",
+      "entrada": {
+        "folha": "A3",
+        "tipo": "PNG"
+      },
+      "saida": {
+        "notaDoPainel": "A3 · 4961 × 3508 px · 300 dpi. Prefira PNG: o JPEG borra linhas finas e cotas.",
+        "aviso": "Folha-modelo A3 baixada · 4961 × 3508 px, 300 dpi."
+      }
+    },
+    {
+      "id": "apr-57",
+      "calculo": "zoom_de_ajuste",
+      "descricao": "Janela de 1440 px, formato A4",
+      "como": "arquivo aberto nessa largura",
+      "entrada": {
+        "larguraDaJanela": 1440,
+        "formato": "a4"
+      },
+      "saida": {
+        "larguraUtilDoMain": 1080,
+        "rotulo": "90%",
+        "zoomCss": "0.90472"
+      }
+    },
+    {
+      "id": "apr-58",
+      "calculo": "zoom_de_ajuste",
+      "descricao": "Janela de 1024 px, formato A4",
+      "como": "arquivo aberto nessa largura",
+      "entrada": {
+        "larguraDaJanela": 1024,
+        "formato": "a4"
+      },
+      "saida": {
+        "larguraUtilDoMain": 664,
+        "rotulo": "53%",
+        "zoomCss": "0.534283"
+      }
+    },
+    {
+      "id": "apr-59",
+      "calculo": "zoom_de_ajuste",
+      "descricao": "Janela de 1440 px, formato A3",
+      "como": "arquivo aberto nessa largura",
+      "entrada": {
+        "larguraDaJanela": 1440,
+        "formato": "a3"
+      },
+      "saida": {
+        "larguraUtilDoMain": 1080,
+        "rotulo": "64%",
+        "zoomCss": "0.90472"
+      }
+    },
+    {
+      "id": "apr-60",
+      "calculo": "zoom_de_ajuste",
+      "descricao": "Janela de 1920 px, formato A4",
+      "como": "arquivo aberto nessa largura",
+      "entrada": {
+        "larguraDaJanela": 1920,
+        "formato": "a4"
+      },
+      "saida": {
+        "larguraUtilDoMain": 1560,
+        "rotulo": "133%",
+        "zoomCss": "1.33215"
+      }
+    },
+    {
+      "id": "apr-61",
+      "calculo": "aviso_de_conteudo_excedente",
+      "descricao": "Uma página de notas com 120 linhas e outra curta",
+      "como": "aba Páginas e botão \"Exportar PDF\"",
+      "entrada": {
+        "paginas": [
+          "capa",
+          "notas longa",
+          "notas curta"
+        ]
+      },
+      "saida": {
+        "avisosNaListaDePaginas": 1,
+        "confirmacaoAoExportar": "1 página(s) têm conteúdo além do limite e serão cortadas no PDF. Exportar mesmo assim?"
+      }
+    },
+    {
+      "id": "apr-62",
+      "calculo": "aviso_de_escala_real_ao_exportar",
+      "descricao": "Desenho técnico em escala real",
+      "como": "botão \"Exportar PDF\"",
+      "entrada": {
+        "desenho": "1:50 com referência"
+      },
+      "saida": {
+        "alerta": "Esta apresentação tem desenhos em escala real.\n\nNa janela de impressão, escolha “Tamanho real” ou “Escala 100%” — nunca “Ajustar à página”. Para conferir, meça a escala gráfica impressa com uma régua."
+      }
+    },
+    {
+      "id": "apr-63",
+      "calculo": "tamanho_das_paginas_no_pdf",
+      "descricao": "Documento A4 com capa e notas",
+      "como": "Page.printToPDF com o CSS de impressão do arquivo",
+      "entrada": {
+        "formato": "a4"
+      },
+      "saida": {
+        "paginasMm": [
+          [
+            297,
+            209.9
+          ],
+          [
+            297,
+            209.9
+          ]
+        ]
+      }
+    },
+    {
+      "id": "apr-64",
+      "calculo": "tamanho_das_paginas_no_pdf",
+      "descricao": "Documento A3",
+      "como": "Page.printToPDF com o CSS de impressão do arquivo",
+      "entrada": {
+        "formato": "a3"
+      },
+      "saida": {
+        "paginasMm": [
+          [
+            420.2,
+            297
+          ],
+          [
+            420.2,
+            297
+          ]
+        ]
+      }
+    },
+    {
+      "id": "apr-65",
+      "calculo": "tamanho_das_paginas_no_pdf",
+      "descricao": "Documento 16:9",
+      "como": "Page.printToPDF com o CSS de impressão do arquivo",
+      "entrada": {
+        "formato": "wide"
+      },
+      "saida": {
+        "paginasMm": [
+          [
+            297,
+            167.2
+          ],
+          [
+            297,
+            167.2
+          ]
+        ]
+      }
+    },
+    {
+      "id": "apr-66",
+      "calculo": "tamanho_das_paginas_no_pdf",
+      "descricao": "Documento A4 com uma prancha A3",
+      "como": "Page.printToPDF com o CSS de impressão do arquivo",
+      "entrada": {
+        "formato": "a4"
+      },
+      "saida": {
+        "paginasMm": [
+          [
+            297,
+            209.9
+          ],
+          [
+            420.2,
+            297
+          ],
+          [
+            297,
+            209.9
+          ]
+        ]
+      }
+    }
+  ],
+  "conferencia": {
+    "errosNoConsole": [],
+    "requisicoesExternas": []
+  }
+}

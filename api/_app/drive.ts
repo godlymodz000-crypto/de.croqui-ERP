@@ -33,6 +33,8 @@ export interface DriveClient {
    */
   createUploadSession(input: { name: string; mimeType: string; size: number; parentId: string; origin: string }): Promise<string>;
   getFile(id: string): Promise<DriveFile | null>;
+  /** Envia um arquivo gerado no servidor (PDF do orçamento) para a pasta, numa chamada só. */
+  uploadFile(input: { name: string; mimeType: string; parentId: string; body: Uint8Array }): Promise<DriveFile>;
   /** Move o arquivo para a lixeira do Drive (recuperável por 30 dias). */
   trashFile(id: string): Promise<void>;
   /** Imagem gerada pelo Drive com o lado maior em `size` px (miniatura ou visualização grande), quando existe. */
@@ -166,6 +168,29 @@ export function createAdminDrive({ config, db, fetch: doFetch = fetch }: { confi
       const location = res.headers.get('location');
       if (!res.ok || !location) throw new DriveError(`Abertura da sessão de upload falhou (${res.status}).`);
       return location;
+    },
+
+    async uploadFile({ name, mimeType, parentId, body }) {
+      // Upload multipart: metadados e conteúdo no mesmo pedido. Serve para arquivos de até 5 MB.
+      const boundary = `erp-${crypto.randomUUID()}`;
+      const head = `--${boundary}
+content-type: application/json; charset=UTF-8
+
+${JSON.stringify({ name, mimeType, parents: [parentId] })}
+--${boundary}
+content-type: ${mimeType}
+
+`;
+      const res = await call(`${UPLOAD_ENDPOINT}?uploadType=multipart&fields=id,name,mimeType,size,parents,trashed`, {
+        method: 'POST',
+        headers: { 'content-type': `multipart/related; boundary=${boundary}` },
+        body: new Blob([head, body as Uint8Array<ArrayBuffer>, `
+--${boundary}--`]),
+      });
+      if (!res.ok) throw new DriveError(`Envio do arquivo falhou (${res.status}).`);
+      const f = (await res.json()) as Omit<DriveFile, 'size'> & { size?: string };
+      if (!f.id) throw new DriveError('Resposta do Drive sem ID do arquivo.');
+      return { ...f, size: Number(f.size ?? body.byteLength), parents: f.parents ?? [parentId], trashed: !!f.trashed };
     },
 
     async getFile(id) {

@@ -11,6 +11,11 @@ export interface Config {
   /** Para onde o navegador volta depois do login. */
   appUrl: string;
   secureCookies: boolean;
+  /**
+   * Navegador usado para gerar PDF no computador (Edge ou Chrome instalado). Na Vercel fica vazio e o
+   * PDF usa o Chromium do @sparticuz/chromium.
+   */
+  pdfBrowserPath?: string;
 }
 
 const REQUIRED = [
@@ -48,5 +53,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     tokenEncryptionKey: parseEncryptionKey(env.TOKEN_ENCRYPTION_KEY!),
     appUrl,
     secureCookies: redirect.protocol === 'https:',
+    pdfBrowserPath: env.PDF_BROWSER_PATH || undefined,
   };
 }

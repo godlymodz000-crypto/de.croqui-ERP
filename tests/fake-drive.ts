@@ -73,6 +73,14 @@ export class FakeDrive implements DriveClient {
     this.sessions.set(url, input);
     return url;
   }
+  /** Conteúdo dos arquivos enviados pelo servidor (PDF do orçamento). */
+  contents = new Map<string, Uint8Array>();
+  async uploadFile(input: { name: string; mimeType: string; parentId: string; body: Uint8Array }): Promise<DriveFile> {
+    this.check('uploadFile');
+    const id = this.add(input.name, input.parentId, false, input.mimeType, input.body.byteLength);
+    this.contents.set(id, input.body);
+    return { id, name: input.name, mimeType: input.mimeType, size: input.body.byteLength, parents: [input.parentId], trashed: false };
+  }
   async getFile(id: string): Promise<DriveFile | null> {
     this.check('getFile');
     const f = this.folders.get(id);

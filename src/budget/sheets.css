@@ -1,0 +1,365 @@
+/*
+ * Folhas A4 do orçamento: medidas e tipos do template templates/orcamento do design system.
+ * Só tokens; nenhuma cor fixa. A folha tem altura exata de A4 e a lista de ambientes é dividida em
+ * folhas de continuação (budget-calc.ts), então nenhuma folha passa de 297 mm.
+ */
+.bsheet {
+  width: 210mm;
+  height: 297mm;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 14mm 16mm 11mm;
+  background: var(--linho-50);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--font-body);
+  color: var(--noite-900);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.bsheet * {
+  box-sizing: border-box;
+}
+.bsheet__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 5mm;
+  border-bottom: 1px solid var(--border-hairline);
+}
+.bsheet__logo {
+  height: 15mm;
+  width: auto;
+  display: block;
+}
+.bsheet__contacts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  font: 400 10.5px/1 var(--font-body);
+  letter-spacing: 0.06em;
+  color: var(--ardosia-700);
+}
+.bsheet__region {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 9.5px;
+}
+.bsheet__title-block {
+  padding: 11mm 0 8mm;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bsheet__eyebrow {
+  font: 500 10.5px/1 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--vinho-800);
+}
+.bsheet__title {
+  font: 300 46px/1.02 var(--font-display);
+  letter-spacing: -0.01em;
+  color: var(--noite-900);
+}
+.bsheet__title--cover {
+  font-size: 50px;
+  text-wrap: balance;
+}
+.bsheet__title em,
+.bsheet__title--cover em {
+  color: var(--vinho-800);
+}
+.bsheet__facts {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 0.8fr 1.1fr 1fr;
+  gap: 12px;
+  border-top: 1px solid var(--noite-900);
+  padding-top: 10px;
+}
+.bsheet__fact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.bsheet__fact-label,
+.bsheet__label {
+  font: 500 9px/1 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ardosia-700);
+}
+.bsheet__label {
+  font-size: 10px;
+}
+.bsheet__label--brand {
+  color: var(--vinho-800);
+}
+.bsheet__label--spaced {
+  margin-bottom: 5px;
+}
+.bsheet__fact-value {
+  font: 400 15px/1.2 var(--font-display);
+  overflow-wrap: anywhere;
+}
+.bsheet__investment {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 10mm;
+}
+.bsheet__investment-title {
+  font: 400 26px/1 var(--font-display);
+}
+.bsheet__cards {
+  display: flex;
+  gap: 5mm;
+  margin-top: 5mm;
+}
+.bsheet__card {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--linho-200);
+  border-radius: 48px 48px 4px 4px;
+  padding: 9mm 7mm 7mm;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bsheet__card-tag {
+  font: 500 10px/1 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--vinho-800);
+}
+.bsheet__card-name {
+  font: 400 22px/1.1 var(--font-display);
+  color: var(--noite-900);
+}
+.bsheet__card-total {
+  font: 300 40px/1 var(--font-display);
+  color: var(--vinho-800);
+  margin-top: 6px;
+}
+.bsheet__card-text {
+  font: 300 12.5px/1.5 var(--font-body);
+  color: var(--ardosia-700);
+}
+.bsheet__card--night {
+  background: var(--noite-900);
+}
+.bsheet__card--night .bsheet__card-tag,
+.bsheet__card--night .bsheet__card-text {
+  color: var(--ardosia-300);
+}
+.bsheet__card--night .bsheet__card-name,
+.bsheet__card--night .bsheet__card-total {
+  color: var(--linho-50);
+}
+.bsheet__two-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9mm;
+  margin-top: 9mm;
+}
+.bsheet__two-cols--notes {
+  grid-template-columns: 1.25fr 1fr;
+  margin-top: 10mm;
+}
+.bsheet__ruled {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--noite-900);
+  padding-top: 10px;
+  min-width: 0;
+}
+.bsheet__ruled--offer {
+  gap: 9px;
+}
+.bsheet__list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font: 300 12.5px/1.5 var(--font-body);
+}
+.bsheet__list--tight {
+  gap: 5px;
+}
+.bsheet__ruled.bsheet__list--tight {
+  gap: 5px;
+}
+.bsheet strong {
+  font-weight: 500;
+}
+.bsheet__pay {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font: 300 12.5px/1.5 var(--font-body);
+}
+.bsheet__pay--validity {
+  margin-top: 4px;
+}
+.bsheet__pay-title {
+  font: 400 15px/1.2 var(--font-display);
+}
+.bsheet__closing {
+  margin: 10mm 0 0;
+  font: italic 300 19px/1.35 var(--font-display);
+  color: var(--noite-900);
+  max-width: 150mm;
+}
+.bsheet__property {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8mm;
+  background: var(--linho-200);
+  padding: 6mm 7mm;
+  border-radius: 4px;
+}
+.bsheet__property-text {
+  font: 400 18px/1.35 var(--font-display);
+  color: var(--noite-900);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  /* No máximo três linhas, como no arquivo original; o painel avisa quando o texto passa disso. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+/* Cópia invisível usada pelo painel para contar as linhas: a largura do texto dentro do quadro Imóvel. */
+.bsheet__property-text--measure {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  display: block;
+  -webkit-line-clamp: none;
+  line-clamp: none;
+  overflow: visible;
+  width: calc(210mm - 32mm - 14mm);
+}
+.bsheet__offer-title {
+  font: 400 21px/1.15 var(--font-display);
+}
+.bsheet__offer-value {
+  font: 300 26px/1 var(--font-display);
+  color: var(--vinho-800);
+}
+.bsheet__offer-value span {
+  font: 300 13px var(--font-body);
+  color: var(--ardosia-700);
+}
+.bsheet__text {
+  font: 300 12.5px/1.5 var(--font-body);
+}
+.bsheet__summary {
+  margin-top: 10mm;
+  display: flex;
+  flex-direction: column;
+}
+.bsheet__summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4mm;
+}
+.bsheet__summary-title {
+  font: 400 24px/1 var(--font-display);
+}
+.bsheet__summary > .bsheet__summary-title {
+  margin-bottom: 4mm;
+}
+.bsheet__line {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border-default);
+  font: 300 13.5px/1.4 var(--font-body);
+}
+.bsheet__line--room {
+  padding: 9px 0;
+}
+.bsheet__line > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.bsheet__line-value {
+  flex: none;
+  font: 400 17px/1.2 var(--font-display);
+}
+.bsheet__total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 6mm 7mm;
+  margin-top: 3mm;
+  border-radius: 4px;
+}
+.bsheet__total--wine {
+  background: var(--vinho-800);
+  color: var(--vinho-100);
+}
+.bsheet__total--night {
+  background: var(--noite-900);
+  color: var(--linho-100);
+}
+.bsheet__total-label {
+  font: 500 10.5px/1 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.bsheet__total-value {
+  font: 300 34px/1 var(--font-display);
+  color: var(--linho-50);
+}
+.bsheet__continues {
+  margin: 4mm 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-default);
+  font: italic 300 15px/1.35 var(--font-display);
+  color: var(--ardosia-700);
+}
+.bsheet__note {
+  margin: 6mm 0 0;
+  font: italic 300 16px/1.4 var(--font-display);
+  color: var(--ardosia-700);
+}
+.bsheet__foot {
+  margin-top: auto;
+  padding-top: 8mm;
+  display: flex;
+  justify-content: space-between;
+  font: 500 9px/1 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ardosia-700);
+}
+
+/* Impressão e PDF: uma folha por página A4, sem sombra nem margem. */
+@page {
+  size: A4;
+  margin: 0;
+}
+@media print {
+  .bsheet {
+    box-shadow: none;
+    margin: 0;
+    zoom: 1 !important;
+    break-after: page;
+  }
+  .bsheet:last-child {
+    break-after: auto;
+  }
+}
