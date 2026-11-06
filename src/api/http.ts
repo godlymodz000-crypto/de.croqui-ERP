@@ -4,6 +4,8 @@ export class ApiError extends Error {
     public status: number,
     public code: string,
     public fields: Record<string, string> = {},
+    /** Corpo da resposta de erro, para quem precisa de mais que o código (ex.: 409 no_changes traz o PDF atual). */
+    public body: Record<string, unknown> = {},
   ) {
     super(code);
   }
@@ -40,7 +42,7 @@ export async function request<T>(method: string, url: string, body?: unknown): P
     if (err instanceof DOMException && (err.name === 'TimeoutError' || err.name === 'AbortError')) throw new ApiError(0, 'timeout');
     return {};
   });
-  if (!res.ok) throw new ApiError(res.status, data.error ?? 'unknown', data.fields);
+  if (!res.ok) throw new ApiError(res.status, data.error ?? 'unknown', data.fields, data);
   return data as T;
 }
 

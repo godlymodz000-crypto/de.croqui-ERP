@@ -328,6 +328,8 @@ export const budgets = pgTable(
     pdfName: text('pdf_name'),
     pdfVersion: integer('pdf_version').notNull().default(0),
     pdfExportedAt: timestamp('pdf_exported_at', { withTimezone: true }),
+    // sha256 do que gerou o PDF mais recente (conteúdo, nome, projeto e número). Igual ao atual: não gera outro.
+    pdfSourceHash: text('pdf_source_hash'),
   },
   (t) => [
     uniqueIndex('budgets_number_idx').on(t.number),

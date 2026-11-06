@@ -5,7 +5,7 @@ import { auditLog, budgets, projectFiles, projects, users, type Budget } from '.
 import { audit } from '../audit.js';
 import { ensureRootFolder, fileViewUrl, projectSubfolderId, type DriveClient } from '../drive.js';
 import type { BudgetPdfRenderer } from '../budget-pdf.js';
-import { budgetPdfName, LOOSE_BUDGETS_FOLDER, todayInStudio } from '../budget-files.js';
+import { budgetPdfName, budgetSourceHash, LOOSE_BUDGETS_FOLDER, todayInStudio } from '../budget-files.js';
 import { budgetHeadlineCents, emptyBudget, parseBudgetData, type BudgetData } from '../../../src/shared/budget-calc.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -98,21 +98,25 @@ export async function budgetsRoutes(app: FastifyInstance, { db, drive, pdf }: { 
         updatedAt: b.updatedAt.toISOString(),
         updatedBy: editorById.get(b.id) ?? null,
         // PDF mais recente no Drive. Os anteriores continuam no Drive, com versão menor no nome.
-        pdf: b.pdfDriveFileId
-          ? {
-              driveFileId: b.pdfDriveFileId,
-              name: b.pdfName,
-              // A versão do arquivo vem do nome: pdf_version pode estar reservado por uma exportação em andamento.
-              version: Number(/-v(\d+)\.pdf$/.exec(b.pdfName ?? '')?.[1] ?? 1),
-              exportedAt: b.pdfExportedAt?.toISOString() ?? null,
-              url: fileViewUrl(b.pdfDriveFileId),
-            }
-          : null,
+        pdf: pdfDto(b),
         ...(withData ? { data } : {}),
       };
     });
   }
   const dto = async (b: Budget, withData: boolean) => (await dtos([b], withData))[0];
+
+  /** PDF mais recente no Drive. Os anteriores continuam no Drive, com versão menor no nome. */
+  function pdfDto(b: Budget) {
+    if (!b.pdfDriveFileId) return null;
+    return {
+      driveFileId: b.pdfDriveFileId,
+      name: b.pdfName,
+      // A versão do arquivo vem do nome: pdf_version pode estar reservado por uma exportação em andamento.
+      version: Number(/-v(\d+)\.pdf$/.exec(b.pdfName ?? '')?.[1] ?? 1),
+      exportedAt: b.pdfExportedAt?.toISOString() ?? null,
+      url: fileViewUrl(b.pdfDriveFileId),
+    };
+  }
 
   // Lista: ?projectId=<id> traz os orçamentos do projeto; ?semProjeto=1, os avulsos. Sem filtro, todos.
   app.get<{ Querystring: { projectId?: string; semProjeto?: string } }>(
@@ -253,6 +257,20 @@ export async function budgetsRoutes(app: FastifyInstance, { db, drive, pdf }: { 
     const project = budget.projectId ? await activeProject(budget.projectId) : null;
     if (budget.projectId && !project) return reply.code(404).send({ error: 'not_found' });
 
+    // Nada mudou desde o último PDF: não gera outro igual. Se o arquivo foi apagado do Drive (lixeira ou
+    // sumiu), exporta de novo. Essa conferência é uma leitura só, com o token do administrador.
+    const sourceHash = budgetSourceHash({ data, name: budget.name, projectId: budget.projectId, number: budget.number });
+    if (budget.pdfDriveFileId && budget.pdfSourceHash === sourceHash) {
+      let existing;
+      try {
+        existing = await drive.getFile(budget.pdfDriveFileId);
+      } catch (err) {
+        request.log.error({ err: (err as Error)?.message ?? err }, 'falha no Google Drive');
+        return reply.code(502).send({ error: 'drive_failed' });
+      }
+      if (existing && !existing.trashed) return reply.code(409).send({ error: 'no_changes', file: pdfDto(budget) });
+    }
+
     // Reserva a versão antes de gerar: duas exportações ao mesmo tempo nunca recebem o mesmo nome.
     const [reserved] = await db
       .update(budgets)
@@ -304,7 +322,7 @@ export async function budgetsRoutes(app: FastifyInstance, { db, drive, pdf }: { 
         // Só vira o "mais recente" se nenhuma exportação mais nova foi reservada depois desta.
         const [b] = await tx
           .update(budgets)
-          .set({ pdfDriveFileId: file.id, pdfName: file.name, pdfExportedAt: exportedAt })
+          .set({ pdfDriveFileId: file.id, pdfName: file.name, pdfExportedAt: exportedAt, pdfSourceHash: sourceHash })
           .where(and(eq(budgets.id, budget.id), eq(budgets.pdfVersion, version)))
           .returning();
         if (project) {

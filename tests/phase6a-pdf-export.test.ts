@@ -15,7 +15,7 @@ import * as schema from '../api/_app/db/schema.js';
 import { createSession } from '../api/_app/auth.js';
 import { randomToken } from '../api/_app/crypto.js';
 import { ROOT_FOLDER_NAME } from '../api/_app/drive.js';
-import { budgetPdfName, fileSlug, todayInStudio } from '../api/_app/budget-files.js';
+import { budgetPdfName, budgetSourceHash, canonicalJson, fileSlug, todayInStudio } from '../api/_app/budget-files.js';
 import type { BudgetPdfRenderer } from '../api/_app/budget-pdf.js';
 import { emptyBudget, type BudgetData } from '../src/shared/budget-calc.js';
 import { FakeDrive } from './fake-drive.js';
@@ -88,6 +88,18 @@ async function budget(name: string, projectId?: string, data: Partial<BudgetData
 }
 
 const exportPdf = (id: string, headers: Headers = member) => app.inject({ method: 'POST', url: `/budgets/${id}/pdf`, headers });
+
+/** Altera o orçamento como o salvamento automático faria (por cima do que está gravado). */
+async function edit(id: string, patch: { name?: string; data?: Partial<BudgetData> }) {
+  const current = (await app.inject({ method: 'GET', url: `/budgets/${id}`, headers: member })).json();
+  const res = await app.inject({
+    method: 'PATCH',
+    url: `/budgets/${id}`,
+    headers: member,
+    payload: { ...(patch.name ? { name: patch.name } : {}), ...(patch.data ? { data: { ...current.data, ...patch.data } } : {}) },
+  });
+  expect(res.statusCode).toBe(200);
+}
 
 async function row(id: string) {
   const [b] = await db.select().from(schema.budgets).where(eq(schema.budgets.id, id));
@@ -212,6 +224,7 @@ describe('permissão', () => {
   it('administrador e colaborador exportam; sem sessão, 401', async () => {
     const b = await budget('Sala');
     expect((await exportPdf(b.id, admin)).statusCode).toBe(201);
+    await edit(b.id, { data: { cliente: 'Outro cliente' } });
     expect((await exportPdf(b.id, member)).statusCode).toBe(201);
     expect((await app.inject({ method: 'POST', url: `/budgets/${b.id}/pdf` })).statusCode).toBe(401);
   });
@@ -288,6 +301,7 @@ describe('exportar de novo', () => {
     const p = await project();
     const b = await budget('Sala de Jantar', p.id);
     const first = (await exportPdf(b.id)).json().file;
+    await edit(b.id, { data: { cliente: 'Outro cliente' } });
     const second = (await exportPdf(b.id)).json().file;
     expect(second.name).toBe(`Orcamento-${b.number}-Sala-de-Jantar-2026-11-04-v2.pdf`);
     expect(second.version).toBe(2);
@@ -313,5 +327,129 @@ describe('exportar de novo', () => {
     const versions = [r1.json().file.version, r2.json().file.version].sort();
     expect(versions).toEqual([1, 2]);
     expect((await row(b.id)).pdfName).toMatch(/-v2\.pdf$/);
+  });
+});
+
+describe('sem alterações desde o último PDF', () => {
+  it('hash igual: 409 no_changes com o PDF atual, sem gerar, sem enviar e sem gravar nada', async () => {
+    const p = await project();
+    const b = await budget('Sala', p.id);
+    const first = (await exportPdf(b.id)).json().file;
+    const before = await row(b.id);
+    pdf.calls = [];
+    drive.resetCalls();
+
+    const res = await exportPdf(b.id);
+    expect(res.statusCode).toBe(409);
+    expect(res.json()).toEqual({
+      error: 'no_changes',
+      file: { driveFileId: first.driveFileId, name: first.name, version: 1, exportedAt: first.exportedAt, url: first.url },
+    });
+    expect(pdf.calls).toHaveLength(0);
+    // Só a leitura que confere se o arquivo ainda está no Drive.
+    expect(drive.calls).toEqual(['getFile']);
+    expect(await row(b.id)).toEqual(before);
+    expect(await auditRows('budget.export')).toHaveLength(1);
+    expect(await db.select().from(schema.projectFiles).where(eq(schema.projectFiles.projectId, p.id))).toHaveLength(1);
+  });
+
+  it('primeira exportação (sem hash gravado): exporta e grava o hash', async () => {
+    const b = await budget('Sala');
+    expect((await row(b.id)).pdfSourceHash).toBeNull();
+    const res = await exportPdf(b.id);
+    expect(res.statusCode).toBe(201);
+    const r = await row(b.id);
+    expect(r.pdfSourceHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(r.pdfSourceHash).toBe(budgetSourceHash({ data: { ...emptyBudget(), ...(r.data as object) }, name: r.name, projectId: r.projectId, number: r.number }));
+  });
+
+  it('hash diferente: exporta normalmente (-v2) e grava o novo hash', async () => {
+    const b = await budget('Sala');
+    await exportPdf(b.id);
+    const firstHash = (await row(b.id)).pdfSourceHash;
+    await edit(b.id, { data: { ambientes: [{ nome: 'Sala', valor: 500 }, { nome: 'Cozinha', valor: 300 }] } as Partial<BudgetData> });
+    const res = await exportPdf(b.id);
+    expect(res.statusCode).toBe(201);
+    expect(res.json().file.version).toBe(2);
+    const r = await row(b.id);
+    expect(r.pdfSourceHash).not.toBe(firstHash);
+    expect(r.pdfDriveFileId).toBe(res.json().file.driveFileId);
+    expect(await auditRows('budget.export')).toHaveLength(2);
+  });
+
+  it('trocar o nome do orçamento, mesmo com o mesmo conteúdo e a mesma data, permite exportar de novo', async () => {
+    const b = await budget('Sala');
+    await exportPdf(b.id);
+    await edit(b.id, { name: 'Sala e varanda' });
+    const res = await exportPdf(b.id);
+    expect(res.statusCode).toBe(201);
+    expect(res.json().file.name).toBe(`Orcamento-${b.number}-Sala-e-varanda-2026-11-04-v2.pdf`);
+  });
+
+  it('alterar e desfazer volta ao mesmo hash: não gera PDF repetido', async () => {
+    const b = await budget('Sala');
+    await exportPdf(b.id);
+    await edit(b.id, { data: { cliente: 'Outro cliente' } });
+    await edit(b.id, { data: { cliente: 'Cliente Exemplo' } });
+    expect((await exportPdf(b.id)).statusCode).toBe(409);
+  });
+
+  it('PDF anterior na lixeira ou apagado do Drive: o hash igual não bloqueia, exporta de novo', async () => {
+    const b = await budget('Sala');
+    const first = (await exportPdf(b.id)).json().file;
+    await drive.trashFile(first.driveFileId);
+    const again = await exportPdf(b.id);
+    expect(again.statusCode).toBe(201);
+    expect(again.json().file.version).toBe(2);
+
+    drive.folders.delete(again.json().file.driveFileId);
+    const third = await exportPdf(b.id);
+    expect(third.statusCode).toBe(201);
+    expect(third.json().file.version).toBe(3);
+  });
+
+  it('Drive sem resposta ao conferir o arquivo: 502 drive_failed, sem reservar versão', async () => {
+    const b = await budget('Sala');
+    await exportPdf(b.id);
+    drive.failOn = { op: 'getFile' };
+    const res = await exportPdf(b.id);
+    expect(res.statusCode).toBe(502);
+    expect(res.json()).toEqual({ error: 'drive_failed' });
+    expect((await row(b.id)).pdfVersion).toBe(1);
+    expect(await auditRows('budget.export')).toHaveLength(1);
+  });
+});
+
+describe('hash do que entra no PDF', () => {
+  const base = {
+    data: { ...emptyBudget(), cliente: 'Cliente Exemplo', data: '2026-11-04', ambientes: [{ nome: 'Sala', valor: 500 }] } as Record<string, unknown>,
+    name: 'Sala',
+    projectId: null as string | null,
+    number: 7,
+  };
+  const h = (over: Partial<typeof base> = {}) => budgetSourceHash({ ...base, ...over });
+
+  it('qualquer campo do orçamento muda o hash: data, um item, cliente', () => {
+    expect(h({ data: { ...base.data, data: '2026-11-05' } })).not.toBe(h());
+    expect(h({ data: { ...base.data, ambientes: [{ nome: 'Sala', valor: 501 }] } })).not.toBe(h());
+    expect(h({ data: { ...base.data, ambientes: [{ nome: 'Sala ', valor: 500 }] } })).not.toBe(h());
+    expect(h({ data: { ...base.data, cliente: 'Outro' } })).not.toBe(h());
+  });
+
+  it('nome, projeto e número também entram', () => {
+    expect(h({ name: 'Sala de estar' })).not.toBe(h());
+    expect(h({ projectId: '00000000-0000-4000-8000-000000000000' })).not.toBe(h());
+    expect(h({ number: 8 })).not.toBe(h());
+  });
+
+  it('só a ordem das chaves mudou: mesmo hash (JSON canônico)', () => {
+    const reversed = Object.fromEntries(Object.entries(base.data).reverse());
+    expect(h({ data: { ...reversed, ambientes: [{ valor: 500, nome: 'Sala' }] } })).toBe(h());
+    expect(canonicalJson({ b: 1, a: { d: [2, { y: 1, x: 2 }], c: null } })).toBe('{"a":{"c":null,"d":[2,{"x":2,"y":1}]},"b":1}');
+  });
+
+  it('a ordem dos ambientes conta', () => {
+    const rooms = [{ nome: 'Sala', valor: 500 }, { nome: 'Cozinha', valor: 300 }];
+    expect(h({ data: { ...base.data, ambientes: rooms } })).not.toBe(h({ data: { ...base.data, ambientes: [...rooms].reverse() } }));
   });
 });

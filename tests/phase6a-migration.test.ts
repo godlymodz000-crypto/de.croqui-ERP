@@ -14,6 +14,7 @@ afterAll(() => tmp.forEach((d) => rmSync(d, { recursive: true, force: true })));
 
 const BUDGETS_TAG = '0008_orcamentos';
 const PDF_TAG = '0009_orcamento_pdf';
+const HASH_TAG = '0010_pdf_source_hash';
 
 /** Cópia da pasta de migrações só até a anterior a `tag`. */
 function migrationsBefore(tag: string): string {
@@ -55,11 +56,12 @@ async function snapshot(pg: PGlite) {
 
 
 
-describe('migrações 0008 e 0009: orçamentos', () => {
+describe('migrações 0008, 0009 e 0010: orçamentos', () => {
   it('cria só a tabela budgets e o tipo budget_status; as tabelas existentes não mudam', async () => {
     const before = migrationsBefore(BUDGETS_TAG);
     const old = await snapshot(await database(before));
-    const now = await snapshot(await database('./drizzle'));
+    // Até a 0009: a 0010 tem teste próprio abaixo.
+    const now = await snapshot(await database(migrationsBefore(HASH_TAG)));
 
     const notBudgets = <T extends Record<string, unknown>>(rows: T[], key: string) => rows.filter((r) => r[key] !== 'budgets');
     expect(notBudgets(now.columns, 'table_name')).toEqual(old.columns);
@@ -106,7 +108,7 @@ describe('migrações 0008 e 0009: orçamentos', () => {
 
   it('0009 só acrescenta as colunas do PDF em budgets, sem mudar o que já existe', async () => {
     const old = await snapshot(await database(migrationsBefore(PDF_TAG)));
-    const now = await snapshot(await database('./drizzle'));
+    const now = await snapshot(await database(migrationsBefore(HASH_TAG)));
     const pdfCols = ['pdf_drive_file_id', 'pdf_name', 'pdf_version', 'pdf_exported_at'];
     expect(now.columns.filter((c) => !pdfCols.includes(c.column_name as string))).toEqual(old.columns);
     // O NOT NULL de pdf_version aparece como restrição própria no PGlite.
@@ -118,5 +120,19 @@ describe('migrações 0008 e 0009: orçamentos', () => {
     const pg = await database('./drizzle');
     const { rows } = await pg.query(`insert into budgets (name) values ('A') returning pdf_drive_file_id, pdf_name, pdf_version, pdf_exported_at`);
     expect(rows).toEqual([{ pdf_drive_file_id: null, pdf_name: null, pdf_version: 0, pdf_exported_at: null }]);
+  });
+
+  it('0010 só acrescenta pdf_source_hash (texto, opcional) em budgets, sem mudar o que já existe', async () => {
+    const old = await snapshot(await database(migrationsBefore(HASH_TAG)));
+    const now = await snapshot(await database('./drizzle'));
+    expect(now.columns.filter((c) => c.column_name !== 'pdf_source_hash')).toEqual(old.columns);
+    expect(now.columns.filter((c) => c.column_name === 'pdf_source_hash')).toEqual([
+      expect.objectContaining({ table_name: 'budgets', data_type: 'text', is_nullable: 'YES', column_default: null }),
+    ]);
+    expect(now.constraints).toEqual(old.constraints);
+    expect(now.indexes).toEqual(old.indexes);
+    expect(now.rls).toEqual(old.rls);
+    expect(now.enums).toEqual(old.enums);
+    expect(now.rows).toEqual(old.rows);
   });
 });
