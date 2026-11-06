@@ -7,7 +7,7 @@ import { LoadError } from '../../ui/LoadError';
 import { useIsMobile } from '../../ui/useMediaQuery';
 import { useSession } from '../../session';
 import { ApiError } from '../../api/http';
-import { budgetsApi, type BudgetData, type BudgetWithData } from '../../api/budgets';
+import { budgetsApi, type BudgetData, type BudgetPdf, type BudgetWithData } from '../../api/budgets';
 import { addRoom, applyToAll, removeRoom, toggleOption } from '../../shared/budget-calc';
 import { FittedBudgetSheets, PROPERTY_MAX_LINES, usePropertyLines } from '../../budget/BudgetSheets';
 import '../../budget/sheets.css';
@@ -23,8 +23,15 @@ const RETRY_MS = 10_000;
 const SHEET_PX = 794;
 
 type SaveState = { kind: 'saved'; at: Date | null } | { kind: 'saving' } | { kind: 'error' } | { kind: 'conflict' };
-/** "Salvar em PDF": `unsaved` quando as alterações não foram gravadas e o PDF não foi gerado. */
-type PdfState = { kind: 'idle' } | { kind: 'working' } | { kind: 'error'; reason: 'unsaved' | 'failed' };
+/**
+ * "Salvar em PDF": `unsaved` quando as alterações não foram gravadas e o PDF não foi gerado.
+ * `unchanged`: nada mudou desde o último PDF, e o servidor não gerou outro.
+ */
+type PdfState =
+  | { kind: 'idle' }
+  | { kind: 'working' }
+  | { kind: 'error'; reason: 'unsaved' | 'failed' }
+  | { kind: 'unchanged'; file: BudgetPdf };
 /** Quanto o PDF espera um salvamento em andamento terminar antes de desistir. */
 const PDF_SAVE_WAIT_MS = 15_000;
 
@@ -150,8 +157,9 @@ export function BudgetEditorPage() {
       const { budget: saved } = await budgetsApi.exportPdf(id);
       setBudget((b) => (b ? { ...b, pdf: saved.pdf } : b));
       setPdf({ kind: 'idle' });
-    } catch {
-      setPdf({ kind: 'error', reason: 'failed' });
+    } catch (err) {
+      const file = err instanceof ApiError && err.code === 'no_changes' ? (err.body.file as BudgetPdf | undefined) : undefined;
+      setPdf(file ? { kind: 'unchanged', file } : { kind: 'error', reason: 'failed' });
     }
   }, [flush, id]);
 
@@ -250,7 +258,7 @@ export function BudgetEditorPage() {
         </div>
       )}
 
-      {(save.kind === 'error' || save.kind === 'conflict' || pdf.kind === 'error') && (
+      {(save.kind === 'error' || save.kind === 'conflict' || pdf.kind === 'error' || pdf.kind === 'unchanged') && (
         <div className="toast-slot beditor__toast">
           {save.kind === 'error' && (
             <div className="save-alert save-alert--danger" role="alert">
@@ -279,6 +287,19 @@ export function BudgetEditorPage() {
                 <button type="button" className="link-button" onClick={() => void exportPdf()}>
                   Tentar de novo
                 </button>
+                <button type="button" className="link-button" onClick={() => setPdf({ kind: 'idle' })}>
+                  Fechar
+                </button>
+              </div>
+            </div>
+          )}
+          {pdf.kind === 'unchanged' && (
+            <div className="save-alert save-alert--info" role="status">
+              <p>Nenhuma alteração desde o último PDF.</p>
+              <div className="save-alert__actions">
+                <a className="link-button" href={pdf.file.url} target="_blank" rel="noreferrer" title={pdf.file.name}>
+                  Abrir PDF atual
+                </a>
                 <button type="button" className="link-button" onClick={() => setPdf({ kind: 'idle' })}>
                   Fechar
                 </button>

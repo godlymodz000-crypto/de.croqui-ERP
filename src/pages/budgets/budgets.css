@@ -392,6 +392,16 @@
   border-color: var(--feedback-warning);
   color: var(--text-primary);
 }
+/* Informação, não erro: "Nenhuma alteração desde o último PDF." */
+.save-alert--info {
+  background: var(--feedback-info-bg);
+  border-color: var(--feedback-info);
+  color: var(--text-primary);
+}
+.save-alert--info .link-button {
+  color: var(--text-primary);
+  text-decoration: none;
+}
 
 @media (min-width: 769px) and (max-width: 1279px) {
   .beditor__body {
