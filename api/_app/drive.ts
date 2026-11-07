@@ -37,6 +37,11 @@ export interface DriveClient {
   uploadFile(input: { name: string; mimeType: string; parentId: string; body: Uint8Array }): Promise<DriveFile>;
   /** Move o arquivo para a lixeira do Drive (recuperável por 30 dias). */
   trashFile(id: string): Promise<void>;
+  /**
+   * Muda o arquivo de pasta: passa a ter só `toParentId` como pasta. O ID do arquivo não muda. Devolve as
+   * pastas anteriores, para desfazer a mudança, ou nulo se o arquivo já não existe no Drive.
+   */
+  moveFile(id: string, toParentId: string): Promise<string[] | null>;
   /** Imagem gerada pelo Drive com o lado maior em `size` px (miniatura ou visualização grande), quando existe. */
   thumbnail(id: string, size?: number): Promise<Image | null>;
   /** Conteúdo do arquivo, só quando cabe em `maxBytes`. Usado quando o Drive não gera a imagem. */
@@ -237,6 +242,20 @@ export function createAdminDrive({ config, db, fetch: doFetch = fetch }: { confi
       const res = await call(`${FILES_ENDPOINT}/${encodeURIComponent(id)}?alt=media`);
       if (!res.ok) return null;
       return { contentType: mimeType ?? 'application/octet-stream', body: await res.arrayBuffer() };
+    },
+
+    async moveFile(id, toParentId) {
+      const meta = await call(`${FILES_ENDPOINT}/${encodeURIComponent(id)}?fields=parents`);
+      // 404: já não existe no Drive (apagado por fora); não há o que mover.
+      if (meta.status === 404) return null;
+      if (!meta.ok) throw new DriveError(`Consulta do arquivo falhou (${meta.status}).`);
+      const { parents = [] } = (await meta.json()) as { parents?: string[] };
+      const from = parents.filter((p) => p !== toParentId);
+      const qs = new URLSearchParams({ addParents: toParentId, fields: 'id' });
+      if (from.length) qs.set('removeParents', from.join(','));
+      const res = await call(`${FILES_ENDPOINT}/${encodeURIComponent(id)}?${qs}`, { method: 'PATCH', body: '{}' });
+      if (!res.ok) throw new DriveError(`Mudar o arquivo de pasta falhou (${res.status}).`);
+      return parents;
     },
 
     async shareReader(folderId, email) {

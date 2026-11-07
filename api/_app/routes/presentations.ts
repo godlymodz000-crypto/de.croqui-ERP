@@ -6,6 +6,7 @@ import { auditLog, presentationImages, presentations, projects, users, type Pres
 import { audit } from '../audit.js';
 import { fileViewUrl, type DriveClient } from '../drive.js';
 import { ImagesUnavailableError, syncImageUses, trashUnusedImages } from '../presentation-images.js';
+import { linkPresentationToProject } from '../presentation-link.js';
 import {
   emptyPresentation,
   parsePresentationData,
@@ -17,7 +18,7 @@ import {
 
 // Apresentações (Fase 6b, etapas E3 e E4): lista, leitura, criação e salvamento automático, com os vínculos
 // das imagens e a regra da lixeira. Envio e biblioteca em routes/presentation-images.ts. Vínculo a projeto
-// e PDF entram nas etapas seguintes. Mesmo padrão de routes/budgets.ts.
+// (E5) em POST /presentations/:id/link. PDF entra na etapa seguinte. Mesmo padrão de routes/budgets.ts.
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_NAME = 120;
@@ -55,7 +56,7 @@ export async function presentationsRoutes(app: FastifyInstance, { db, drive }: {
   async function activeProject(id: string) {
     if (!UUID_RE.test(id)) return undefined;
     const [p] = await db
-      .select({ id: projects.id, name: projects.name, clientName: projects.clientName })
+      .select({ id: projects.id, name: projects.name, clientName: projects.clientName, driveFolderId: projects.driveFolderId })
       .from(projects)
       .where(and(eq(projects.id, id), isNull(projects.deletedAt)));
     return p;
@@ -315,6 +316,38 @@ export async function presentationsRoutes(app: FastifyInstance, { db, drive }: {
         }
       }
       return dto(updated, true);
+    },
+  );
+
+  /**
+   * Vincular apresentação avulsa a um projeto (E5). As imagens da avulsa e o PDF mudam de pasta no Drive e
+   * passam ao projeto; as imagens entram na biblioteca do projeto e o PDF aparece em Arquivos. Se o Drive
+   * falhar no meio, o que já foi movido volta e nada muda no banco (502).
+   */
+  app.post<{ Params: { id: string }; Body: { projectId?: unknown } }>(
+    '/presentations/:id/link',
+    { config: { permission: 'documents.write' } },
+    async (request, reply) => {
+      const current = await find(request.params.id);
+      if (!current) return reply.code(404).send({ error: 'not_found' });
+      const projectId = request.body?.projectId;
+      const project = typeof projectId === 'string' ? await activeProject(projectId) : undefined;
+      if (!project) return reply.code(400).send({ error: 'validation', fields: { projectId: 'not_found' } });
+      if (current.projectId) return reply.code(409).send({ error: 'already_linked' });
+
+      const result = await linkPresentationToProject({
+        db,
+        drive,
+        presentation: current,
+        project,
+        actorId: request.user!.id,
+        log: (err, msg) => request.log.error({ err: (err as Error)?.message ?? err }, msg),
+      });
+      if (!result.ok) {
+        if (result.error === 'already_linked') return reply.code(409).send({ error: 'already_linked' });
+        return reply.code(502).send({ error: 'drive_failed', rolledBack: result.rolledBack });
+      }
+      return dto(result.presentation, true);
     },
   );
 }

@@ -65,6 +65,14 @@ export class FakeDrive implements DriveClient {
     const f = this.folders.get(id);
     if (f) f.trashed = true;
   }
+  async moveFile(id: string, toParentId: string) {
+    this.check('moveFile');
+    const f = this.folders.get(id);
+    if (!f) return null;
+    const from = f.parentId ? [f.parentId] : [];
+    f.parentId = toParentId;
+    return from;
+  }
   async findChildFolder(parentId: string, name: string) {
     this.check('findChildFolder');
     return [...this.folders.values()].find((f) => f.folder && !f.trashed && f.parentId === parentId && f.name === name)?.id ?? null;
