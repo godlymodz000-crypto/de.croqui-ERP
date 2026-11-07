@@ -34,6 +34,8 @@ Decisões aceitas pelo usuário em 2026-11-04 (6a) e em 2026-11-06/07 (6b, plane
 - Apagar do Drive (lixeira) só acontece quando nenhuma apresentação usa mais a imagem.
 - Trocar uma imagem numa página segue a mesma regra: só o vínculo muda. A antiga vai para a lixeira apenas se nenhuma outra apresentação a usa.
 - Duplicar página com imagem cria cópia do arquivo no Drive, para que apagar uma página não afete a outra.
+- Se o Drive falhar ao mandar a imagem para a lixeira, o salvamento continua valendo e a imagem volta para a biblioteca, sem vínculo. Nenhum salvamento futuro tenta a lixeira de novo para ela. A limpeza desses casos fica para uma tarefa à parte (2026-11-07).
+- Imagem enviada e nunca usada fica na biblioteca. Limpar essas imagens é uma regra nova, que fica para depois (2026-11-07).
 
 ## Celular e computador
 - Celular: lista de apresentações, visualização e PDF. Edição só no computador.
