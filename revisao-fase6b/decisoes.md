@@ -4,7 +4,7 @@ Decisões aceitas pelo usuário em 2026-11-04 (6a) e em 2026-11-06/07 (6b, plane
 
 ## Estado
 - Fase 6a (Orçamento): fechada e em produção. PR #2 (PDF e orçamentos) e PR #4 (não gera PDF repetido, com hash e migração 0010) mesclados. Teste real validado pelo usuário.
-- Fase 6b (Apresentação): em planejamento. Ainda sem código.
+- Fase 6b (Apresentação): E0 aprovada em 2026-11-07. O planejamento (`planejamento.md`), estas decisões e os desenhos 6b-01 a 6b-13 estão aprovados. O código começa na E1, que depende de aprovação.
 
 ## Dados e armazenamento
 - Textos, números e estrutura dos documentos ficam no Supabase, em JSON (budgets.data e presentations.data).

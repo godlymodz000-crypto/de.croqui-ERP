@@ -2,6 +2,7 @@
 
 Este documento é só planejamento. Nesta etapa não houve código de produção, migração, merge, deploy nem alteração no Supabase ou na Vercel.
 
+- **Situação:** E0 aprovada em 2026-11-07 (plano, decisões e desenhos 6b-01 a 6b-13). As etapas seguintes continuam dependendo de aprovação, uma de cada vez.
 - **Branch:** `feat/fase-6b-apresentacao`, criada da `main` em `8c17804`. Só existe no computador: sem push, porque um push gera uma prévia na Vercel.
 - **Decisões:** `revisao-fase6b/decisoes.md` (cópia do `decisoes-fase-6.md` do Project) e `revisao-fase6b/molduras.md`, seção 7.
 - **Lido:**
@@ -303,7 +304,7 @@ Cada etapa termina com `npm run build` e `npm test` passando. Os testes de grava
 
 | Etapa | O que entrega | Critério de aceite | Testes |
 |---|---|---|---|
-| E0 | Este plano e os desenhos 6b-01 a 6b-13 aprovados | Sua aprovação por escrito | — |
+| E0 | Este plano e os desenhos 6b-01 a 6b-13 aprovados | Sua aprovação por escrito. **Aprovada em 2026-11-07** | — |
 | E1 | Migração `0011`: `presentations`, `presentation_images` e `presentation_image_uses` | Só cria as três tabelas; nenhuma coluna, índice, restrição ou linha das outras tabelas muda | `phase6b-migration.test.ts`, como o da 6a; check do nome |
 | E2 | `src/shared/presentation-calc.ts`: numeração, tamanho de redução, zoom de ajuste em A4 | `apr-20`, `apr-21`, `apr-52` a `apr-54`, `apr-57`, `apr-58` e `apr-60` dão a saída gravada no JSON | `phase6b-calc.test.ts`, que lê esses casos do `casos-de-teste.json` |
 | E3 | API `/presentations`: lista com projeto e Sem projeto, leitura, criação (só a capa, dados do projeto copiados), salvamento automático com conflito, limite de 512 KB | Nome obrigatório (400 e check); documento novo zerado; 409 de conflito; 413 ou 400 acima de 512 KB; leitor 403 em toda gravação; projeto excluído 404 | `phase6b.test.ts`; linhas novas na matriz de `phase2.test.ts` |
