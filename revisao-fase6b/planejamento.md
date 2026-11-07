@@ -34,7 +34,7 @@ Deixam de valer, porque não haverá ferramenta de escala nem medição de cota:
   - a apresentação pode ser avulsa, e a aba Sem projeto existe;
   - uma avulsa pode ser vinculada a um projeto depois; as imagens e o PDF são movidos junto (P27);
   - vincular um orçamento avulso a projeto fica fora desta fase, como tarefa separada (P26);
-  - ao criar a partir de um projeto, nome, cliente e localização são copiados como texto editável;
+  - ao criar a partir de um projeto, nome e cliente são copiados como texto editável; a localização começa vazia, porque o cadastro do projeto não tem esse campo (decisão de 2026-11-07);
   - o nome é obrigatório, e um projeto pode ter várias apresentações.
 - **Criação:**
   - nada é criado sozinho com o projeto;
@@ -84,7 +84,7 @@ A coluna "Base da 6a" diz o que já existe e pode ser reaproveitado.
 |---|---|---|---|
 | Lista `/apresentacoes` | Abas Todas e Sem projeto, nome, número, projeto, última alteração e quem alterou; botão "Nova apresentação" | `BudgetsPage.tsx`, `shared.ts` | Colunas próprias |
 | Nova apresentação avulsa | Painel com nome obrigatório e projeto opcional | `NewBudgetPanel.tsx`; check `*_name_not_blank` | Textos |
-| Nova apresentação no projeto | Botão "Nova apresentação" na página do projeto; copia nome, cliente e localização como texto editável | Botão "Novo orçamento" do projeto | A cópia dos dados do projeto |
+| Nova apresentação no projeto | Botão "Nova apresentação" na página do projeto; copia nome e cliente como texto editável (a localização começa vazia) | Botão "Novo orçamento" do projeto | A cópia dos dados do projeto |
 | Documento novo | Só a capa, sem texto, valores ou imagens de exemplo | `emptyBudget()` | Documento inicial da apresentação |
 | Vincular avulsa a projeto | Escolher o projeto; as imagens da biblioteca da avulsa e o PDF saem de `Avulsos` e vão para a pasta do projeto (P27). O orçamento avulso fica fora (P26) | — | Tudo, inclusive mover arquivos no Drive |
 | Salvamento automático | "Salvo às HH:MM", erro ao salvar, alterado em outra aba; ao reabrir, o documento está como foi deixado | PATCH de `budgets` com conflito por `updated_at`; o aviso do editor | Limite de 512 KB |
@@ -109,7 +109,7 @@ A coluna "Base da 6a" diz o que já existe e pode ser reaproveitado.
 |---|---|---|---|
 | Inserir | Clique ou arraste no espaço de imagem, ou escolher da biblioteca do projeto | — | Tudo |
 | Validação | PNG, JPG e WebP até 40 MB; GIF recusado com aviso | — | `apr-52` a `apr-54` |
-| Redução no navegador | Até 4000 px no lado maior; PNG continua PNG, o resto vira JPEG 0,9 | — | Antes do envio |
+| Redução no navegador | Até 4000 px no lado maior; PNG continua PNG, o resto vira JPEG 0,9. Sem redução, o arquivo vai como veio, e WebP continua WebP (2026-11-07) | — | Antes do envio |
 | Envio direto ao Drive | O navegador envia; a API só abre a sessão e confere o arquivo | `createUploadSession` com `origin`, `UploadGrant` e conferência em `routes/files.ts` | Pasta `Imagens`; registro na biblioteca |
 | Biblioteca | Projeto: as imagens já enviadas, para qualquer apresentação dele. Avulsa: só as imagens daquela apresentação (P23). Sem contagem fixa de imagens (P28) | — | Tudo |
 | Exibir | Na tela, imagem de 1600 px servida pelo ERP; no PDF, a resolução original do arquivo guardado (P8) | `GET /files/:id/image` (visualização de 1600 px do Drive ou arquivo inteiro até 4 MB) | Rota equivalente para a biblioteca |
@@ -143,7 +143,7 @@ A coluna "Base da 6a" diz o que já existe e pode ser reaproveitado.
 | P3 | Editor no celular | Não. No celular: lista, visualização e PDF |
 | P4 | Com o que o documento novo começa | Só a capa |
 | P5 | Campos preenchidos de fábrica | Nenhum. O documento começa zerado; só os dados do projeto são copiados |
-| P6 | Dados do projeto | Nome, cliente e localização copiados como texto editável |
+| P6 | Dados do projeto | Nome e cliente copiados como texto editável. A localização começa vazia: o cadastro não tem esse campo (2026-11-07) |
 | P9 | Pasta das imagens | `Imagens` dentro de `Apresentações` do projeto, ou dentro de `Avulsos`. Não aparecem em Arquivos |
 | P10 | Imagem que sai da apresentação | Só tira o vínculo; a lixeira recebe a imagem quando nenhuma apresentação a usa (P22) |
 | P11 | Duplicar com imagem | Cria cópia do arquivo no Drive |
@@ -257,7 +257,7 @@ Cada linha é um arquivo no Drive que o servidor conferiu no envio.
 | `owner_presentation_id` | `uuid`, opcional, `references presentations(id)` | Dona da imagem, só na avulsa: cada avulsa tem a sua biblioteca (P23). Ao vincular, fica vazio e `project_id` recebe o projeto |
 | `drive_file_id` | `text not null`, único | |
 | `file_name` | `text not null` | Nome mostrado na biblioteca |
-| `mime_type` | `text not null` | `image/png` ou `image/jpeg` depois da redução |
+| `mime_type` | `text not null` | `image/png`, `image/jpeg` ou `image/webp`. WebP sem redução continua WebP (2026-11-07) |
 | `width_px`, `height_px`, `size_bytes` | inteiros, `not null` | |
 | `created_by` | `uuid`, `on delete set null` | |
 | `created_at` | `timestamptz not null default now()` | |
@@ -294,7 +294,7 @@ Diz quais apresentações usam cada imagem, para aplicar a regra da lixeira sem 
 ```
 
 - **Tipos de página:** na 6c, `paginas` passa a aceitar os outros tipos. O desenho técnico tem `imagem`, `titulo` e `escala` (texto livre). Na 6d entra `prancha`, com o número da versão da moldura.
-- **Validação:** a API confere a forma, os tipos, o tamanho (512 KB) e as referências de imagem. Ela recusa texto em base64.
+- **Validação:** a API confere a forma, os tipos, o tamanho (512 KB) e as referências de imagem. Ela recusa texto em base64. O tamanho é medido no documento como chega, antes de descartar campos desconhecidos, desde a 6b (2026-11-07).
 
 ---
 

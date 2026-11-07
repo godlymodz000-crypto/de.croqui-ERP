@@ -11,12 +11,13 @@ Decisões aceitas pelo usuário em 2026-11-04 (6a) e em 2026-11-06/07 (6b, plane
 - Imagens de apresentação são enviadas direto do navegador para o Drive, não pela API. O banco guarda só o endereço delas, numa tabela própria (presentation_images), para o servidor conferir cada imagem.
 - PDF de orçamento e de apresentação é salvo no Drive, na pasta Orçamentos ou Apresentações do projeto. Para documentos avulsos, na pasta Avulsos dentro da pasta do ERP.
 - Salvamento automático. Ao reabrir, o documento aparece como foi deixado. Mostrar aviso discreto "Salvo às ...".
-- Limite de tamanho do documento de apresentação: 512 KB, com mensagem clara no editor.
+- Limite de tamanho do documento de apresentação: 512 KB, com mensagem clara no editor. A API mede o documento como ele chega, antes de descartar campos desconhecidos. Vale desde a 6b (2026-11-07).
 
 ## Vínculo com projeto
 - Orçamentos e apresentações podem ser avulsos (sem projeto). O campo de projeto é opcional no banco.
 - Aba "Sem projeto" em Orçamentos e em Apresentações. Depois é possível vincular um documento avulso a um projeto, e as pastas no Drive são movidas.
-- Ao criar a partir de um projeto, os dados do projeto (nome, cliente, localização) são copiados como texto editável. Mudar o cadastro depois não altera a apresentação já feita.
+- Ao criar a partir de um projeto, os dados do projeto (nome e cliente) são copiados como texto editável. Mudar o cadastro depois não altera a apresentação já feita.
+- Localização: o cadastro do projeto não tem esse campo. A apresentação começa com a localização vazia, que é preenchida no editor (2026-11-07).
 - Nome do documento é obrigatório, para a lista ficar legível.
 - Vários orçamentos ou apresentações por projeto são aceitos.
 
@@ -73,6 +74,7 @@ Decisões aceitas pelo usuário em 2026-11-04 (6a) e em 2026-11-06/07 (6b, plane
 - 4000 px no lado maior: reduz antes do PDF, para não estourar memória ou tempo da função da Vercel.
 - 7200 px na prancha: a prancha precisa de mais resolução para a cota ficar nítida.
 - 512 KB no documento: o salvamento automático envia o documento inteiro a cada alteração.
+- WebP sem redução continua WebP, como no arquivo offline. O tipo guardado é PNG, JPEG ou WebP. A prancha continua aceitando só PNG (2026-11-07).
 
 ## Respostas às perguntas em aberto do planejamento (2026-11-07)
 - P7: a data no nome do PDF segue o padrão do orçamento, com a data de emissão do documento.
