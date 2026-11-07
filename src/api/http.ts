@@ -116,4 +116,5 @@ export const TTL = {
   /** Abaixo do intervalo da Agenda (2 min): a leitura periódica sempre busca de novo. */
   events: 60_000,
   budgets: 30_000,
+  presentations: 30_000,
 };
