@@ -17,7 +17,7 @@ import { PrivacyPage } from './pages/privacy/PrivacyPage';
 import { BudgetsPage } from './pages/budgets/BudgetsPage';
 import { BudgetEditorPage } from './pages/budgets/BudgetEditorPage';
 import { PresentationsPage } from './pages/presentations/PresentationsPage';
-import { PresentationPendingPage } from './pages/presentations/PresentationPendingPage';
+import { PresentationEditorPage } from './pages/presentations/PresentationEditorPage';
 
 function Protected() {
   const session = useSession();
@@ -85,6 +85,14 @@ function SessionRoutes() {
             </ProtectedFull>
           }
         />
+        <Route
+          path="/apresentacoes/:id"
+          element={
+            <ProtectedFull>
+              <PresentationEditorPage />
+            </ProtectedFull>
+          }
+        />
         <Route element={<Protected />}>
           <Route
             index
@@ -97,7 +105,6 @@ function SessionRoutes() {
             }
           />
           <Route path="/apresentacoes" element={<PresentationsPage />} />
-          <Route path="/apresentacoes/:id" element={<PresentationPendingPage />} />
           <Route path="/orcamentos" element={<BudgetsPage />} />
           <Route path="/agenda" element={<AgendaPage />} />
           <Route path="/processos" element={<ProcessesPage />} />

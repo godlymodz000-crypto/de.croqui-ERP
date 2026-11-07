@@ -22,6 +22,7 @@ import {
   type Tab,
 } from './list';
 import { NewPresentationPanel } from './NewPresentationPanel';
+import type { EditorOrigin } from './editor';
 import '../budgets/budgets.css';
 import './presentations.css';
 
@@ -69,6 +70,8 @@ export function PresentationsPage() {
   const setTab = (value: Tab) => setParam('aba', value, 'todas');
   const setSort = (value: Sort) => setParam('ordem', value, 'updated');
   const isEmpty = list !== null && list.length === 0;
+  // O editor volta para a lista na mesma aba e ordem.
+  const origin: EditorOrigin = { from: 'lista', search: params.toString() ? `?${params.toString()}` : '' };
 
   return (
     <section className="budgets presentations">
@@ -153,7 +156,7 @@ export function PresentationsPage() {
           </div>
         ) : (
           visible.map((p) => (
-            <Link key={p.id} to={`/apresentacoes/${p.id}`} className="projects-table__row presentations-table__row" role="row">
+            <Link key={p.id} to={`/apresentacoes/${p.id}`} state={origin} className="projects-table__row presentations-table__row" role="row">
               <span role="cell" className="project-cell">
                 <span className="project-cell__text">
                   <span className="project-cell__name">{p.name}</span>
@@ -193,7 +196,7 @@ export function PresentationsPage() {
           onClose={() => setCreating(false)}
           onCreated={(p) => {
             setCreating(false);
-            navigate(`/apresentacoes/${p.id}`);
+            navigate(`/apresentacoes/${p.id}`, { state: origin });
           }}
         />
       )}

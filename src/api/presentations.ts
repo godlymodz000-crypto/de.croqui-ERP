@@ -37,4 +37,10 @@ export const presentationsApi = {
   /** "Nova apresentação": nasce só com a capa; com projeto, copia nome e cliente como texto editável. */
   create: (input: { name: string; projectId: string | null }) =>
     mutate(request<PresentationWithData>('POST', '/presentations', input), 'presentations'),
+  /**
+   * Salvamento automático do documento. `baseUpdatedAt` é a versão que a tela tem: outra mais nova
+   * responde 409; documento acima de 512 KB responde 413 `too_large`.
+   */
+  save: (id: string, input: { data: PresentationData; baseUpdatedAt: string }) =>
+    mutate(request<PresentationWithData>('PATCH', `/presentations/${id}`, input), 'presentations'),
 };
