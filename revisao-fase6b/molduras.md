@@ -123,7 +123,7 @@ Para isso funcionar no ERP, falta o seguinte:
 
 1. **A moldura não existe como arquivo.** Para baixar pelo sistema, há dois caminhos:
    - levar o desenho de `apDrawTpl` para o ERP e gerar no navegador, como a página offline faz, sem rota nova e sem Drive;
-   - ou gerar os quatro arquivos (A4 e A3, PNG e JPEG) uma vez, conferir e guardar no repositório, como arquivos estáticos.
+   - ou gerar os arquivos uma vez, conferir e guardar no repositório, como arquivos estáticos. Pela decisão de M2 e M3 (seção 7), são dois arquivos PNG, um A4 e um A3.
 
    Hoje o ERP não tem nenhum dos dois. Se a moldura só for baixada da página offline, o ERP não precisa de nada disso.
 2. **Rodapé por cima da imagem.** A prancha do ERP precisa escrever os valores do rodapé nas mesmas posições em mm da moldura. Se a posição mudar, os valores caem fora das células. As posições estão na seção 3.
@@ -157,26 +157,27 @@ As respostas às perguntas M1 a M9 da seção 6. A prancha e a moldura ficam par
 | Nº | Decisão |
 |---|---|
 | M1 | **A moldura é baixada pelo ERP.** A página offline deixa de ser a única fonte |
-| M2 | **São quatro arquivos prontos guardados no repositório,** e não gerados no navegador. O código de `apDrawTpl` não é levado para o ERP |
+| M2 | **São dois arquivos prontos guardados no repositório, em PNG:** um para A4 e outro para A3. Eles não são gerados no navegador, e o código de `apDrawTpl` não é levado para o ERP |
 | M3 | **A moldura é baixada só em PNG.** O JPEG sai do download porque borra linhas finas e cotas |
 | M4 | **A imagem exportada pode ter qualquer resolução a partir de 200 dpi,** desde que a proporção esteja exata. A recomendação é 300 dpi: 3508 × 2480 px no A4 e 4961 × 3508 px no A3 |
 | M5 | **A prancha recusa a imagem se a proporção diferir mais de 0,5% da folha.** Até 0,5%, a imagem entra sem aviso. No arquivo offline, a tolerância era de 1,5% e só gerava aviso |
-| M6 | **A prancha aceita só PNG, JPEG e WebP nesta versão.** PDF não é aceito |
+| M6 | **A prancha aceita só PNG nesta versão.** JPEG, WebP e PDF são recusados |
 | M7 | **Pendente:** falta conferir se o LayOut coloca a moldura com 297 × 210 mm. A conferência fica para a 6d, quando a prancha existir. Não foi feito teste agora |
 | M8 | **O desenho da moldura fica congelado.** Uma mudança futura vira uma nova versão da moldura, e as pranchas antigas continuam com a versão com que foram feitas |
 | M9 | **"Desenho técnico" fica só com imagem e um campo de texto para a escala digitada** (por exemplo, 1:50). Não há cota automática, escala gráfica nem carimbo automático |
 
-Duas leituras que deixo registradas:
+Duas confirmações:
 
-- **M3 e M6 juntas:** o JPEG sai só do download da moldura. Na importação da prancha, JPEG e WebP continuam aceitos, como diz M6. Se a ideia era também recusar JPEG na importação, M6 precisa ser corrigida.
-- **Medida exata de cada arquivo, a conferir na 6d:** os quatro arquivos devem ter as mesmas dimensões e o mesmo desenho que a página offline gera hoje (seções 2 e 3), com 300 dpi gravados no arquivo:
+- **M3 e M6 juntas:** o JPEG sai do download da moldura e também da importação da prancha. Nesta versão, a prancha aceita só PNG.
+- **Medida exata dos dois arquivos, a conferir na 6d:** os dois PNG devem ter as mesmas dimensões e o mesmo desenho que a página offline gera hoje (seções 2 e 3), com 300 dpi gravados no arquivo:
   - A4: 3508 × 2480 px;
   - A3: 4961 × 3508 px.
 
-  A versão congelada é a "versão 1" de M8. Como são só PNG, os quatro arquivos se reduzem a dois. Fica o registro para confirmar na 6d.
+  Esses dois arquivos são a "versão 1" de M8.
 
 **O que entra na 6d, por causa dessas decisões:**
-- os arquivos da moldura versão 1 no repositório, servidos como arquivos estáticos, sem rota de API;
+- os dois arquivos PNG da moldura versão 1 (A4 e A3) no repositório, servidos como arquivos estáticos, sem rota de API;
+- a importação da prancha só com PNG, recusando JPEG, WebP e PDF;
 - o número da versão da moldura gravado em cada prancha;
 - a recusa por proporção acima de 0,5%;
 - o aviso de resolução abaixo de 200 dpi;

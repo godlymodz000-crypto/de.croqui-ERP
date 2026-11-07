@@ -21,10 +21,10 @@ Detalhes e justificativas em `revisao-fase6b/molduras.md`, seção 7.
 - **Casos de teste que deixam de valer:** `apr-01` a `apr-15` (escalas, cota e carimbo) e `apr-62` (aviso de escala real ao exportar).
 - **Casos que vão para a 6d:** `apr-16` a `apr-19` (rodapé da prancha), `apr-45` a `apr-51` (importação da prancha), `apr-55` e `apr-56` (folha-modelo) e `apr-66` (prancha A3 dentro de documento A4).
 - **Moldura, para a 6d:**
-  - baixada pelo ERP, a partir de arquivos prontos guardados no repositório e só em PNG (M1 a M3);
+  - baixada pelo ERP, a partir de dois arquivos PNG prontos guardados no repositório, um para A4 e outro para A3 (M1 a M3);
   - aceita qualquer resolução a partir de 200 dpi, com proporção exata; a recomendação é 300 dpi (M4);
   - imagem com proporção mais de 0,5% fora é recusada (M5);
-  - só PNG, JPEG e WebP (M6);
+  - a prancha importa só PNG; JPEG, WebP e PDF são recusados (M3 e M6). Nos outros espaços de imagem da 6b, PNG, JPG e WebP continuam aceitos;
   - desenho congelado e com versão (M8);
   - conferência no LayOut ainda pendente (M7).
 
@@ -138,7 +138,7 @@ Estes pontos estão ambíguos ou faltam nos arquivos offline e nos desenhos. Nã
 
 - **P17.** A edição direto na folha entra na 6b, ou a primeira versão edita só pelo painel?
 - **P18.** Respondida: não há medição de cota (M9).
-- **P19.** Respondida: a folha-modelo vai para a 6d, como arquivo PNG pronto no repositório, baixado pelo ERP (M1 a M3).
+- **P19.** Respondida: a folha-modelo vai para a 6d, como dois arquivos PNG prontos no repositório (A4 e A3), baixados pelo ERP (M1 a M3).
 - **P20.** "Novo" sai do editor, já que "Nova apresentação" fica na lista e no projeto? Ou passa a criar outra apresentação?
 - **P21.** Uma apresentação avulsa pode ser ligada a um projeto depois? O orçamento ficou preparado para isso, mas ainda não tem a tela.
 
