@@ -51,15 +51,15 @@ Decisões aceitas pelo usuário em 2026-11-04 (6a) e em 2026-11-06/07 (6b, plane
 
 ## Escala e folha (prancha de detalhamento)
 - Não há ferramenta de escala nem medição de cota no sistema.
-- A escala vem da moldura de tamanho fixo (A4 ou A3), baixada da página offline ("folha-modelo", em PNG a 300 dpi) e usada no SketchUp LayOut.
+- A escala vem da moldura de tamanho fixo (A4 ou A3), baixada pelo ERP ("folha-modelo", em PNG a 300 dpi) e usada no SketchUp LayOut. A página offline deixa de ser a fonte da moldura.
 - O fluxo: escolher a moldura, desenhar no LayOut, exportar PNG, importar na prancha de detalhamento.
-- Moldura: no ERP, como arquivo pronto, em PNG (sem JPEG, que borra linhas finas e cotas). Quatro arquivos: A4 e A3, em PNG.
+- Moldura: no ERP, como arquivo pronto, em PNG (sem JPEG, que borra linhas finas e cotas). Dois arquivos PNG: um A4 e outro A3.
 - Resolução: qualquer valor a partir de 200 dpi, desde que a proporção seja exata. 300 dpi é a recomendação.
 - Proporção fora do padrão: recusa acima de 0,5% de diferença.
-- Sem PDF do LayOut nesta versão. Só PNG, JPEG ou WebP.
+- A prancha aceita só PNG nesta versão. JPEG, WebP e PDF (inclusive o PDF do LayOut) são recusados.
 - Desenho da moldura congelado. Mudanças futuras viram nova versão, e as pranchas antigas continuam com a versão antiga.
 - Tipo "Desenho técnico": imagem mais campo de texto para a escala digitada (ex.: 1:50). Sem cota automática, sem escala gráfica e sem carimbo automático.
-- Folha-modelo: download no navegador, sem ir ao Drive.
+- Folha-modelo: os dois PNG ficam prontos no repositório e são baixados pelo ERP, direto no navegador, sem ir ao Drive.
 - Teste da M7 (LayOut com a moldura no tamanho exato): não será feito agora. A conferência de pixels fica para a 6d, quando a prancha existir.
 
 ## Divisão da fase 6b
@@ -73,6 +73,17 @@ Decisões aceitas pelo usuário em 2026-11-04 (6a) e em 2026-11-06/07 (6b, plane
 - 4000 px no lado maior: reduz antes do PDF, para não estourar memória ou tempo da função da Vercel.
 - 7200 px na prancha: a prancha precisa de mais resolução para a cota ficar nítida.
 - 512 KB no documento: o salvamento automático envia o documento inteiro a cada alteração.
+
+## Respostas às perguntas em aberto do planejamento (2026-11-07)
+- P7: a data no nome do PDF segue o padrão do orçamento, com a data de emissão do documento.
+- P8: a visualização usa imagem de 1600 px; a exportação usa a resolução original.
+- P22: remover da apresentação só tira o vínculo; a lixeira só entra quando nenhuma apresentação usa a imagem.
+- P23: cada apresentação avulsa tem a sua biblioteca, dentro de Avulsos; só as de um mesmo projeto compartilham.
+- P24: duplicar apresentação fica fora da 6b.
+- P25: o aviso de "Tamanho real" aparece no diálogo de exportar, em qualquer apresentação.
+- P26: vínculo de orçamento avulso a projeto fica fora desta fase, como tarefa separada.
+- P27: ao vincular a projeto, o PDF é movido junto com a apresentação.
+- P28: sem contagem fixa de imagens por apresentação; o limite de 512 KB do documento controla o tamanho.
 
 ## Dados de exemplo
 - Os nomes e telefones de pessoas reais dos arquivos offline saem. Qualquer exemplo fica fictício.
