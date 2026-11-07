@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigint, boolean, check, date, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, boolean, check, date, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 export const userRole = pgEnum('user_role', ['admin', 'member', 'viewer']);
 export const userStatus = pgEnum('user_status', ['invited', 'active', 'disabled']);
@@ -339,6 +339,91 @@ export const budgets = pgTable(
   ],
 );
 
+/**
+ * Apresentações (Fase 6b). Mesmo padrão de `budgets`, sem total e sem status. O conteúdo do editor fica
+ * em `data`, em JSON (até 512 KB, conferido na API); as imagens entram só por referência a
+ * `presentation_images`. Projeto opcional: sem projeto é a apresentação avulsa.
+ */
+export const presentations = pgTable(
+  'presentations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id').references(() => projects.id),
+    name: text('name').notNull(),
+    // Número sequencial da apresentação no ERP, exibido como "Apresentação nº".
+    number: integer('number').notNull().generatedAlwaysAsIdentity(),
+    data: jsonb('data').$type<Record<string, unknown>>().notNull().default({}),
+    // Quantidade de páginas, para a lista. A capa conta.
+    pageCount: integer('page_count').notNull().default(1),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    // Também serve para detectar alteração feita em outra aba.
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    // PDF mais recente salvo no Drive, como em `budgets`.
+    pdfDriveFileId: text('pdf_drive_file_id'),
+    pdfName: text('pdf_name'),
+    pdfVersion: integer('pdf_version').notNull().default(0),
+    pdfExportedAt: timestamp('pdf_exported_at', { withTimezone: true }),
+    pdfSourceHash: text('pdf_source_hash'),
+  },
+  (t) => [
+    uniqueIndex('presentations_number_idx').on(t.number),
+    index('presentations_project_updated_idx').on(t.projectId, t.updatedAt),
+    // Nome obrigatório também no banco: vazio ou só espaços é recusado.
+    check('presentations_name_not_blank', sql`length(btrim(${t.name})) > 0`),
+  ],
+);
+
+/**
+ * Biblioteca de imagens das apresentações (Fase 6b). Cada linha é um arquivo no Drive conferido pelo
+ * servidor no envio. A imagem é do projeto (reaproveitada entre as apresentações dele) ou, na avulsa,
+ * da própria apresentação: exatamente um dos dois tem valor.
+ */
+export const presentationImages = pgTable(
+  'presentation_images',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id').references(() => projects.id),
+    // Dona da imagem, só na avulsa. Ao vincular a um projeto, fica vazio e project_id recebe o projeto.
+    ownerPresentationId: uuid('owner_presentation_id').references(() => presentations.id),
+    driveFileId: text('drive_file_id').notNull().unique(),
+    fileName: text('file_name').notNull(),
+    // image/png ou image/jpeg, depois da redução.
+    mimeType: text('mime_type').notNull(),
+    widthPx: integer('width_px').notNull(),
+    heightPx: integer('height_px').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // Quando foi para a lixeira do Drive (nenhuma apresentação usa mais a imagem).
+    trashedAt: timestamp('trashed_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('presentation_images_project_created_idx').on(t.projectId, t.createdAt),
+    index('presentation_images_owner_idx').on(t.ownerPresentationId),
+    check('presentation_images_owner', sql`(${t.projectId} is null) <> (${t.ownerPresentationId} is null)`),
+  ],
+);
+
+/**
+ * Quais apresentações usam cada imagem (Fase 6b). Acertado a cada salvamento, na mesma transação, para
+ * aplicar a regra da lixeira sem ler o JSON de todas as apresentações.
+ */
+export const presentationImageUses = pgTable(
+  'presentation_image_uses',
+  {
+    presentationId: uuid('presentation_id')
+      .notNull()
+      .references(() => presentations.id),
+    imageId: uuid('image_id')
+      .notNull()
+      .references(() => presentationImages.id),
+  },
+  (t) => [
+    primaryKey({ name: 'presentation_image_uses_pk', columns: [t.presentationId, t.imageId] }),
+    index('presentation_image_uses_image_idx').on(t.imageId),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type ProjectFile = typeof projectFiles.$inferSelect;
@@ -354,3 +439,5 @@ export type EventKind = (typeof eventKind.enumValues)[number];
 export type CalendarSyncState = typeof calendarSyncState.$inferSelect;
 export type Budget = typeof budgets.$inferSelect;
 export type BudgetStatus = (typeof budgetStatus.enumValues)[number];
+export type Presentation = typeof presentations.$inferSelect;
+export type PresentationImage = typeof presentationImages.$inferSelect;
