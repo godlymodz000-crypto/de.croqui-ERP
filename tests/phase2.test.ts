@@ -175,6 +175,29 @@ describe('Rotas de colaboradores: só administrador', () => {
   });
 });
 
+// Fase 6b: rotas reais de apresentação, por papel. Leitura para todos; gravação só administrador e colaborador.
+describe('Rotas de apresentação: leitor vê e recebe 403 em toda gravação', () => {
+  const routes = (id: string) => [
+    { method: 'GET' as const, url: '/presentations', write: false },
+    { method: 'GET' as const, url: `/presentations/${id}`, write: false },
+    { method: 'POST' as const, url: '/presentations', payload: { name: 'Apresentação' }, write: true },
+    { method: 'PATCH' as const, url: `/presentations/${id}`, payload: { name: 'Renomeada' }, write: true },
+  ];
+
+  for (const role of ROLES) {
+    it(`${role}: leitura permitida, gravação ${role === 'viewer' ? '403' : 'permitida'}`, async () => {
+      const { headers: adminHeaders } = await as('admin');
+      const created = await app.inject({ method: 'POST', url: '/presentations', headers: adminHeaders, payload: { name: 'Base' } });
+      expect(created.statusCode).toBe(201);
+      const { headers } = await as(role);
+      for (const { write, ...r } of routes(created.json().id)) {
+        const res = await app.inject({ ...r, headers });
+        expect(res.statusCode, `${r.method} ${r.url}`).toBe(write && role === 'viewer' ? 403 : r.method === 'POST' ? 201 : 200);
+      }
+    });
+  }
+});
+
 describe('Fase 2 — critérios de aceite (seção 12)', () => {
   it('admin convida: cria com status invited e registra no audit_log', async () => {
     const { user: admin, headers } = await as('admin');
