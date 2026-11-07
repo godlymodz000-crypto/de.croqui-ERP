@@ -149,3 +149,36 @@ Para isso funcionar no ERP, falta o seguinte:
 - **M7.** Você confirma que o LayOut coloca a moldura PNG com 297 × 210 mm ao inserir? Ou é preciso ajustar o tamanho à mão no LayOut?
 - **M8.** O desenho da moldura continua igual ao da página offline (faixas, logo e as 6 células AMBIENTE, FASE, PROJETO, CLIENTE, DATA e FOLHA)? Ou muda na 6d? Se mudar, as pranchas já exportadas com a moldura antiga ficam desalinhadas com o rodapé novo.
 - **M9.** Com a decisão de não ter ferramenta de escala, as composições "Desenho técnico" (DPI, Exportado em, cota, escala gráfica e carimbo automático) saem da apresentação? Ou o tipo fica só com imagem, título e o texto de escala digitado?
+
+## 7. Decisões (aceitas pela dona do projeto em 2026-11-07)
+
+As respostas às perguntas M1 a M9 da seção 6. A prancha e a moldura ficam para a **6d**. Na 6b nada disso é implementado.
+
+| Nº | Decisão |
+|---|---|
+| M1 | **A moldura é baixada pelo ERP.** A página offline deixa de ser a única fonte |
+| M2 | **São quatro arquivos prontos guardados no repositório,** e não gerados no navegador. O código de `apDrawTpl` não é levado para o ERP |
+| M3 | **A moldura é baixada só em PNG.** O JPEG sai do download porque borra linhas finas e cotas |
+| M4 | **A imagem exportada pode ter qualquer resolução a partir de 200 dpi,** desde que a proporção esteja exata. A recomendação é 300 dpi: 3508 × 2480 px no A4 e 4961 × 3508 px no A3 |
+| M5 | **A prancha recusa a imagem se a proporção diferir mais de 0,5% da folha.** Até 0,5%, a imagem entra sem aviso. No arquivo offline, a tolerância era de 1,5% e só gerava aviso |
+| M6 | **A prancha aceita só PNG, JPEG e WebP nesta versão.** PDF não é aceito |
+| M7 | **Pendente:** falta conferir se o LayOut coloca a moldura com 297 × 210 mm. A conferência fica para a 6d, quando a prancha existir. Não foi feito teste agora |
+| M8 | **O desenho da moldura fica congelado.** Uma mudança futura vira uma nova versão da moldura, e as pranchas antigas continuam com a versão com que foram feitas |
+| M9 | **"Desenho técnico" fica só com imagem e um campo de texto para a escala digitada** (por exemplo, 1:50). Não há cota automática, escala gráfica nem carimbo automático |
+
+Duas leituras que deixo registradas:
+
+- **M3 e M6 juntas:** o JPEG sai só do download da moldura. Na importação da prancha, JPEG e WebP continuam aceitos, como diz M6. Se a ideia era também recusar JPEG na importação, M6 precisa ser corrigida.
+- **Medida exata de cada arquivo, a conferir na 6d:** os quatro arquivos devem ter as mesmas dimensões e o mesmo desenho que a página offline gera hoje (seções 2 e 3), com 300 dpi gravados no arquivo:
+  - A4: 3508 × 2480 px;
+  - A3: 4961 × 3508 px.
+
+  A versão congelada é a "versão 1" de M8. Como são só PNG, os quatro arquivos se reduzem a dois. Fica o registro para confirmar na 6d.
+
+**O que entra na 6d, por causa dessas decisões:**
+- os arquivos da moldura versão 1 no repositório, servidos como arquivos estáticos, sem rota de API;
+- o número da versão da moldura gravado em cada prancha;
+- a recusa por proporção acima de 0,5%;
+- o aviso de resolução abaixo de 200 dpi;
+- o rodapé escrito nas posições em mm da seção 3;
+- a conferência de M7 no LayOut.
