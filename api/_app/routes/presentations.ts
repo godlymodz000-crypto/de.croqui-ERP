@@ -4,7 +4,8 @@ import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { auditLog, presentationImages, presentations, projects, users, type Presentation } from '../db/schema.js';
 import { audit } from '../audit.js';
-import { fileViewUrl } from '../drive.js';
+import { fileViewUrl, type DriveClient } from '../drive.js';
+import { ImagesUnavailableError, syncImageUses, trashUnusedImages } from '../presentation-images.js';
 import {
   emptyPresentation,
   parsePresentationData,
@@ -14,8 +15,9 @@ import {
   type PresentationData,
 } from '../../../src/shared/presentation-data.js';
 
-// Apresentações (Fase 6b, etapa E3): lista, leitura, criação e salvamento automático. Imagens, vínculo a
-// projeto e PDF entram nas etapas seguintes. Mesmo padrão de routes/budgets.ts.
+// Apresentações (Fase 6b, etapas E3 e E4): lista, leitura, criação e salvamento automático, com os vínculos
+// das imagens e a regra da lixeira. Envio e biblioteca em routes/presentation-images.ts. Vínculo a projeto
+// e PDF entram nas etapas seguintes. Mesmo padrão de routes/budgets.ts.
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_NAME = 120;
@@ -49,7 +51,7 @@ interface UpdateBody {
 /** Ações do histórico que contam como "alterado por" na lista. */
 const EDIT_ACTIONS = ['presentation.create', 'presentation.update'];
 
-export async function presentationsRoutes(app: FastifyInstance, { db }: { db: Db }) {
+export async function presentationsRoutes(app: FastifyInstance, { db, drive }: { db: Db; drive: DriveClient }) {
   async function activeProject(id: string) {
     if (!UUID_RE.test(id)) return undefined;
     const [p] = await db
@@ -260,29 +262,58 @@ export async function presentationsRoutes(app: FastifyInstance, { db }: { db: Db
       if (!changed.length) return dto(current, true);
 
       const actor = request.user!;
-      const updated = await db.transaction(async (tx) => {
-        const [p] = await tx
-          .update(presentations)
-          .set({
-            name,
-            ...(data ? { data: data as unknown as Record<string, unknown>, pageCount: data.paginas.length } : {}),
-            updatedAt: new Date(),
-          })
-          .where(eq(presentations.id, current.id))
-          .returning();
-        await audit(tx, {
-          userId: actor.id,
-          action: 'presentation.update',
-          entity: 'presentation',
-          entityId: current.id,
-          // Só o que mudou; o conteúdo da apresentação não é copiado para o histórico.
-          payload: {
-            changed,
-            ...(changed.includes('name') ? { name: { from: current.name, to: name } } : {}),
-          },
+      let unused: { id: string; driveFileId: string }[] = [];
+      let updated: Presentation;
+      try {
+        updated = await db.transaction(async (tx) => {
+          // Vínculos com as imagens citadas, na mesma transação. As que ficarem sem nenhum uso saem da biblioteca.
+          if (changed.includes('data') && data) unused = await syncImageUses(tx, current.id, presentationImageIds(data));
+          const [p] = await tx
+            .update(presentations)
+            .set({
+              name,
+              ...(data ? { data: data as unknown as Record<string, unknown>, pageCount: data.paginas.length } : {}),
+              updatedAt: new Date(),
+            })
+            .where(eq(presentations.id, current.id))
+            .returning();
+          await audit(tx, {
+            userId: actor.id,
+            action: 'presentation.update',
+            entity: 'presentation',
+            entityId: current.id,
+            // Só o que mudou; o conteúdo da apresentação não é copiado para o histórico.
+            payload: {
+              changed,
+              ...(changed.includes('name') ? { name: { from: current.name, to: name } } : {}),
+            },
+          });
+          return p;
         });
-        return p;
-      });
+      } catch (err) {
+        if (err instanceof ImagesUnavailableError) {
+          return reply.code(400).send({ error: 'validation', fields: { data: 'image_not_in_library' }, images: err.ids });
+        }
+        throw err;
+      }
+
+      // Regra da lixeira (P22): depois do commit, a imagem que nenhuma apresentação usa mais vai para a
+      // lixeira do Drive. Se o Drive falhar, ela volta para a biblioteca e o salvamento continua valendo.
+      if (unused.length) {
+        const trashed = await trashUnusedImages(db, drive, unused, (err, imageId) =>
+          request.log.error({ err: (err as Error)?.message ?? err, imageId }, 'falha ao mandar imagem para a lixeira do Drive'),
+        );
+        for (const id of trashed) {
+          const img = unused.find((u) => u.id === id)!;
+          await audit(db, {
+            userId: actor.id,
+            action: 'presentation.image_trash',
+            entity: 'presentation_image',
+            entityId: id,
+            payload: { presentationId: current.id, driveFileId: img.driveFileId, reason: 'sem_uso' },
+          });
+        }
+      }
       return dto(updated, true);
     },
   );

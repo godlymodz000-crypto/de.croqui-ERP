@@ -28,6 +28,7 @@ import { createCalendarSync } from './calendar-sync.js';
 import { eventsRoutes } from './routes/events.js';
 import { budgetsRoutes } from './routes/budgets.js';
 import { presentationsRoutes } from './routes/presentations.js';
+import { presentationImagesRoutes } from './routes/presentation-images.js';
 
 export const SESSION_COOKIE = 'decroqui_sid';
 const FLOW_COOKIE = 'decroqui_oauth';
@@ -191,7 +192,13 @@ export async function buildApp({ config, db, google, drive, pdf, calendar, logge
     const sync = createCalendarSync({ db, calendar: calendar ?? createAdminCalendar({ config, db }) });
     await protectedRoutes.register(eventsRoutes, { db, sync });
     await protectedRoutes.register(budgetsRoutes, { db, drive: driveClient, pdf: pdf ?? lazyPdfRenderer(config.pdfBrowserPath) });
-    await protectedRoutes.register(presentationsRoutes, { db });
+    await protectedRoutes.register(presentationsRoutes, { db, drive: driveClient });
+    await protectedRoutes.register(presentationImagesRoutes, {
+      db,
+      drive: driveClient,
+      sessionSecret: config.sessionSecret,
+      appOrigin: new URL(config.appUrl).origin,
+    });
     if (extraProtectedRoutes) await protectedRoutes.register(extraProtectedRoutes);
   });
 

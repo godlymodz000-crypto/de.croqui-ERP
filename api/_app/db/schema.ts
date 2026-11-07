@@ -387,7 +387,7 @@ export const presentationImages = pgTable(
     ownerPresentationId: uuid('owner_presentation_id').references(() => presentations.id),
     driveFileId: text('drive_file_id').notNull().unique(),
     fileName: text('file_name').notNull(),
-    // image/png ou image/jpeg, depois da redução.
+    // image/png, image/jpeg ou image/webp. Na redução, PNG continua PNG e o resto vira JPEG; sem redução, o tipo original.
     mimeType: text('mime_type').notNull(),
     widthPx: integer('width_px').notNull(),
     heightPx: integer('height_px').notNull(),

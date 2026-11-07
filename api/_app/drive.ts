@@ -59,6 +59,9 @@ export interface DriveFile {
   size: number;
   parents: string[];
   trashed: boolean;
+  /** Largura e altura da imagem, quando o Drive já as leu (imageMediaMetadata). */
+  imageWidth?: number;
+  imageHeight?: number;
 }
 
 export const SUBFOLDER_NAMES: Record<Subfolder, (typeof PROJECT_SUBFOLDERS)[number]> = {
@@ -196,11 +199,22 @@ export function createAdminDrive({ config, db, fetch: doFetch = fetch }: { confi
     },
 
     async getFile(id) {
-      const res = await call(`${FILES_ENDPOINT}/${encodeURIComponent(id)}?fields=id,name,mimeType,size,parents,trashed`);
+      const res = await call(
+        `${FILES_ENDPOINT}/${encodeURIComponent(id)}?fields=id,name,mimeType,size,parents,trashed,imageMediaMetadata(width,height)`,
+      );
       if (res.status === 404) return null;
       if (!res.ok) throw new DriveError(`Consulta do arquivo falhou (${res.status}).`);
-      const f = (await res.json()) as Omit<DriveFile, 'size'> & { size?: string };
-      return { ...f, size: Number(f.size ?? 0), parents: f.parents ?? [], trashed: !!f.trashed };
+      const { imageMediaMetadata: img, ...f } = (await res.json()) as Omit<DriveFile, 'size'> & {
+        size?: string;
+        imageMediaMetadata?: { width?: number; height?: number };
+      };
+      return {
+        ...f,
+        size: Number(f.size ?? 0),
+        parents: f.parents ?? [],
+        trashed: !!f.trashed,
+        ...(img?.width && img?.height ? { imageWidth: img.width, imageHeight: img.height } : {}),
+      };
     },
 
     async thumbnail(id, size = 220) {
