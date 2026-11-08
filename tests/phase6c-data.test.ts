@@ -340,7 +340,7 @@ describe('Fase 6c · E1 · limites', () => {
     }
   });
 
-  it('tamanho de uma página cheia de cada tipo, para o limite de 512 KB (R1)', () => {
+  it('tamanho de uma página cheia de cada tipo, para o limite de 1 MiB (R1)', () => {
     const L = 'a'.repeat(PRESENTATION_MAX_TEXT);
     const S = 'a'.repeat(PRESENTATION_MAX_SHORT);
     const fill = (o: Record<string, unknown>) => {
@@ -360,8 +360,10 @@ describe('Fase 6c · E1 · limites', () => {
     const out = accepted(d);
     const sizes = Object.fromEntries(out.paginas.slice(1).map((p) => [p.tipo, presentationBytes(p)]));
     console.info('Tamanho de uma página cheia, em bytes:', JSON.stringify(sizes));
-    // Página de texto cheia: 12 blocos de 2000 caracteres, cerca de 29 KB. Só 17 delas cabem em 512 KB.
-    expect(sizes.texto).toBeGreaterThan(24 * 1024);
-    expect(Math.floor(PRESENTATION_MAX_BYTES / sizes.texto)).toBe(17);
+    // Página de texto cheia: 12 blocos de 2000 caracteres, cerca de 29 KB. Cabem 35 delas em 1 MiB; com o
+    // moodboard cheio (cerca de 40 KB), 25. O limite de 40 páginas só é alcançado com páginas mais leves.
+    expect(PRESENTATION_MAX_BYTES).toBe(1024 * 1024);
+    expect(Math.floor(PRESENTATION_MAX_BYTES / sizes.texto)).toBe(35);
+    expect(Math.floor(PRESENTATION_MAX_BYTES / sizes.moodboard)).toBe(25);
   });
 });

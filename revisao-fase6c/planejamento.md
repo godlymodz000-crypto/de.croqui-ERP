@@ -42,7 +42,7 @@ A coluna "Base da 6b" diz o que já existe e pode ser reaproveitado.
 |---|---|---|---|
 | JSON `presentations.data` | Guardar as páginas de todos os tipos | `PresentationData` com `v: 1`, `projeto` e `paginas` (só a capa) | Os tipos de página em `paginas` |
 | Validação | Conferir cada tipo, os limites e a regra da capa | `parsePresentationData`, `PRESENTATION_MAX_TEXT` (2000), recusa de base64 | Validação por tipo, limites de itens e de páginas |
-| Limite de 512 KB | Igual | `PRESENTATION_MAX_BYTES`, 413 `too_large`, aviso 6b-05 | — |
+| Limite do documento | 1 MiB (decisão de 2026-11-08, seção 10) | `PRESENTATION_MAX_BYTES` (512 KB), 413 `too_large`, aviso 6b-05 | Limite de 1 MiB no servidor (E2) e aviso de 80% no editor (E4) |
 | Salvamento automático | Igual, com o documento inteiro | `PATCH /presentations/:id` com conflito por `updatedAt` (409) | — |
 | `page_count` | Contar todas as páginas | Coluna existe e já recebe `data.paginas.length` | — |
 | Rotas | Nenhuma rota nova para páginas | `GET`, `POST`, `PATCH /presentations`, `POST /presentations/:id/pdf`, `/link` | — |
@@ -213,7 +213,7 @@ Sem cálculo de escala, sem escala gráfica, sem cota e sem carimbo. A linha "Es
 |---|---|---|
 | Páginas por apresentação | 40, com a capa | Tempo e memória do PDF (R2, R3) |
 | Itens por lista | 12 blocos, 12 materiais, 12 notas, 8 imagens em `grade` | O que cabe numa folha A4 sem passar do limite |
-| Tamanho | 512 KB, como na 6b | Já validado em produção |
+| Tamanho | 1 MiB (era 512 KB na 6b; seção 10) | Uma página de texto cheia tem cerca de 29 KB |
 
 Acima de qualquer limite, a API responde 400 `invalid_data` (itens e páginas) ou 413 `too_large` (tamanho). O editor não deixa chegar lá: "+ item" e os tipos do menu ficam desligados no limite, com o motivo em texto.
 
@@ -262,7 +262,7 @@ Cada etapa termina com `npm run build` e `npm test` passando. Os testes de grava
 |---|---|---|---|---|
 | E0 | Este plano e as respostas às perguntas | Sua aprovação por escrito | — | Código |
 | E1 | Modelo de dados em `src/shared/presentation-data.ts`: os seis tipos, a capa única em primeiro, limites de texto, itens e páginas, página nova de cada tipo, imagens de todas as páginas em `presentationImageIds` | Documento da 6b continua válido; cada tipo válido é aceito; capa fora do lugar, segunda capa, `prancha`, tipo desconhecido, item acima do limite e base64 são recusados | `phase6c-data.test.ts` (unidade) | Rotas e telas |
-| E2 | API com os tipos novos: `PATCH` grava todos os tipos, `page_count` certo, vínculos e lixeira com imagens em várias páginas | Salvar e reler cada tipo; remover a última página que usa uma imagem tira o vínculo; imagem usada em outra página continua; 413 acima de 512 KB; leitor 403 | `phase6c.test.ts` em PGlite com o Drive simulado | PDF e telas |
+| E2 | API com os tipos novos: `PATCH` grava todos os tipos, `page_count` certo, vínculos e lixeira com imagens em várias páginas | Salvar e reler cada tipo; remover a última página que usa uma imagem tira o vínculo; imagem usada em outra página continua; 413 acima de 1 MiB; leitor 403 | `phase6c.test.ts` em PGlite com o Drive simulado | PDF e telas |
 | E3 | Folhas: capa nas 3 composições, 3 cores e 3 marcas; uma folha por tipo e composição, nos modos Prévia desligada e ligada | Igual a 6c-01 a 6c-14; textos em cinza só com a Prévia desligada | `phase6c-sheets.test.ts` com `renderToStaticMarkup`; capturas locais | Painel e aba Páginas |
 | E4 | Aba Página de cada tipo: campos, seletor de composição, lista de itens com ↑ ↓ ×, "+ item", espaços de imagem; seletores da capa ligados | Igual a 6c-15 a 6c-20; limites de itens com o botão desligado e o motivo | `phase6c-editor.test.ts` (funções puras de edição) e capturas em 1440 e 1024 | Aba Páginas |
 | E5 | Aba Páginas e navegação: adicionar, ↑ ↓, remover com confirmação, ‹ ›, "Página NN de T"; leitor e celular navegam sem editar | Igual a 6c-21; a capa não sai do primeiro lugar; Duplicar desligado como proposta | Funções puras de lista de páginas; capturas em 1440, 1024 e 390 | Duplicar página e duplicar apresentação |
@@ -277,7 +277,7 @@ Depois da E7, e só com sua aprovação de cada passo: push, PR, merge, conferê
 
 | Nº | Risco | Mitigação proposta |
 |---|---|---|
-| R1 | **Limite de 512 KB com mais páginas.** Uma página com todos os textos longos cheios (12 blocos × 2000 caracteres) passa de 24 KB; 20 páginas assim chegam perto do limite | O limite fica como está. O editor mostra o aviso da 6b-05 antes de salvar. Medir na E1 o tamanho real de uma página cheia de cada tipo e anotar no relatório |
+| R1 | **Limite do documento com mais páginas.** Medido na E1: texto cheio 29,5 KB, moodboard cheio 40,8 KB, notas cheias 31,9 KB. Com 512 KB, só 17 páginas de texto cheias cabiam | O limite subiu para 1 MiB (seção 10): cabem 35 páginas de texto cheias ou 25 de moodboard. O editor avisa a partir de 80% (E4) e, acima do limite, recusa o salvamento com a mensagem da 6b-05, sem perder o que foi escrito |
 | R2 | **Texto longo que estoura a página no PDF.** A folha tem tamanho fixo, e 2000 caracteres não cabem em todos os lugares | A medição da 6b passa a valer para todos os tipos (422 `content_overflow`); o PDF nunca sai cortado. Na Prévia ligada, a mesma folha mostra o que passa do limite |
 | R3 | **Imagens por página e por documento.** Mais imagens na resolução original deixam o PDF lento ou sem memória na função da Vercel (limite de 300 s) | Baixar cada imagem uma vez e uma de cada vez; limites de 40 páginas e de itens. Medir na E6 o pior caso. Se passar, levar a você antes de mudar P8 ou `vercel.json` |
 | R4 | **JSON já salvo na 6b.** A apresentação de teste em produção tem só a capa | O formato continua `v: 1`, e a validação nova aceita o documento de uma página. Teste com o JSON exato salvo na 6b |
@@ -325,3 +325,15 @@ Respostas às perguntas da seção 8, aprovadas pelo usuário em 2026-11-08, jun
 | P37 | Duplicar apresentação não entra na 6c; continua como proposta |
 
 Ponto em aberto: P29 decide a regra da cópia, mas não diz se duplicar página entra na 6c. Até essa aprovação, o botão Duplicar continua como proposta, como em 6c-21. Se entrar, a cópia no Drive vai para a E2 (API e `DriveClient`) e o botão para a E5.
+
+---
+
+## 10. Decisões da E2 (2026-11-08)
+
+Aprovadas pelo usuário em 2026-11-08, antes da E2.
+
+- **Duplicar página:** quando entrar, cria um arquivo novo no Drive (P29). Na 6c o botão fica desligado como proposta, como em 6c-21. Isso fecha o ponto em aberto da seção 9.
+- **Duplicar apresentação:** não entra na 6c (P37).
+- **Limite do documento:** sobe de 512 KB para 1 MiB.
+  - **Servidor (E2):** acima de 1 MiB, 413 `too_large` com o tamanho e o limite. O corpo aceito na rota de salvamento sobe para 2 MiB, para que um documento um pouco maior que 1 MiB receba essa resposta, e não o erro genérico do servidor. O teto do corpo de uma função da Vercel é 4,5 MB.
+  - **Editor (E4):** aviso a partir de 80% do limite, com o texto "O documento está perto do limite de tamanho. Remova conteúdo ou divida a apresentação.". Acima do limite, recusa o salvamento com a mensagem já existente, sem perder o que foi escrito. O texto da mensagem existente ainda diz "512 KB" e precisa passar a "1 MB" na E4.

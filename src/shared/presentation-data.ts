@@ -5,8 +5,11 @@
 // (revisao-fase6c/planejamento.md, seção 2, e decisoes.md, respostas P30 a P33). O formato continua v: 1,
 // e o documento salvo na 6b continua válido sem conversão. A prancha de detalhamento fica para a 6d.
 
-/** Limite do documento salvo, em bytes do JSON em UTF-8: o salvamento automático envia tudo a cada vez. */
-export const PRESENTATION_MAX_BYTES = 512 * 1024;
+/**
+ * Limite do documento salvo, em bytes do JSON em UTF-8: o salvamento automático envia tudo a cada vez.
+ * Era 512 KB na 6b; passou a 1 MiB na 6c (E2, decisão de 2026-11-08), com o aviso de 80% no editor (E4).
+ */
+export const PRESENTATION_MAX_BYTES = 1024 * 1024;
 /** Maior texto aceito num campo longo (introdução, texto do bloco, observações). Impede colar arquivos no JSON. */
 export const PRESENTATION_MAX_TEXT = 2000;
 /** Maior texto aceito num campo curto (sobretítulo, título, categoria, legenda, escala). */

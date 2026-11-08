@@ -341,7 +341,7 @@ export const budgets = pgTable(
 
 /**
  * Apresentações (Fase 6b). Mesmo padrão de `budgets`, sem total e sem status. O conteúdo do editor fica
- * em `data`, em JSON (até 512 KB, conferido na API); as imagens entram só por referência a
+ * em `data`, em JSON (até 1 MiB desde a 6c, conferido na API); as imagens entram só por referência a
  * `presentation_images`. Projeto opcional: sem projeto é a apresentação avulsa.
  */
 export const presentations = pgTable(

@@ -109,11 +109,11 @@ describe('salvamento automático', () => {
     expect(saveFailure(new Error('x'))).toBe('error');
   });
 
-  it('o documento acima de 512 KB nem é enviado', () => {
+  it('o documento acima do limite (1 MiB desde a 6c) nem é enviado', () => {
     const d = novo();
     expect(isTooLarge(d)).toBe(false);
-    // Bem acima do que a capa permite: 300 campos de 2000 caracteres.
-    const grande = { ...d, extra: Array.from({ length: 300 }, () => 'x'.repeat(PRESENTATION_MAX_TEXT)) };
+    // Bem acima do limite: 600 campos de 2000 caracteres, cerca de 1,2 MB.
+    const grande = { ...d, extra: Array.from({ length: 600 }, () => 'x'.repeat(PRESENTATION_MAX_TEXT)) };
     expect(isTooLarge(grande as typeof d)).toBe(true);
   });
 

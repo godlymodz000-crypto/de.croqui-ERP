@@ -17,8 +17,10 @@ Decisões aceitas pelo usuário em 2026-11-08. As decisões da 6a e da 6b contin
 - P36: a ordem dos tipos no menu de adicionar é a mesma de 6c-21.
 - P37: duplicar apresentação não entra na 6c; continua como proposta.
 
-## Ponto em aberto
-- Duplicar página: a regra da cópia está decidida (P29), mas a entrada na 6c ainda não. Até lá, o botão continua como proposta em 6c-21. Se entrar, pede a operação de cópia no Drive, que o `DriveClient` não tem.
+## Decisões da E2 (2026-11-08)
+- Duplicar página: quando entrar, cria um arquivo novo no Drive (P29). Na 6c o botão fica desligado como proposta (6c-21). Duplicar apresentação não entra na 6c.
+- Limite do documento: sobe de 512 KB para 1 MiB. Acima de 1 MiB, o servidor responde 413 `too_large` com o tamanho e o limite. O corpo aceito na rota de salvamento sobe para 2 MiB, só para que essa resposta chegue.
+- Editor (E4): aviso a partir de 80% do limite, com o texto "O documento está perto do limite de tamanho. Remova conteúdo ou divida a apresentação.". Acima do limite, recusa o salvamento com a mensagem já existente, sem perder o que foi escrito.
 
 ## Regras que continuam
 - Sem migração na 6c: tudo cabe em `presentations.data`.
