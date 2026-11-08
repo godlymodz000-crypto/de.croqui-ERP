@@ -42,7 +42,7 @@ export function CoverSheet({
     <div className="pcover" data-mode={mode} data-composicao={options.composicao} data-cor={options.cor} data-marca={options.marca}>
       {foto && (image || mode === 'edit') && (
         // Imagem lateral inteira: vazia, some com a Prévia ligada.
-        <div className="pcover__photo" {...archProps}>
+        <div {...archProps} className={`pcover__photo${archProps?.className ? ` ${archProps.className}` : ''}`}>
           {image && (
             <img className="pcover__image" src={image.src} alt="" draggable={false} style={coverImageStyle(image.ref)} onError={onImageError} />
           )}
@@ -58,7 +58,7 @@ export function CoverSheet({
         </div>
       )}
       {options.composicao === 'arco' && (
-        <div className="pcover__arch" {...archProps}>
+        <div {...archProps} className={`pcover__arch${archProps?.className ? ` ${archProps.className}` : ''}`}>
           {image && (
             <img className="pcover__image" src={image.src} alt="" draggable={false} style={coverImageStyle(image.ref)} onError={onImageError} />
           )}

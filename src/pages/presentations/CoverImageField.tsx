@@ -19,7 +19,8 @@ import { ImageLibraryDialog } from './ImageLibraryDialog';
 import './images.css';
 
 // Imagem da capa no editor (Fase 6b, E8; desenhos 6b-06 a 6b-09). O estado fica num gancho só, porque o
-// painel e a visualização mostram a mesma imagem e as mesmas ferramentas.
+// painel e a visualização mostram a mesma imagem e as mesmas ferramentas. Na 6c (E4) o mesmo gancho serve o
+// espaço de imagem do item aberto numa página (`where: 'item'`); a biblioteca é a mesma.
 
 const ACCEPT = IMAGE_TYPES.join(',');
 
@@ -41,8 +42,12 @@ export interface CoverImage {
   libraryOpen: boolean;
   removing: boolean;
   hasProject: boolean;
-  /** A imagem da capa não é usada em nenhuma outra apresentação: ao sair da capa, vai para a lixeira (P22). */
+  /** A imagem não é usada em nenhuma outra apresentação nem em outro espaço desta: ao sair, vai para a lixeira (P22). */
   lastUse: boolean;
+  /** Espaço da capa ou de um item de página: muda só os textos dos avisos. */
+  where: 'capa' | 'item';
+  /** Endereço de qualquer imagem da biblioteca, para as folhas: a cópia local logo depois do envio, senão a de 1600 px. */
+  imageSrc: (id: string) => string;
   pickFiles: () => void;
   handleFiles: (files: File[]) => void;
   retry: () => void;
@@ -66,6 +71,8 @@ export function useCoverImage({
   imagem,
   setImagem,
   enabled,
+  where = 'capa',
+  usedElsewhere = false,
 }: {
   presentationId: string;
   hasProject: boolean;
@@ -73,6 +80,9 @@ export function useCoverImage({
   setImagem: (next: PresentationImageRef | null) => void;
   /** Falso no leitor e no celular: nada de biblioteca nem envio. */
   enabled: boolean;
+  where?: 'capa' | 'item';
+  /** A imagem colocada também está em outro espaço desta apresentação: não vai para a lixeira ao sair deste. */
+  usedElsewhere?: boolean;
 }): CoverImage {
   const [library, setLibrary] = useState<LibraryImage[] | null>(null);
   const [upload, setUpload] = useState<Upload>({ kind: 'idle' });
@@ -107,6 +117,8 @@ export function useCoverImage({
 
   const send = useCallback(
     async (file: File, placeIt: boolean): Promise<boolean> => {
+      // O envio vai para o espaço onde começou, mesmo que a pessoa abra outro item enquanto isso.
+      const setTarget = setImagemRef.current;
       const controller = new AbortController();
       abortRef.current = controller;
       setUpload({ kind: 'sending', name: file.name, sent: 0, total: file.size });
@@ -123,7 +135,7 @@ export function useCoverImage({
         setLibrary((l) => [img, ...(l ?? []).filter((x) => x.id !== img.id)]);
         if (placeIt) {
           setFailedId(null);
-          setImagemRef.current({ id: img.id, ajuste: 'fill', zoom: 1, x: 50, y: 50 });
+          setTarget({ id: img.id, ajuste: 'fill', zoom: 1, x: 50, y: 50 });
         }
         setUpload({ kind: 'idle' });
         return true;
@@ -153,9 +165,9 @@ export function useCoverImage({
       for (const extra of ok.slice(1)) {
         if (!(await send(extra, false))) return;
       }
-      if (ok.length > 1 && !refused) setNotice({ tone: 'info', message: extraFilesNotice(ok.length - 1), action: 'close' });
+      if (ok.length > 1 && !refused) setNotice({ tone: 'info', message: extraFilesNotice(ok.length - 1, where), action: 'close' });
     },
-    [send, upload.kind],
+    [send, upload.kind, where],
   );
 
   const pickFiles = useCallback(() => {
@@ -165,7 +177,7 @@ export function useCoverImage({
 
   const placed = imagem && library ? (library.find((i) => i.id === imagem.id) ?? null) : null;
   const missing = !!imagem && (failedId === imagem.id || (library !== null && !placed && !local[imagem.id]));
-  const lastUse = isLastUse(placed);
+  const lastUse = isLastUse(placed) && !usedElsewhere;
   const src = imagem && !missing ? (local[imagem.id] ?? presentationImagesApi.imageUrl(imagem.id)) : null;
 
   const input = (
@@ -195,6 +207,8 @@ export function useCoverImage({
     removing,
     hasProject,
     lastUse,
+    where,
+    imageSrc: (id) => local[id] ?? presentationImagesApi.imageUrl(id),
     pickFiles,
     handleFiles: (files) => void handleFiles(files),
     retry: () => {
@@ -272,7 +286,7 @@ export function useImageDrag(cover: CoverImage) {
   if (!cover.imagem || cover.missing) return undefined;
   const ref = cover.imagem;
   return {
-    className: 'pcover__arch is-draggable',
+    className: 'is-draggable',
     onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => {
       if ((e.target as HTMLElement).closest('button')) return;
       const box = e.currentTarget.getBoundingClientRect();
@@ -293,8 +307,19 @@ export function useImageDrag(cover: CoverImage) {
   };
 }
 
-/** Espaço "Imagem da capa" no painel (6b-06), com as ferramentas ao passar o mouse (6b-07). */
-export function CoverImageField({ cover }: { cover: CoverImage }) {
+/**
+ * Espaço "Imagem da capa" no painel (6b-06), com as ferramentas ao passar o mouse (6b-07). Na 6c, o mesmo
+ * espaço serve o item aberto: `label` é o rótulo do campo e `emptyTitle` o texto do espaço vazio.
+ */
+export function CoverImageField({
+  cover,
+  label = 'Imagem da capa',
+  emptyTitle = 'Imagem principal (opcional)',
+}: {
+  cover: CoverImage;
+  label?: string;
+  emptyTitle?: string;
+}) {
   const [dragCount, setDragCount] = useState(0);
   const depth = useRef(0);
   const { upload } = cover;
@@ -360,14 +385,14 @@ export function CoverImageField({ cover }: { cover: CoverImage }) {
     body = (
       <div className="pdrop is-placed" {...dragProps}>
         <ImageTools cover={cover} />
-        <span className="pdrop__title">{cover.placed?.fileName ?? 'Imagem da capa'}</span>
+        <span className="pdrop__title">{cover.placed?.fileName ?? label}</span>
         {cover.placed && <span className="pdrop__sub">{imagePlacedLine(cover.placed.sizeBytes, cover.hasProject)}</span>}
       </div>
     );
   } else {
     body = (
       <div className="pdrop is-empty" role="button" tabIndex={0} onClick={cover.openLibrary} onKeyDown={(e) => e.key === 'Enter' && cover.openLibrary()} {...dragProps}>
-        <span className="pdrop__title">Imagem principal (opcional)</span>
+        <span className="pdrop__title">{emptyTitle}</span>
         <span className="pdrop__sub">Clique, arraste ou escolha na biblioteca · PNG, JPG, WebP</span>
       </div>
     );
@@ -375,7 +400,7 @@ export function CoverImageField({ cover }: { cover: CoverImage }) {
 
   return (
     <div className="pfield">
-      <span className="pfield__label">Imagem da capa</span>
+      <span className="pfield__label">{label}</span>
       {body}
     </div>
   );
@@ -414,7 +439,7 @@ export function CoverImageLayers({ cover, projectName }: { cover: CoverImage; pr
             <h2 id="pconfirm-title" className="pconfirm__title">
               Remover a imagem desta página?
             </h2>
-            <p className="pconfirm__text">{removeImageText(cover.lastUse, cover.hasProject)}</p>
+            <p className="pconfirm__text">{removeImageText(cover.lastUse, cover.hasProject, cover.where)}</p>
             <div className="pconfirm__actions">
               <button type="button" className="pbtn pbtn--text" onClick={() => cover.askRemove(false)}>
                 Cancelar

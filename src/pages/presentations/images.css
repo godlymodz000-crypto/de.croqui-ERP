@@ -133,11 +133,13 @@
   top: auto;
   left: auto;
 }
-.pcover__arch.is-draggable {
+.pcover__arch.is-draggable,
+.pcover__photo.is-draggable {
   cursor: grab;
   touch-action: none;
 }
-.pcover__arch.is-draggable:active {
+.pcover__arch.is-draggable:active,
+.pcover__photo.is-draggable:active {
   cursor: grabbing;
 }
 

@@ -25,6 +25,16 @@ Decisões aceitas pelo usuário em 2026-11-08. As decisões da 6a e da 6b contin
 ## Decisões da E3 (2026-11-08)
 - Espaço de imagem vazio com a Prévia ligada e no PDF: continua como fundo bege, sem o texto em cinza, para a composição não mudar, como no arquivo offline e na capa em arco da 6b.
 
+## Escolhas da E4 (2026-11-08), para conferir
+- Itens da lista: clicar no item abre os campos dele logo abaixo, um por vez. Os desenhos 6c-15 a 6c-20 mostram só a lista fechada.
+- Apresentação visual: "+ Imagem" só fica ligado em "Várias imagens do ambiente", até 8. Nas outras composições fica desligado, com o motivo escrito. Os desenhos 6c-17 e 6c-18 não mostram "+ item".
+- Desenho técnico: sem "+ item". A quantidade de desenhos vem da composição, como no arquivo offline.
+- Visual e técnico: o × fica desligado quando a lista já tem só o que a composição usa.
+- Itens guardados e escondidos pela composição (P32) continuam na lista, com "Guardada · não aparece nesta composição".
+- Botões ‹ › da visualização ligados no computador, porque sem eles não se chega às páginas internas antes da E5. A aba Páginas, o leitor e o celular ficam para a E5.
+- Página interna sem a moldura vinho da capa (6b-04), como nos desenhos 6c.
+- Recusa acima de 1 MB: a mensagem diz o tamanho que a API devolveu. Recusa 400 com motivo: a mensagem da API, sem nova tentativa automática.
+
 ## Regras que continuam
 - Sem migração na 6c: tudo cabe em `presentations.data`.
 - Sem push, merge ou deploy sem aprovação. Prévias da Vercel não são usadas para gravar. Testes de gravação só em PGlite.
