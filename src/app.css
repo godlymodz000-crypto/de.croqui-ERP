@@ -1050,6 +1050,22 @@ a.user-menu__item {
   align-items: center;
   gap: var(--space-3);
 }
+/* Excluir projeto ou Pedir exclusão, separado das ações de adicionar, no fim da página (6b-03). */
+.project__footer {
+  display: flex;
+  margin-top: var(--space-7);
+}
+/* O texto do botão alinha com a borda do conteúdo, como no desenho. */
+.project__footer > .text-button {
+  margin-left: calc(-1 * var(--space-4));
+}
+/* No tablet, os três botões não cabem ao lado do nome: ficam embaixo dele. */
+@media (min-width: 769px) and (max-width: 1279px) {
+  .project .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
 .project-details {
   max-width: 720px;
 }
@@ -2678,12 +2694,9 @@ body.is-card-dragging * {
   .project__actions > :only-child {
     margin-left: auto;
   }
-  /* Com "Novo orçamento" (Fase 6a) são três ações: ele ocupa a primeira linha e as outras ficam embaixo. */
+  /* No celular ficam Novo orçamento e Editar, lado a lado; Nova apresentação não aparece (6b-13). */
   .project__actions {
     flex-wrap: wrap;
-  }
-  .project__actions > :first-child:not(:only-child):not(.text-button) {
-    flex: 1 0 100%;
   }
   .project-details__list > div {
     grid-template-columns: minmax(0, 1fr);
