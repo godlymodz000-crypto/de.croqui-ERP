@@ -1,5 +1,6 @@
 // Fase 6b, etapa E6, lado da tela: abas, contagens e ordenação da lista de apresentações (6b-01 e a lista de
 // 390 de 6b-13) e o painel "Nova apresentação" (6b-02), renderizado sem navegador com react-dom/server.
+import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -132,5 +133,58 @@ describe('painel Nova apresentação', () => {
 
   it('o projeto escolhido não promete copiar a localização', () => {
     expect(panel.HINT_PROJETO).not.toMatch(/localiza/i);
+  });
+
+  it('aberto no projeto (6b-03): projeto preenchido e travado, sem a opção avulsa', () => {
+    const html = renderToStaticMarkup(
+      createElement(panel.NewPresentationPanel, {
+        project: { id: 'p1', name: 'Projeto Teste', clientName: 'Cliente Avulso' },
+        onClose: () => {},
+        onCreated: () => {},
+      }),
+    );
+    expect(html).toContain('Projeto Teste · Cliente Avulso');
+    expect(html).not.toContain('Sem projeto (avulsa)');
+    // Campo fixo, sem lista para trocar de projeto.
+    expect(html).not.toContain('<select');
+    expect(html).toContain('budget-panel__value');
+    expect(html).toContain(panel.HINT_DO_PROJETO);
+    expect(panel.HINT_DO_PROJETO).toBe(`Aberto a partir do projeto. ${panel.HINT_PROJETO}`);
+    expect(panel.HINT_DO_PROJETO).not.toContain('!');
+  });
+});
+
+describe('página do projeto (6b-03): ordem dos botões', () => {
+  const source = readFileSync(new URL('../src/pages/projects/ProjectPage.tsx', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const css = readFileSync(new URL('../src/app.css', import.meta.url), 'utf8');
+  const at = (text: string) => {
+    const i = source.indexOf(text);
+    expect(i, text).toBeGreaterThan(-1);
+    return i;
+  };
+
+  it('Nova apresentação, Novo orçamento e Editar, nessa ordem, no topo', () => {
+    const actions = at('className="project__actions"');
+    expect(at('Nova apresentação')).toBeGreaterThan(actions);
+    expect(at('Novo orçamento')).toBeGreaterThan(at('Nova apresentação'));
+    expect(at('Editar\n')).toBeGreaterThan(at('Novo orçamento'));
+  });
+
+  it('Excluir projeto e Pedir exclusão saem do topo e ficam no fim da página', () => {
+    const header = source.slice(at('<header className="page-header">'), at('</header>'));
+    expect(header).not.toContain('Excluir projeto');
+    expect(header).not.toContain('Pedir exclusão');
+    const footer = at('className="project__footer"');
+    expect(footer).toBeGreaterThan(at('className="project-layout"'));
+    expect(at('Excluir projeto\n')).toBeGreaterThan(footer);
+    expect(source.indexOf('Pedir exclusão\n', footer)).toBeGreaterThan(footer);
+    // Mesmo estilo de antes, sem botão Vinho novo.
+    expect(source.slice(footer, footer + 800)).toContain('className="text-button"');
+    expect(source.slice(footer, footer + 800)).not.toContain('variant="primary"');
+    expect(css).toMatch(/\.project__footer \{/);
+  });
+
+  it('no celular não aparece Nova apresentação', () => {
+    expect(source).toMatch(/canCreatePresentation = canWritePresentations\(me\) && !isMobile/);
   });
 });

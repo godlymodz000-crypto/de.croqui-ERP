@@ -15,6 +15,10 @@ import { UploadPanel } from './UploadPanel';
 import { FilePreview, isImage } from './FilePreview';
 import { ConfirmDeleteDialog, RequestDeletionDialog } from './DeletionDialogs';
 import { NewBudgetPanel } from '../budgets/NewBudgetPanel';
+import { NewPresentationPanel } from '../presentations/NewPresentationPanel';
+import { canWritePresentations } from '../presentations/list';
+import type { EditorOrigin } from '../presentations/editor';
+import { useIsMobile } from '../../ui/useMediaQuery';
 import { canDeleteProjects, canWriteProjects, deadlineLabel, folderName, formatDate, SituationBadge } from './shared';
 
 type Pending =
@@ -58,6 +62,10 @@ export function ProjectPage() {
   const isAdmin = me?.role === 'admin';
   const canWrite = canWriteProjects(me);
   const canRequest = me?.role === 'member';
+  // No celular não se cria apresentação (6b-13).
+  const isMobile = useIsMobile();
+  const canCreatePresentation = canWritePresentations(me) && !isMobile;
+  const [creatingPresentation, setCreatingPresentation] = useState(false);
 
   // Ao abrir, uma leitura só traz projeto, arquivos e notas. Depois de enviar ou apagar, cada lista se atualiza sozinha.
   const load = useCallback(async () => {
@@ -204,34 +212,19 @@ export function ProjectPage() {
             {project.clientName} · {deadlineLabel(project)}
           </p>
         </div>
-        {(canWrite || canDeleteProjects(me)) && (
+        {canWrite && (
           <div className="project__actions">
-            {canWrite && (
-              <Button variant="outline" onClick={() => setCreatingBudget(true)}>
-                Novo orçamento
+            {canCreatePresentation && (
+              <Button variant="outline" onClick={() => setCreatingPresentation(true)}>
+                Nova apresentação
               </Button>
             )}
-            {canDeleteProjects(me) && (
-              <button type="button" className="text-button" onClick={() => setDeletingProject(true)}>
-                Excluir projeto
-              </button>
-            )}
-            {canRequest && (
-              <button
-                type="button"
-                className="text-button"
-                onClick={() =>
-                  setPending({ kind: 'request', itemType: 'project', itemId: project.id, label: project.name, keeps: 'o projeto continua no ERP' })
-                }
-              >
-                Pedir exclusão
-              </button>
-            )}
-            {canWrite && (
-              <Button variant="outline" onClick={() => setEditing(true)}>
-                Editar
-              </Button>
-            )}
+            <Button variant="outline" onClick={() => setCreatingBudget(true)}>
+              Novo orçamento
+            </Button>
+            <Button variant="outline" onClick={() => setEditing(true)}>
+              Editar
+            </Button>
           </div>
         )}
       </header>
@@ -286,6 +279,39 @@ export function ProjectPage() {
           </section>
         </div>
       </div>
+
+      {/* Desenho 6b-03: excluir fica separado das ações de adicionar, no fim da página. */}
+      {(canDeleteProjects(me) || canRequest) && (
+        <div className="project__footer">
+          {canDeleteProjects(me) && (
+            <button type="button" className="text-button" onClick={() => setDeletingProject(true)}>
+              Excluir projeto
+            </button>
+          )}
+          {canRequest && (
+            <button
+              type="button"
+              className="text-button"
+              onClick={() =>
+                setPending({ kind: 'request', itemType: 'project', itemId: project.id, label: project.name, keeps: 'o projeto continua no ERP' })
+              }
+            >
+              Pedir exclusão
+            </button>
+          )}
+        </div>
+      )}
+
+      {creatingPresentation && (
+        <NewPresentationPanel
+          project={project}
+          onClose={() => setCreatingPresentation(false)}
+          onCreated={(p) => {
+            setCreatingPresentation(false);
+            navigate(`/apresentacoes/${p.id}`, { state: { from: 'projeto', projectId: project.id } satisfies EditorOrigin });
+          }}
+        />
+      )}
 
       {editing && (
         <ProjectPanel

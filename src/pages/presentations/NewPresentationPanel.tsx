@@ -4,6 +4,7 @@ import { AppIcon } from '../../ui/AppIcon';
 import { ApiError } from '../../api/http';
 import { presentationsApi, type PresentationWithData } from '../../api/presentations';
 import { projectsApi, type Project } from '../../api/projects';
+import '../budgets/budgets.css';
 
 export const NAME_MESSAGES: Record<string, string> = {
   required: 'Dê um nome à apresentação para criá-la.',
@@ -16,13 +17,25 @@ export const HINT_AVULSA =
 export const HINT_PROJETO =
   'A apresentação fica no projeto e em Apresentações, na aba Por projeto. Nome do projeto e cliente são copiados como texto editável; mudar o cadastro depois não altera a apresentação.';
 
+// Aberto pela página do projeto (6b-03): o projeto vem escolhido e não muda.
+export const HINT_DO_PROJETO = `Aberto a partir do projeto. ${HINT_PROJETO}`;
+
 /**
  * Painel "Nova apresentação" (desenho 6b-02). Nome obrigatório; projeto opcional, começando em
  * "Sem projeto (avulsa)". A apresentação nasce só com a capa, sem textos nem imagens de exemplo.
+ * Com `project` (página do projeto, 6b-03), o campo Projeto vem preenchido e travado.
  */
-export function NewPresentationPanel({ onClose, onCreated }: { onClose: () => void; onCreated: (p: PresentationWithData) => void }) {
+export function NewPresentationPanel({
+  project,
+  onClose,
+  onCreated,
+}: {
+  project?: Pick<Project, 'id' | 'name' | 'clientName'>;
+  onClose: () => void;
+  onCreated: (p: PresentationWithData) => void;
+}) {
   const [name, setName] = useState('');
-  const [projectId, setProjectId] = useState('');
+  const [projectId, setProjectId] = useState(project?.id ?? '');
   const [projects, setProjects] = useState<Project[]>([]);
   const [nameError, setNameError] = useState<string | null>(null);
   const [failure, setFailure] = useState(false);
@@ -37,9 +50,9 @@ export function NewPresentationPanel({ onClose, onCreated }: { onClose: () => vo
   }, [onClose]);
 
   useEffect(() => {
-    // Sem a lista, a apresentação ainda pode ser criada como avulsa.
-    projectsApi.list().then(setProjects, () => setProjects([]));
-  }, []);
+    // Sem a lista, a apresentação ainda pode ser criada como avulsa. Aberto no projeto, a lista não é usada.
+    if (!project) projectsApi.list().then(setProjects, () => setProjects([]));
+  }, [project]);
 
   async function submit(event?: FormEvent) {
     event?.preventDefault();
@@ -55,7 +68,7 @@ export function NewPresentationPanel({ onClose, onCreated }: { onClose: () => vo
       onCreated(await presentationsApi.create({ name: clean, projectId: projectId || null }));
     } catch (err) {
       if (err instanceof ApiError && err.fields.name) setNameError(err.fields.name);
-      else if (err instanceof ApiError && err.fields.projectId) {
+      else if (err instanceof ApiError && err.fields.projectId && !project) {
         // O projeto foi excluído enquanto o painel estava aberto: volta para avulsa e recarrega a lista.
         setProjectId('');
         projectsApi.list().then(setProjects, () => setProjects([]));
@@ -70,6 +83,7 @@ export function NewPresentationPanel({ onClose, onCreated }: { onClose: () => vo
     { value: '', label: 'Sem projeto (avulsa)' },
     ...projects.filter((p) => p.status === 'active').map((p) => ({ value: p.id, label: `${p.name} · ${p.clientName}` })),
   ];
+  const hint = project ? HINT_DO_PROJETO : projectId ? HINT_PROJETO : HINT_AVULSA;
 
   return (
     <aside className="side-panel" aria-labelledby="presentation-panel-title">
@@ -95,10 +109,21 @@ export function NewPresentationPanel({ onClose, onCreated }: { onClose: () => vo
           }}
         />
 
-        <div>
-          <Select label="Projeto" variant="box" options={options} value={projectId} onChange={(e) => setProjectId(e.target.value)} />
-          <p className="side-panel__hint">{projectId ? HINT_PROJETO : HINT_AVULSA}</p>
-        </div>
+        {project ? (
+          // Mesmo campo fixo do orçamento aberto no projeto (budgets.css).
+          <div className="budget-panel__fixed">
+            <span className="budget-panel__label">Projeto</span>
+            <span className="budget-panel__value">
+              {project.name} · {project.clientName}
+            </span>
+            <p className="side-panel__hint">{hint}</p>
+          </div>
+        ) : (
+          <div>
+            <Select label="Projeto" variant="box" options={options} value={projectId} onChange={(e) => setProjectId(e.target.value)} />
+            <p className="side-panel__hint">{hint}</p>
+          </div>
+        )}
 
         <div className="side-panel__spacer" />
 
