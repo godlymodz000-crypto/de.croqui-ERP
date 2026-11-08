@@ -7,18 +7,21 @@ import { useIsMobile, useMediaQuery } from '../../ui/useMediaQuery';
 import { useSession } from '../../session';
 import { ApiError } from '../../api/http';
 import { presentationsApi, type PresentationWithData } from '../../api/presentations';
-import type { PresentationData, PresentationProject } from '../../shared/presentation-data';
+import type { PresentationData, PresentationImageRef, PresentationProject } from '../../shared/presentation-data';
 import { fitZoom, pageNavLabel, zoomCss, zoomIn, zoomLabel, zoomOut } from '../../shared/presentation-calc';
 import { CoverSheet } from '../../presentation/CoverSheet';
 import type { CoverMode } from '../../presentation/cover';
 import '../../presentation/sheets.css';
 import logo from '../../design-system/assets/logo/decroqui-imagotipo-horizontal-claro.svg';
+import { CoverImageField, CoverImageLayers, ImageTools, useCoverImage, useImageDrag, type CoverImage } from './CoverImageField';
 import {
   backTarget,
+  cleanPresentationName,
   clock,
   coverNotice,
   isTooLarge,
   pageKindLabel,
+  presentationNameError,
   projectTabHelp,
   SAVE_MESSAGES,
   saveFailure,
@@ -54,6 +57,7 @@ export function PresentationEditorPage() {
   const [save, setSave] = useState<SaveState>({ kind: 'saved', at: null });
   const [preview, setPreview] = useState(false);
   const [tab, setTab] = useState<PanelTab>('pagina');
+  const [nameDraft, setNameDraft] = useState('');
 
   const dataRef = useRef<PresentationData | null>(null);
   const baseRef = useRef('');
@@ -61,12 +65,16 @@ export function PresentationEditorPage() {
   const inFlightRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blockedRef = useRef(false);
+  /** Nome válido ainda não salvo; nulo quando não há nome para enviar. */
+  const nameRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       const p = await presentationsApi.get(id);
       setPresentation(p);
       setData(p.data);
+      setNameDraft(p.name);
+      nameRef.current = null;
       dataRef.current = p.data;
       baseRef.current = p.updatedAt;
       dirtyRef.current = false;
@@ -95,9 +103,15 @@ export function PresentationEditorPage() {
     inFlightRef.current = true;
     dirtyRef.current = false;
     let tooLarge = false;
+    const sentName = nameRef.current;
     setSave({ kind: 'saving' });
     try {
-      const saved = await presentationsApi.save(id, { data: dataRef.current, baseUpdatedAt: baseRef.current });
+      const saved = await presentationsApi.save(id, {
+        data: dataRef.current,
+        baseUpdatedAt: baseRef.current,
+        ...(sentName !== null ? { name: sentName } : {}),
+      });
+      if (nameRef.current === sentName) nameRef.current = null;
       baseRef.current = saved.updatedAt;
       setPresentation((p) => (p ? { ...p, ...saved, data: p.data } : saved));
       setSave({ kind: 'saved', at: new Date() });
@@ -139,6 +153,37 @@ export function PresentationEditorPage() {
     [canWrite, isMobile, flush],
   );
 
+  /** Nome da apresentação: salva junto com o documento; vazio ou longo demais, fica o nome anterior. */
+  const changeName = useCallback(
+    (value: string) => {
+      if (!canWrite || isMobile) return;
+      setNameDraft(value);
+      if (presentationNameError(value)) {
+        nameRef.current = null;
+        return;
+      }
+      nameRef.current = cleanPresentationName(value);
+      dirtyRef.current = true;
+      if (blockedRef.current) return;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => flush(), SAVE_DELAY_MS);
+    },
+    [canWrite, isMobile, flush],
+  );
+
+  const setCoverImage = useCallback(
+    (imagem: PresentationImageRef | null) =>
+      update((d) => ({ ...d, paginas: d.paginas.map((pg, i) => (i === 0 ? { ...pg, imagem } : pg)) as PresentationData['paginas'] })),
+    [update],
+  );
+  const cover = useCoverImage({
+    presentationId: id,
+    hasProject: !!presentation?.projectId,
+    imagem: data?.paginas[0]?.imagem ?? null,
+    setImagem: setCoverImage,
+    enabled: state === 'ready' && canWrite && !isMobile,
+  });
+
   // Fechar ou recarregar com alteração ainda não salva: o navegador pergunta antes.
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
@@ -176,13 +221,15 @@ export function PresentationEditorPage() {
   const hasProject = !!presentation.projectId;
 
   if (isMobile) {
-    return <MobileView presentation={presentation} data={data} back={back} save={save} canExport={canWrite} />;
+    return <MobileView presentation={presentation} data={data} back={back} save={save} canExport={canWrite} cover={cover} />;
   }
 
   const readOnly = !canWrite;
   const mode: CoverMode = readOnly || preview ? 'print' : 'edit';
   const setProject = (key: keyof PresentationProject, value: string) =>
     update((d) => ({ ...d, projeto: { ...d.projeto, [key]: value } }));
+  const nameError = readOnly ? null : presentationNameError(nameDraft);
+  const shownName = nameError || readOnly ? presentation.name : cleanPresentationName(nameDraft);
 
   return (
     <div className="beditor peditor">
@@ -193,7 +240,7 @@ export function PresentationEditorPage() {
         </Link>
         <div className="beditor__title">
           <span className="beditor__eyebrow peditor__eyebrow">Apresentação nº {presentation.number}</span>
-          <span className="beditor__name">{presentation.name}</span>
+          <span className="beditor__name">{shownName}</span>
         </div>
         <div className="beditor__actions peditor__actions">
           {readOnly ? (
@@ -253,14 +300,27 @@ export function PresentationEditorPage() {
           </div>
 
           <div className="ppanel__content">
-            {tab === 'projeto' && <ProjectTab projeto={data.projeto} readOnly={readOnly} hasProject={hasProject} onChange={setProject} onBlur={() => void flush()} />}
+            {tab === 'projeto' && (
+              <ProjectTab
+                name={readOnly ? presentation.name : nameDraft}
+                nameError={nameError}
+                onName={changeName}
+                projeto={data.projeto}
+                readOnly={readOnly}
+                hasProject={hasProject}
+                onChange={setProject}
+                onBlur={() => void flush()}
+              />
+            )}
             {tab === 'paginas' && <PagesTab onOpen={() => setTab('pagina')} />}
-            {tab === 'pagina' && <CoverTab readOnly={readOnly} hasProject={hasProject} />}
+            {tab === 'pagina' && <CoverTab readOnly={readOnly} hasProject={hasProject} cover={cover} />}
           </div>
         </aside>
 
-        <Preview data={data} mode={mode} kind={readOnly ? 'readonly' : mode} />
+        <Preview data={data} mode={mode} kind={readOnly ? 'readonly' : mode} cover={cover} tools={!readOnly && !preview} />
       </div>
+
+      {!readOnly && <CoverImageLayers cover={cover} projectName={presentation.project?.name ?? null} />}
 
       {(save.kind === 'error' || save.kind === 'conflict' || save.kind === 'too_large') && (
         <div className="toast-slot beditor__toast">
@@ -303,7 +363,20 @@ function SaveIndicator({ save }: { save: SaveState }) {
 }
 
 /** Área da visualização: barra com página e zoom, e a folha reduzida para caber (zoom de ajuste em A4). */
-function Preview({ data, mode, kind }: { data: PresentationData; mode: CoverMode; kind: CoverMode | 'readonly' }) {
+function Preview({
+  data,
+  mode,
+  kind,
+  cover,
+  tools,
+}: {
+  data: PresentationData;
+  mode: CoverMode;
+  kind: CoverMode | 'readonly';
+  cover: CoverImage;
+  /** Ferramentas e arrastar só com a Prévia desligada. */
+  tools: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState(1);
   const [zoom, setZoom] = useState<number | null>(null);
@@ -318,6 +391,8 @@ function Preview({ data, mode, kind }: { data: PresentationData; mode: CoverMode
     return () => ro.disconnect();
   }, []);
   const z = zoom ?? fit;
+  const drag = useImageDrag(cover);
+  const showTools = tools && !!cover.src;
   return (
     <section className="ppreview" aria-label="Visualização">
       <div className="ppreview__bar">
@@ -339,7 +414,20 @@ function Preview({ data, mode, kind }: { data: PresentationData; mode: CoverMode
       </div>
       <div ref={ref} className="ppreview__area">
         <div className="ppreview__sheet" style={{ zoom: zoomCss(z) }}>
-          <CoverSheet projeto={data.projeto} mode={mode} logoSrc={logo} />
+          <CoverSheet
+            projeto={data.projeto}
+            mode={mode}
+            logoSrc={logo}
+            image={cover.src && cover.imagem ? { src: cover.src, ref: cover.imagem } : null}
+            onImageError={cover.imageFailed}
+            archProps={showTools ? drag : undefined}
+            overlay={
+              showTools ? (
+                // No canto de baixo do arco, no tamanho real, qualquer que seja o zoom da visualização.
+                <ImageTools cover={cover} className="pimgtools--sheet" style={{ zoom: 1 / z, right: 68 * z, bottom: 16 * z }} />
+              ) : undefined
+            }
+          />
         </div>
       </div>
     </section>
@@ -362,12 +450,18 @@ const PROJECT_FIELDS: { key: Exclude<keyof PresentationProject, 'formato'>; labe
 ];
 
 function ProjectTab({
+  name,
+  nameError,
+  onName,
   projeto,
   readOnly,
   hasProject,
   onChange,
   onBlur,
 }: {
+  name: string;
+  nameError: string | null;
+  onName: (value: string) => void;
   projeto: PresentationProject;
   readOnly: boolean;
   hasProject: boolean;
@@ -376,6 +470,24 @@ function ProjectTab({
 }) {
   return (
     <>
+      <label className={`pfield${nameError ? ' has-error' : ''}`}>
+        <span className="pfield__label">Nome da apresentação</span>
+        <input
+          className="pfield__input"
+          value={name}
+          maxLength={200}
+          disabled={readOnly}
+          aria-invalid={!!nameError}
+          aria-describedby={nameError ? 'pname-error' : undefined}
+          onChange={(e) => onName(e.target.value)}
+          onBlur={onBlur}
+        />
+        {nameError && (
+          <span id="pname-error" className="pfield__error">
+            {nameError}
+          </span>
+        )}
+      </label>
       <div className="ppanel__section">
         <h2 className="ppanel__section-title">Dados do projeto</h2>
         <p className="ppanel__help">{projectTabHelp(hasProject)}</p>
@@ -429,7 +541,7 @@ function PagesTab({ onOpen }: { onOpen: () => void }) {
 }
 
 /** Na E7 cada menu tem uma opção só: arco, vinho e marca pequena (as outras ainda não têm desenho aprovado). */
-function CoverTab({ readOnly, hasProject }: { readOnly: boolean; hasProject: boolean }) {
+function CoverTab({ readOnly, hasProject, cover }: { readOnly: boolean; hasProject: boolean; cover: CoverImage }) {
   const select = (label: string, value: string) => (
     <label className="pfield">
       <span className="pfield__label">{label}</span>
@@ -456,16 +568,7 @@ function CoverTab({ readOnly, hasProject }: { readOnly: boolean; hasProject: boo
       {select('Composição', 'Imagem em arco')}
       {select('Cor da capa', 'Vinho')}
       {select('Tamanho da marca', 'Pequeno')}
-      {!readOnly && (
-        <div className="pfield">
-          <span className="pfield__label">Imagem da capa</span>
-          {/* O envio de imagens chega na etapa E8: o espaço aparece como no desenho, ainda sem ação. */}
-          <div className="pdrop" aria-disabled="true">
-            <span className="pdrop__title">Imagem principal (opcional)</span>
-            <span className="pdrop__sub">Clique, arraste ou escolha na biblioteca · PNG, JPG, WebP</span>
-          </div>
-        </div>
-      )}
+      {!readOnly && <CoverImageField cover={cover} />}
     </>
   );
 }
@@ -478,12 +581,14 @@ function MobileView({
   back,
   save,
   canExport,
+  cover,
 }: {
   presentation: PresentationWithData;
   data: PresentationData;
   back: { to: string; label: string };
   save: SaveState;
   canExport: boolean;
+  cover: CoverImage;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [z, setZ] = useState(0.32);
@@ -514,7 +619,13 @@ function MobileView({
         <p className="pmobile__intro">Edição só no computador. Aqui você vê a apresentação como vai sair no PDF.</p>
         <div ref={ref} className="pmobile__sheet">
           <div className="ppreview__sheet" style={{ zoom: zoomCss(z) }}>
-            <CoverSheet projeto={data.projeto} mode="print" logoSrc={logo} />
+            <CoverSheet
+              projeto={data.projeto}
+              mode="print"
+              logoSrc={logo}
+              image={cover.src && cover.imagem ? { src: cover.src, ref: cover.imagem } : null}
+              onImageError={cover.imageFailed}
+            />
           </div>
         </div>
         <p className="pmobile__label">{pageNavLabel(0, data.paginas.length)} · Capa</p>

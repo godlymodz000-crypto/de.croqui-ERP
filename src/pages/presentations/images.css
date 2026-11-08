@@ -1,0 +1,392 @@
+/* Fase 6b, E8: nome da apresentação e imagem da capa no editor (desenhos 6b-04 a 6b-09). */
+
+/* ---------- Nome da apresentação ---------- */
+.pfield.has-error .pfield__input {
+  border-bottom-color: var(--feedback-danger);
+}
+.pfield__error {
+  font: var(--weight-regular) 13px / 1.4 var(--font-body);
+  color: var(--feedback-danger);
+}
+
+/* ---------- Espaço de imagem (6b-06) ---------- */
+.pdrop {
+  position: relative;
+}
+.pdrop.is-empty {
+  border: 1px dashed rgba(20, 40, 65, 0.24);
+  cursor: pointer;
+}
+.pdrop.is-empty:hover,
+.pdrop.is-missing:hover {
+  border-color: var(--noite-900);
+}
+.pdrop.is-empty:focus-visible,
+.pdrop.is-missing:focus-visible {
+  outline: 2px solid var(--noite-900);
+  outline-offset: 2px;
+}
+.pdrop.is-dragging {
+  border: 1px solid var(--noite-900);
+  background: #e4e9ef;
+}
+.pdrop.is-sending {
+  border: 1px solid rgba(20, 40, 65, 0.24);
+  background: var(--linho-200);
+}
+.pdrop__progress {
+  position: relative;
+  width: 280px;
+  max-width: calc(100% - 48px);
+  height: 3px;
+  margin-top: 2px;
+  background: #d6ccbc;
+}
+.pdrop__progress > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--noite-900);
+  transition: width 0.2s linear;
+}
+.pdrop.is-placed {
+  border: 0;
+  background: #d6ccbc;
+}
+.pdrop.is-error {
+  border: 1px solid var(--feedback-danger);
+  background: #ecd2c6;
+}
+.pdrop.is-error .pdrop__title {
+  color: var(--feedback-danger);
+}
+.pdrop.is-missing {
+  border: 1px solid #a8762a;
+  background: #f0dfbf;
+  cursor: pointer;
+}
+.pdrop__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: var(--weight-medium) 8.5px / 1.4 var(--font-body);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--noite-900);
+  opacity: 0.8;
+  cursor: pointer;
+}
+.pdrop__title,
+.pdrop__sub {
+  max-width: calc(100% - 32px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Ferramentas sobre a imagem (6b-07) ---------- */
+.pimgtools {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  display: none;
+  gap: 3px;
+}
+.pdrop.is-placed:hover .pimgtools,
+.pdrop.is-placed:focus-within .pimgtools,
+.ppreview__sheet:hover .pimgtools,
+.ppreview__sheet:focus-within .pimgtools {
+  display: flex;
+}
+.pimgtools button {
+  height: 22px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 0;
+  background: var(--noite-900);
+  font: var(--weight-medium) 9px / 1 var(--font-body);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--linho-50);
+  cursor: pointer;
+}
+.pimgtools button[aria-label] {
+  font-size: 11px;
+  letter-spacing: 0;
+}
+.pimgtools button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.pimgtools button:focus-visible {
+  outline: 2px solid var(--linho-50);
+  outline-offset: -3px;
+}
+.pimgtools .pimgtools__remove {
+  background: var(--feedback-danger);
+}
+.pimgtools--sheet {
+  top: auto;
+  left: auto;
+}
+.pcover__arch.is-draggable {
+  cursor: grab;
+  touch-action: none;
+}
+.pcover__arch.is-draggable:active {
+  cursor: grabbing;
+}
+
+/* ---------- Véu, botões, confirmação de remover (6b-07) e biblioteca (6b-09) ---------- */
+.pveil {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(20, 40, 65, 0.4);
+}
+.pbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  font: var(--weight-medium) 11px / 1 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--noite-900);
+  cursor: pointer;
+}
+.pbtn--lg {
+  height: 44px;
+  padding: 0 20px;
+  font-size: 12px;
+}
+.pbtn--outline {
+  border-color: var(--noite-900);
+}
+.pbtn--solid {
+  padding: 0 24px;
+  background: var(--noite-900);
+  color: var(--linho-50);
+}
+.pbtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.pbtn:focus-visible {
+  outline: 2px solid var(--noite-900);
+  outline-offset: 2px;
+}
+.pconfirm {
+  width: 360px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid rgba(20, 40, 65, 0.24);
+  background: var(--surface-card);
+  box-shadow: 0 8px 24px rgba(20, 40, 65, 0.125);
+}
+.pconfirm__title {
+  margin: 0;
+  font: var(--weight-light) 22px / 1.2 var(--font-display);
+  color: var(--noite-900);
+}
+.pconfirm__text {
+  margin: 0;
+  font: var(--weight-light) 13px / 1.55 var(--font-body);
+  color: var(--ardosia-700);
+}
+.pconfirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 6px;
+}
+.plibrary {
+  width: 840px;
+  max-width: 100%;
+  height: 680px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 32px;
+  background: var(--surface-card);
+  box-shadow: 0 16px 40px rgba(20, 40, 65, 0.2);
+}
+.plibrary__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+}
+.plibrary__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 600px;
+}
+.plibrary__eyebrow {
+  font: var(--weight-medium) 10px / 1.4 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--vinho-800);
+}
+.plibrary__title {
+  margin: 0;
+  font: var(--weight-light) 30px / 1.2 var(--font-display);
+  color: var(--noite-900);
+}
+.plibrary__text {
+  margin: 0;
+  font: var(--weight-light) 13px / 1.55 var(--font-body);
+  color: var(--ardosia-700);
+}
+.plibrary__close {
+  align-self: flex-start;
+  width: 32px;
+  height: 35px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: var(--weight-light) 24px / 1 var(--font-body);
+  color: var(--noite-900);
+  cursor: pointer;
+}
+.plibrary__grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 182px);
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 16px;
+}
+.plibrary__item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.plibrary__thumb {
+  position: relative;
+  display: block;
+  width: 182px;
+  height: 120px;
+  background: #d6ccbc;
+}
+.plibrary__thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.plibrary__item.is-selected .plibrary__thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--noite-900);
+}
+.plibrary__item:focus-visible {
+  outline: 2px solid var(--noite-900);
+  outline-offset: 3px;
+}
+.plibrary__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--weight-regular) 12px / 1.4 var(--font-body);
+  color: var(--noite-900);
+}
+.plibrary__caption {
+  font: var(--weight-light) 11px / 1.4 var(--font-body);
+  color: var(--ardosia-700);
+}
+.plibrary__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.plibrary__actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* ---------- Avisos de envio (6b-08), no canto inferior esquerdo ---------- */
+.pnotice {
+  display: flex;
+  gap: 12px;
+  width: 335px;
+  max-width: calc(100vw - 48px);
+  padding: 14px 16px;
+  border-left: 2px solid;
+  box-shadow: var(--shadow-md);
+}
+.pnotice--danger {
+  border-color: var(--feedback-danger);
+  background: #ecd2c6;
+}
+.pnotice--info {
+  border-color: var(--ardosia-700);
+  background: #e4e9ef;
+}
+.pnotice__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1.25px solid;
+  border-radius: 50%;
+  font: var(--weight-medium) 11px / 1 var(--font-body);
+}
+.pnotice--danger .pnotice__icon {
+  color: var(--feedback-danger);
+}
+.pnotice--info .pnotice__icon {
+  color: var(--ardosia-700);
+}
+.pnotice__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.pnotice__body p {
+  margin: 0;
+  font: var(--weight-regular) 13px / 1.5 var(--font-body);
+  color: var(--noite-900);
+}
+.pnotice__action {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: var(--weight-medium) 11px / 1.4 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--noite-900);
+  cursor: pointer;
+}

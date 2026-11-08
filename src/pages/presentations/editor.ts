@@ -71,3 +71,76 @@ export function projectTabHelp(hasProject: boolean): string {
   const base = 'Aparecem na capa e nos rodapés das páginas. Campos vazios não saem no PDF.';
   return hasProject ? `${base} Nome e cliente foram copiados do projeto e podem ser editados aqui.` : base;
 }
+
+// ---------- Nome da apresentação (aba Projeto) ----------
+
+/** Mesmo limite da API. */
+export const PRESENTATION_NAME_MAX = 120;
+
+/** Nome como a API grava: sem espaços nas pontas nem repetidos. */
+export const cleanPresentationName = (v: string) => v.trim().replace(/\s+/g, ' ');
+
+/** Erro do campo "Nome da apresentação", ou nulo. Enquanto houver erro, o nome anterior continua valendo. */
+export function presentationNameError(v: string): string | null {
+  const name = cleanPresentationName(v);
+  if (!name) return 'Dê um nome à apresentação. Até lá, fica o nome anterior.';
+  if (name.length > PRESENTATION_NAME_MAX) return `Use um nome com até ${PRESENTATION_NAME_MAX} caracteres. Até lá, fica o nome anterior.`;
+  return null;
+}
+
+// ---------- Imagem da capa (6b-06 a 6b-09) ----------
+
+/** "2,4 MB", "412 KB". */
+export function imageSize(bytes: number): string {
+  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1).replace('.', ',')} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+/** Linha de baixo do espaço de imagem com a imagem colocada: "2,4 MB · na biblioteca do projeto". */
+export const imagePlacedLine = (bytes: number, hasProject: boolean) =>
+  `${imageSize(bytes)} · ${hasProject ? 'na biblioteca do projeto' : 'na biblioteca desta apresentação'}`;
+
+/** "62% · enviando ao Drive". */
+export const uploadProgressLine = (sent: number, total: number) =>
+  `${total > 0 ? Math.min(100, Math.round((sent / total) * 100)) : 0}% · enviando ao Drive`;
+
+/** Aviso de 6b-08 para o arquivo recusado antes do envio, ou nulo quando ele pode seguir. */
+export function uploadRefusal(file: { name: string; type: string; size: number }, accepted: readonly string[], maxBytes: number): string | null {
+  const ext = (file.name.split('.').pop() ?? '').toLowerCase();
+  const byExt: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' };
+  const type = file.type || byExt[ext] || '';
+  if (!accepted.includes(type)) return `“${file.name}” não é um formato aceito. Use PNG, JPG ou WebP. Nada foi enviado.`;
+  if (file.size > maxBytes) {
+    return `“${file.name}” tem ${Math.round(file.size / 1048576)} MB. O limite é ${Math.round(maxBytes / 1048576)} MB; exporte a imagem em resolução menor.`;
+  }
+  return null;
+}
+
+/** Aviso de 6b-08 quando chegam vários arquivos para o único espaço da capa. */
+export function extraFilesNotice(extras: number): string {
+  return extras === 1
+    ? 'A capa tem um espaço de imagem. A primeira foi usada; a outra ficou na biblioteca.'
+    : `A capa tem um espaço de imagem. A primeira foi usada; as outras ${extras} ficaram na biblioteca.`;
+}
+
+/** Legenda de cada imagem da biblioteca (6b-09). */
+export function libraryCaption(opts: { selected: boolean; usedBy: number; hasProject: boolean }): string {
+  if (!opts.hasProject) return opts.selected ? 'Selecionada' : 'Enviada nesta apresentação';
+  const uses = opts.usedBy === 1 ? 'usada em 1 apresentação' : `usada em ${opts.usedBy} apresentações`;
+  if (opts.selected) return opts.usedBy > 0 ? `Selecionada · ${uses}` : 'Selecionada';
+  return opts.usedBy > 0 ? uses.charAt(0).toUpperCase() + uses.slice(1) : 'Sem uso no momento';
+}
+
+/** Zoom da imagem no espaço: de 1 a 4, em passos de 0,25. */
+export const IMAGE_ZOOM_STEP = 0.25;
+export const imageZoomIn = (z: number) => Math.min(4, Math.round((z + IMAGE_ZOOM_STEP) * 100) / 100);
+export const imageZoomOut = (z: number) => Math.max(1, Math.round((z - IMAGE_ZOOM_STEP) * 100) / 100);
+
+/** Arrastar a imagem: a imagem segue o ponteiro, então o enquadramento anda ao contrário, de 0 a 100%. */
+export function dragFrame(start: { x: number; y: number }, dx: number, dy: number, box: { width: number; height: number }, zoom: number) {
+  const clamp = (v: number) => Math.min(100, Math.max(0, Math.round(v * 10) / 10));
+  return {
+    x: clamp(start.x - (dx / box.width) * (100 / zoom)),
+    y: clamp(start.y - (dy / box.height) * (100 / zoom)),
+  };
+}

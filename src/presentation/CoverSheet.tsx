@@ -1,19 +1,41 @@
-import type { PresentationProject } from '../shared/presentation-data';
-import { coverFields, coverTexts, type CoverMode } from './cover';
+import type { HTMLAttributes, ReactNode } from 'react';
+import type { PresentationImageRef, PresentationProject } from '../shared/presentation-data';
+import { coverFields, coverImageStyle, coverTexts, type CoverMode } from './cover';
 
 /**
  * Capa da apresentação, em A4 deitado (1123 × 794 px), composição "Imagem em arco" na cor vinho
  * (desenhos 6b-04 e 6b-12). Com a Prévia desligada (`edit`), o que falta preencher aparece em cinza e o
  * arco mostra onde vai a imagem; com a Prévia ligada (`print`), a folha fica como sai no PDF.
  * `logoSrc` vem de quem usa: a tela passa o arquivo do Vite; o PDF (E9) passará o arquivo embutido.
+ * `image` é a imagem da capa já com o endereço (na tela, a de 1600 px); sem ela, o arco fica vazio e, com a
+ * Prévia desligada, mostra "Imagem da capa pendente". `overlay` e `archProps` são das ferramentas da tela.
  */
-export function CoverSheet({ projeto, mode, logoSrc }: { projeto: PresentationProject; mode: CoverMode; logoSrc: string }) {
+export function CoverSheet({
+  projeto,
+  mode,
+  logoSrc,
+  image = null,
+  onImageError,
+  overlay,
+  archProps,
+}: {
+  projeto: PresentationProject;
+  mode: CoverMode;
+  logoSrc: string;
+  image?: { src: string; ref: PresentationImageRef } | null;
+  onImageError?: () => void;
+  overlay?: ReactNode;
+  archProps?: HTMLAttributes<HTMLDivElement>;
+}) {
   const texts = coverTexts(projeto, mode);
   const fields = coverFields(projeto, mode);
   return (
     <div className="pcover" data-mode={mode}>
-      <div className="pcover__arch">
-        {mode === 'edit' && (
+      <div className="pcover__arch" {...archProps}>
+        {image && (
+          <img className="pcover__image" src={image.src} alt="" draggable={false} style={coverImageStyle(image.ref)} onError={onImageError} />
+        )}
+        {!image && mode === 'edit' && (
           <>
             <svg className="pcover__window" viewBox="0 0 256.03 883.914" fill="none" aria-hidden>
               <g stroke="currentColor" strokeWidth="1.829" strokeLinecap="round" strokeLinejoin="round">
@@ -61,6 +83,7 @@ export function CoverSheet({ projeto, mode, logoSrc }: { projeto: PresentationPr
         </dl>
       )}
       {texts.contato && <span className={`pcover__contact${texts.contato.pending ? ' is-pending' : ''}`}>{texts.contato.text}</span>}
+      {overlay}
     </div>
   );
 }

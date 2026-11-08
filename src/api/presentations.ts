@@ -41,6 +41,6 @@ export const presentationsApi = {
    * Salvamento automático do documento. `baseUpdatedAt` é a versão que a tela tem: outra mais nova
    * responde 409; documento acima de 512 KB responde 413 `too_large`.
    */
-  save: (id: string, input: { data: PresentationData; baseUpdatedAt: string }) =>
+  save: (id: string, input: { data: PresentationData; baseUpdatedAt: string; name?: string }) =>
     mutate(request<PresentationWithData>('PATCH', `/presentations/${id}`, input), 'presentations'),
 };

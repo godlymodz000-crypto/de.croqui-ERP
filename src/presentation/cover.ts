@@ -70,3 +70,17 @@ export function coverTexts(projeto: PresentationProject, mode: CoverMode): Cover
     contato: contato ? { text: contato, pending: false } : mode === 'edit' ? { text: 'Contato (opcional)', pending: true } : null,
   };
 }
+
+/**
+ * Estilo da imagem dentro do espaço: "caber inteira" (fit) ou "preencher" (fill), zoom de 1 a 4 e
+ * enquadramento de 0 a 100% (o ponto da imagem que fica no ponto equivalente do espaço).
+ */
+export function coverImageStyle(ref: { ajuste: 'fit' | 'fill'; zoom: number; x: number; y: number }) {
+  const origin = `${ref.x}% ${ref.y}%`;
+  return {
+    objectFit: ref.ajuste === 'fit' ? ('contain' as const) : ('cover' as const),
+    objectPosition: origin,
+    transform: ref.zoom === 1 ? undefined : `scale(${ref.zoom})`,
+    transformOrigin: origin,
+  };
+}

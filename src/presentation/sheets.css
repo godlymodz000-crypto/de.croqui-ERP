@@ -131,3 +131,11 @@
 .pcover .is-pending {
   opacity: 0.42;
 }
+/* Imagem da capa dentro do arco (E8). */
+.pcover__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
