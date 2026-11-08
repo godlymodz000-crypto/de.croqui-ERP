@@ -2,7 +2,7 @@
 
 Este documento é só planejamento. Nesta etapa não houve código, teste, migração, merge, deploy nem alteração no Supabase ou na Vercel.
 
-- **Situação:** desenhos 6c-01 a 6c-21 aprovados em 2026-11-08. As etapas seguintes dependem de aprovação, uma de cada vez.
+- **Situação:** desenhos 6c-01 a 6c-21 aprovados em 2026-11-08. E0 aprovada em 2026-11-08, com as respostas às perguntas P29 a P37 (seção 9). As etapas seguintes dependem de aprovação, uma de cada vez.
 - **Branch:** `feat/fase-6c-apresentacao`, criada da `main` do GitHub em `410d29c` (6b em produção). Só existe no computador: sem push, porque um push gera uma prévia na Vercel.
 - **Desenhos:** `design/moldura-erp.figcraft`, página "ERP · Telas", a partir de y = 41.400; capturas em `revisao-fase6c/desenhos/`.
 - **Decisões:** `revisao-fase6b/decisoes.md` (divisão da fase: 6c = tipos de página, sem ferramentas de escala) e `revisao-fase6b/encerramento.md` (pendências para a 6c).
@@ -25,7 +25,7 @@ Este documento é só planejamento. Nesta etapa não houve código, teste, migra
 
 - **Prancha de detalhamento:** 6d. Não aparece no menu de adicionar página.
 - **Escala:** sem ferramenta de escala, escala gráfica, cota e carimbo automático. No desenho técnico, escala e unidade são só texto digitado.
-- **Duplicar página:** aparece em 6c-21 como **proposta**. Não é implementada nesta fase, a menos que você decida o contrário (pergunta P29).
+- **Duplicar página:** aparece em 6c-21 como **proposta**. A regra da cópia foi decidida (P29, 2026-11-08): segue a decisão P11 da 6b e cria um arquivo novo no Drive. A entrada na 6c ainda depende de aprovação, porque pede a operação de cópia que o `DriveClient` não tem.
 - **Duplicar apresentação (P24):** continua como proposta, sem implementação nem desenho nesta fase.
 - **Edição direta na folha:** 6e.
 - **Formatos A3 e 16:9:** 6d. A 6c continua só em A4.
@@ -69,7 +69,7 @@ A coluna "Base da 6b" diz o que já existe e pode ser reaproveitado.
 | Biblioteca | Igual | `ImageLibraryDialog.tsx`, rotas de `presentation-images` | — |
 | Vínculos e lixeira | Contar as imagens de todas as páginas | `presentationImageIds`, `syncImageUses`, `trashUnusedImages` | `presentationImageIds` passa a ler todas as páginas e itens |
 | Remover página com imagem | Só tira o vínculo; a lixeira recebe a imagem quando nenhuma apresentação a usa (P22) | A mesma regra | — |
-| Copiar no Drive | Só se duplicar página for decidida com cópia (P29) | `DriveClient` tem `moveFile`, não tem cópia (R10 da 6b) | Nada, salvo decisão em contrário |
+| Copiar no Drive | Duplicar página cria um arquivo novo no Drive (P29, decisão P11 da 6b) | `DriveClient` tem `moveFile`, não tem cópia (R10 da 6b) | Operação de cópia, quando duplicar página for aprovada para entrar |
 
 ### 1.4 PDF
 
@@ -228,7 +228,7 @@ Desenho 6c-21.
 | Adicionar | O menu "Adicionar página" tem os seis tipos, sem Capa e sem Prancha de detalhamento. A página nova entra logo depois da página atual e passa a ser a atual |
 | ↑ ↓ | Move a página uma posição. Não aparece na capa. A página 02 não sobe acima da capa |
 | × | Remove a página com um diálogo de confirmação (P34). Não aparece na capa. As imagens da página saem do documento; a regra da lixeira é a da 6b |
-| Duplicar | Aparece como proposta, com o aviso de 6c-21. Fica desligado até a decisão (P29) |
+| Duplicar | Aparece como proposta, com o aviso de 6c-21. Quando entrar, a cópia cria um arquivo novo no Drive para cada imagem da página (P29). Fica desligado até a aprovação |
 | Contagem | "N páginas" no título da lista e "Página NN de T" na visualização |
 | Leitor | Vê a lista sem ↑ ↓ ×, sem Duplicar e sem o menu de adicionar |
 
@@ -305,3 +305,23 @@ Cada pergunta tem uma sugestão. Basta responder "conforme a sugestão" ou dizer
 | P35 | O aviso de conteúdo além do limite continua o terracota da 6b, agora com o número da página? | Sim: "O PDF não foi gerado: o texto da página NN passou do limite da página. Encurte os textos mais longos e tente de novo.", só com Fechar. Sem desenho novo |
 | P36 | A ordem dos tipos no menu de adicionar fica como em 6c-21? | Sim: Texto & conceito, Moodboard de materiais, Apresentação visual, Desenho técnico, Notas técnicas e Direitos autorais |
 | P37 | Duplicar apresentação continua só como proposta nesta fase? | Sim, sem implementação na 6c (P24) |
+
+---
+
+## 9. Respostas aprovadas (2026-11-08)
+
+Respostas às perguntas da seção 8, aprovadas pelo usuário em 2026-11-08, junto com a E0.
+
+| Nº | Resposta |
+|---|---|
+| P29 | Duplicar página mantém a decisão P11 da 6b: a cópia cria um arquivo novo no Drive, para que apagar uma página não afete a outra. Isso substitui a sugestão da seção 8 |
+| P30 | A página nova começa com os títulos e as categorias do arquivo offline, como nos desenhos, e os textos longos vazios |
+| P31 | Limites aprovados: 12 blocos de texto, 12 materiais, 12 notas, de 4 a 8 imagens em "Várias imagens do ambiente" e 40 páginas |
+| P32 | Imagens que sobram ao trocar para uma composição com menos imagens ficam guardadas e escondidas, como no arquivo offline |
+| P33 | A imagem escolhida fica guardada na capa "Só tipografia", mas não aparece na folha nem no PDF |
+| P34 | Remover página pede confirmação; remover item não pede. O diálogo de página é desenhado junto da E5 |
+| P35 | O aviso de limite é o mesmo aviso terracota da 6b, com o número da página |
+| P36 | A ordem dos tipos no menu de adicionar é a mesma de 6c-21 |
+| P37 | Duplicar apresentação não entra na 6c; continua como proposta |
+
+Ponto em aberto: P29 decide a regra da cópia, mas não diz se duplicar página entra na 6c. Até essa aprovação, o botão Duplicar continua como proposta, como em 6c-21. Se entrar, a cópia no Drive vai para a E2 (API e `DriveClient`) e o botão para a E5.
