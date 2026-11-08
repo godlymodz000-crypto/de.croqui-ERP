@@ -1,25 +1,12 @@
 /** Nome e data do PDF do orçamento no Drive. */
 import { sha256 } from './crypto.js';
+import { fileSlug, todayInStudio } from '../../src/shared/file-names.js';
 
 /** Pasta dos PDFs de orçamentos sem projeto, dentro de "De.Croqui ERP". */
 export const LOOSE_BUDGETS_FOLDER = 'Avulsos';
 
-/** Texto seguro para nome de arquivo: sem acentos, só letras, números e hífen. */
-export function fileSlug(text: string, max = 60): string {
-  const slug = text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^A-Za-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, max)
-    .replace(/-+$/, '');
-  return slug || 'Sem-nome';
-}
-
-/** Data de hoje (AAAA-MM-DD) no fuso do estúdio. */
-export function todayInStudio(now: Date): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
-}
+// Nome seguro e data de hoje vêm do módulo compartilhado com a tela (o diálogo da 6b mostra o nome antes de gerar).
+export { fileSlug, todayInStudio };
 
 /**
  * "Orcamento-12-Sala-de-Jantar-2026-11-04.pdf": número do orçamento, nome e data de emissão (a Data

@@ -47,6 +47,11 @@ describe('imports da função da Vercel', () => {
     expect(seen).toContain('api/_app/budget-pdf.ts');
     expect(seen).toContain('src/budget/BudgetSheets.tsx');
     expect(seen).toContain('src/shared/budget-calc.ts');
+    // PDF da apresentação (Fase 6b): o gerador, a capa e os nomes de arquivo também.
+    expect(seen).toContain('api/_app/presentation-pdf.ts');
+    expect(seen).toContain('src/presentation/CoverSheet.tsx');
+    expect(seen).toContain('src/presentation/cover.ts');
+    expect(seen).toContain('src/shared/file-names.ts');
     expect(bad).toEqual([]);
   });
 });

@@ -15,6 +15,7 @@ afterAll(() => tmp.forEach((d) => rmSync(d, { recursive: true, force: true })));
 const BUDGETS_TAG = '0008_orcamentos';
 const PDF_TAG = '0009_orcamento_pdf';
 const HASH_TAG = '0010_pdf_source_hash';
+const PRESENTATIONS_TAG = '0011_apresentacoes';
 
 /** Cópia da pasta de migrações só até a anterior a `tag`. */
 function migrationsBefore(tag: string): string {
@@ -124,7 +125,8 @@ describe('migrações 0008, 0009 e 0010: orçamentos', () => {
 
   it('0010 só acrescenta pdf_source_hash (texto, opcional) em budgets, sem mudar o que já existe', async () => {
     const old = await snapshot(await database(migrationsBefore(HASH_TAG)));
-    const now = await snapshot(await database('./drizzle'));
+    // Até a 0010: a 0011 (apresentações) tem teste próprio em phase6b-migration.test.ts.
+    const now = await snapshot(await database(migrationsBefore(PRESENTATIONS_TAG)));
     expect(now.columns.filter((c) => c.column_name !== 'pdf_source_hash')).toEqual(old.columns);
     expect(now.columns.filter((c) => c.column_name === 'pdf_source_hash')).toEqual([
       expect.objectContaining({ table_name: 'budgets', data_type: 'text', is_nullable: 'YES', column_default: null }),

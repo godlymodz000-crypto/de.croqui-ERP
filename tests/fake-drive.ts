@@ -22,6 +22,8 @@ export class FakeDrive implements DriveClient {
   thumbnailSizes: number[] = [];
   /** IDs sem imagem gerada pelo Drive (simula formato que o Drive não converte). */
   noThumbnail = new Set<string>();
+  /** Largura e altura que o Drive informa para a imagem (simula imageMediaMetadata). */
+  imageSizes = new Map<string, { width: number; height: number }>();
   private seq = 0;
   private count: Record<string, number> = {};
 
@@ -63,6 +65,14 @@ export class FakeDrive implements DriveClient {
     const f = this.folders.get(id);
     if (f) f.trashed = true;
   }
+  async moveFile(id: string, toParentId: string) {
+    this.check('moveFile');
+    const f = this.folders.get(id);
+    if (!f) return null;
+    const from = f.parentId ? [f.parentId] : [];
+    f.parentId = toParentId;
+    return from;
+  }
   async findChildFolder(parentId: string, name: string) {
     this.check('findChildFolder');
     return [...this.folders.values()].find((f) => f.folder && !f.trashed && f.parentId === parentId && f.name === name)?.id ?? null;
@@ -85,7 +95,16 @@ export class FakeDrive implements DriveClient {
     this.check('getFile');
     const f = this.folders.get(id);
     if (!f || f.folder) return null;
-    return { id: f.id, name: f.name, mimeType: f.mimeType, size: f.size, parents: f.parentId ? [f.parentId] : [], trashed: f.trashed };
+    const dims = this.imageSizes.get(id);
+    return {
+      id: f.id,
+      name: f.name,
+      mimeType: f.mimeType,
+      size: f.size,
+      parents: f.parentId ? [f.parentId] : [],
+      trashed: f.trashed,
+      ...(dims ? { imageWidth: dims.width, imageHeight: dims.height } : {}),
+    };
   }
   async thumbnail(id: string, size = 220) {
     this.check('thumbnail');
@@ -117,10 +136,15 @@ export class FakeDrive implements DriveClient {
   }
 
   /** O que o navegador faz: envia o arquivo para a sessão. Devolve o ID que o Drive responde. */
-  browserUpload(url: string, override: Partial<{ size: number; name: string; parentId: string }> = {}) {
+  browserUpload(
+    url: string,
+    override: Partial<{ size: number; name: string; parentId: string; mimeType: string; width: number; height: number }> = {},
+  ) {
     const s = this.sessions.get(url);
     if (!s) throw new Error('sessão inexistente');
-    return this.add(override.name ?? s.name, override.parentId ?? s.parentId, false, s.mimeType, override.size ?? s.size);
+    const id = this.add(override.name ?? s.name, override.parentId ?? s.parentId, false, override.mimeType ?? s.mimeType, override.size ?? s.size);
+    if (override.width && override.height) this.imageSizes.set(id, { width: override.width, height: override.height });
+    return id;
   }
 
   childrenOf(id: string) {

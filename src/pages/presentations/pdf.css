@@ -1,0 +1,107 @@
+/* ---------- Salvar em PDF (desenho 6b-11) e faixa do PDF salvo no celular (6b-13) ---------- */
+
+/* Diálogo de exportar: mesma moldura do "Vincular a um projeto" (.plink), 620 px. */
+.pexport__text {
+  line-height: 1.5;
+}
+.pexport__box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: #e4e9ef;
+}
+.pexport__box-title {
+  font: var(--weight-medium) 10px / 1.4 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ardosia-700);
+}
+.pexport__box p {
+  margin: 0;
+  font: var(--weight-light) 13px / 1.6 var(--font-body);
+  color: var(--noite-900);
+}
+
+/* "PDF v1 às 10:45" na barra, ao lado de "Salvo às". */
+.peditor__pdf {
+  font: var(--weight-regular) 11.5px / 1.4 var(--font-body);
+  color: var(--noite-900);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+/* Avisos do PDF: as ações numa linha, separadas por ponto, na cor do aviso. */
+.palert__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--weight-medium) 11px / 1.4 var(--font-body);
+}
+.palert .link-button,
+.save-alert--danger.palert .link-button {
+  color: inherit;
+}
+
+/* Celular: a faixa do PDF salvo fica acima do botão, as duas presas ao pé da tela. */
+.pmobile__foot {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+}
+.pmobile__foot .pmobile__bottom {
+  position: static;
+}
+.pmobile__pdf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 56px;
+  padding: 0 16px;
+  background: #e4e9ef;
+  font: var(--weight-regular) 13px / 1.4 var(--font-body);
+  color: var(--noite-900);
+}
+.pmobile__pdf a {
+  font: var(--weight-medium) 11px / 1.4 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--noite-900);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.pmobile:has(.pmobile__pdf) .pmobile__body {
+  padding-bottom: 156px;
+}
+.toast-slot.pmobile__toast {
+  bottom: 92px;
+}
+.pmobile:has(.pmobile__pdf) .toast-slot.pmobile__toast {
+  bottom: 148px;
+}
+
+/* Diálogo no celular: na largura da tela, com os botões empilhados e o principal em cima. */
+@media (max-width: 767px) {
+  .pexport {
+    padding: 24px 16px;
+  }
+  .pexport .plibrary__title {
+    font-size: 26px;
+  }
+  .pexport .plibrary__text {
+    overflow-wrap: anywhere;
+  }
+  .pexport__actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .pexport__actions .pbtn {
+    width: 100%;
+  }
+}

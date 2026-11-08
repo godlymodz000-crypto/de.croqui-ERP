@@ -16,14 +16,8 @@ import { NotificationsPage } from './pages/notifications/NotificationsPage';
 import { PrivacyPage } from './pages/privacy/PrivacyPage';
 import { BudgetsPage } from './pages/budgets/BudgetsPage';
 import { BudgetEditorPage } from './pages/budgets/BudgetEditorPage';
-
-const PAGES = [
-  {
-    path: '/apresentacoes',
-    title: 'Apresentação',
-    text: 'Aqui você vai montar a apresentação de cada projeto para o cliente. Esta tela chega na fase da apresentação.',
-  },
-];
+import { PresentationsPage } from './pages/presentations/PresentationsPage';
+import { PresentationEditorPage } from './pages/presentations/PresentationEditorPage';
 
 function Protected() {
   const session = useSession();
@@ -91,6 +85,14 @@ function SessionRoutes() {
             </ProtectedFull>
           }
         />
+        <Route
+          path="/apresentacoes/:id"
+          element={
+            <ProtectedFull>
+              <PresentationEditorPage />
+            </ProtectedFull>
+          }
+        />
         <Route element={<Protected />}>
           <Route
             index
@@ -102,9 +104,7 @@ function SessionRoutes() {
               />
             }
           />
-          {PAGES.map((p) => (
-            <Route key={p.path} path={p.path} element={<PlaceholderPage title={p.title} text={p.text} />} />
-          ))}
+          <Route path="/apresentacoes" element={<PresentationsPage />} />
           <Route path="/orcamentos" element={<BudgetsPage />} />
           <Route path="/agenda" element={<AgendaPage />} />
           <Route path="/processos" element={<ProcessesPage />} />

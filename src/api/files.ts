@@ -94,7 +94,7 @@ export class UploadError extends Error {
  * Envia o arquivo direto do navegador para o Drive, na sessão aberta pelo servidor.
  * O arquivo não passa pelo servidor do ERP (limite de cerca de 4,5 MB por requisição na Vercel).
  */
-function putToDrive(uploadUrl: string, file: Blob, onProgress: (sent: number) => void, signal?: AbortSignal): Promise<string> {
+export function putToDrive(uploadUrl: string, file: Blob, onProgress: (sent: number) => void, signal?: AbortSignal): Promise<string> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', uploadUrl);
