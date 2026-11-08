@@ -245,7 +245,12 @@ export type PdfState =
   | { kind: 'idle' }
   | { kind: 'working' }
   | { kind: 'unchanged'; version: number; url: string; name: string | null }
-  | { kind: 'error'; reason: 'failed' | 'unsaved' | 'overflow' };
+  | { kind: 'error'; reason: 'failed' | 'unsaved' }
+  /** Além do limite da folha: as páginas (0 é a capa) e as partes, como a API devolveu. */
+  | { kind: 'error'; reason: 'overflow'; overflow: PdfOverflowItem[] };
+
+/** Uma folha que passou do limite, na resposta 422 `content_overflow`. */
+export type PdfOverflowItem = { page: number; parts: string[] };
 
 /** Aviso de Tamanho real, no diálogo de exportar de qualquer apresentação (P25). */
 export const PDF_REAL_SIZE_TITLE = 'Tamanho real';
@@ -274,8 +279,36 @@ export const pdfUnchangedText = (version: number) => `Nenhuma alteração desde 
 export const PDF_ERROR_TEXTS: Record<'failed' | 'unsaved' | 'overflow', string> = {
   failed: 'Não foi possível salvar o PDF no Drive. A apresentação continua salva; tente de novo em instantes.',
   unsaved: 'O PDF não foi gerado porque as últimas alterações ainda não foram salvas. Tente de novo quando aparecer "Salvo".',
-  overflow: 'O PDF não foi gerado: o texto da capa passou do limite da página. Encurte os textos mais longos e tente de novo.',
+  overflow: 'O PDF não foi gerado: o texto passou do limite da página. Encurte os textos mais longos e tente de novo.',
 };
+
+/** Lê a lista de folhas da resposta 422, ignorando o que vier fora do formato. */
+function overflowItems(raw: unknown): PdfOverflowItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((o): o is { page: number; parts: unknown[] } => !!o && typeof o.page === 'number' && Number.isInteger(o.page) && o.page >= 0 && Array.isArray(o.parts))
+    .map((o) => ({ page: o.page, parts: o.parts.filter((p): p is string => typeof p === 'string') }));
+}
+
+const andList = (items: string[]) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`);
+const sheetName = (page: number) => (page === 0 ? 'a capa' : `a página ${String(page + 1).padStart(2, '0')}`);
+
+/**
+ * Aviso terracota da 6b com o número da página (P35): qual folha passou do limite da página e em quais partes.
+ * A parte pode ser de imagem ("imagens", "desenhos", "materiais") quando o texto esmagou o espaço dela: por isso
+ * o pedido é encurtar os textos da página, e não só os da parte.
+ * Sem detalhe na resposta, o texto geral.
+ */
+export function pdfOverflowText(overflow: PdfOverflowItem[]): string {
+  if (!overflow.length) return PDF_ERROR_TEXTS.overflow;
+  const one = (o: PdfOverflowItem) => (o.parts.length ? `${sheetName(o.page)} (${andList(o.parts)})` : sheetName(o.page));
+  if (overflow.length === 1) {
+    const [o] = overflow;
+    const where = o.parts.length ? ` em ${andList(o.parts)}` : '';
+    return `O PDF não foi gerado: ${sheetName(o.page)} passou do limite da folha${where}. Encurte os textos dessa página e tente de novo.`;
+  }
+  return `O PDF não foi gerado: ${andList(overflow.map(one))} passaram do limite da folha. Encurte os textos dessas páginas e tente de novo.`;
+}
 
 /** Resposta do servidor para o aviso: sem mudança (409), além do limite (422) ou falha. */
 export function pdfFailure(err: unknown): PdfState {
@@ -283,6 +316,6 @@ export function pdfFailure(err: unknown): PdfState {
     const file = err.body.file as { version?: number; url?: string; name?: string | null } | undefined;
     if (file?.url) return { kind: 'unchanged', version: file.version ?? 1, url: file.url, name: file.name ?? null };
   }
-  if (err instanceof ApiError && err.code === 'content_overflow') return { kind: 'error', reason: 'overflow' };
+  if (err instanceof ApiError && err.code === 'content_overflow') return { kind: 'error', reason: 'overflow', overflow: overflowItems(err.body.overflow) };
   return { kind: 'error', reason: 'failed' };
 }

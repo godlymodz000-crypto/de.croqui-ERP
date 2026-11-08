@@ -36,6 +36,7 @@ import {
   pageKindLabel,
   PDF_ERROR_TEXTS,
   pdfFailure,
+  pdfOverflowText,
   pdfSavedLabel,
   pdfUnchangedText,
   presentationNameError,
@@ -391,7 +392,8 @@ export function PresentationEditorPage() {
     />
   );
   const pdfAlert = (pdf.kind === 'error' || pdf.kind === 'unchanged') && (
-    <PdfAlert pdf={pdf} onRetry={() => void exportPdf()} onClose={() => setPdf({ kind: 'idle' })} />
+    // No celular não há edição: o aviso não leva à página.
+    <PdfAlert pdf={pdf} onRetry={() => void exportPdf()} onClose={() => setPdf({ kind: 'idle' })} onGoTo={isMobile ? undefined : goTo} />
   );
 
   if (isMobile) {
@@ -616,7 +618,7 @@ export function PresentationEditorPage() {
 }
 
 /** Avisos do PDF (6b-11): sem alterações (ardósia) e erro (terracota), no canto, como os de 6b-05. */
-function PdfAlert({ pdf, onRetry, onClose }: { pdf: PdfState; onRetry: () => void; onClose: () => void }) {
+function PdfAlert({ pdf, onRetry, onClose, onGoTo }: { pdf: PdfState; onRetry: () => void; onClose: () => void; onGoTo?: (index: number) => void }) {
   if (pdf.kind === 'unchanged') {
     return (
       <div className="save-alert save-alert--info palert" role="status">
@@ -636,9 +638,17 @@ function PdfAlert({ pdf, onRetry, onClose }: { pdf: PdfState; onRetry: () => voi
   if (pdf.kind !== 'error') return null;
   return (
     <div className="save-alert save-alert--danger palert" role="alert">
-      <p>{PDF_ERROR_TEXTS[pdf.reason]}</p>
+      <p>{pdf.reason === 'overflow' ? pdfOverflowText(pdf.overflow) : PDF_ERROR_TEXTS[pdf.reason]}</p>
       <div className="palert__actions">
-        {/* Além do limite, tentar de novo daria no mesmo: só fecha. */}
+        {/* Além do limite, tentar de novo daria no mesmo: leva à primeira folha que passou, ou só fecha. */}
+        {pdf.reason === 'overflow' && pdf.overflow.length > 0 && onGoTo && (
+          <>
+            <button type="button" className="link-button" onClick={() => onGoTo(pdf.overflow[0].page)}>
+              {pdf.overflow[0].page === 0 ? 'Ver a capa' : `Ver a página ${String(pdf.overflow[0].page + 1).padStart(2, '0')}`}
+            </button>
+            <span aria-hidden>·</span>
+          </>
+        )}
         {pdf.reason !== 'overflow' && (
           <>
             <button type="button" className="link-button" onClick={onRetry}>

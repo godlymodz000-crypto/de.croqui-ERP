@@ -43,9 +43,9 @@ export function pageRowKind(page: PresentationPage): string {
 /** Nome da página na lista: o título dela ou, vazio, o nome do tipo. */
 export const pageRowName = (page: PresentationPage) => pagePanelTitle(page);
 
-/** Aviso abaixo da lista (6c-21). Duplicar fica desligado como proposta até a aprovação (P29). */
+/** Aviso abaixo da lista (6c-21, com o texto aprovado na E5). Duplicar fica desligado como proposta até a aprovação (P29). */
 export const DUPLICATE_NOTICE =
-  'Duplicar está em proposta: o que acontece com a página copiada ainda não foi decidido. A capa não pode ser movida, duplicada nem excluída.';
+  'Duplicar está em proposta e ainda não foi aprovado. A capa não pode ser movida, duplicada nem excluída.';
 export const DUPLICATE_TITLE = 'Duplicar está em proposta e ainda não funciona.';
 
 /** Texto abaixo de "Adicionar página": onde a página nova entra. */

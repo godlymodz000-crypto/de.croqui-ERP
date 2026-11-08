@@ -337,3 +337,70 @@ Aprovadas pelo usuário em 2026-11-08, antes da E2.
 - **Limite do documento:** sobe de 512 KB para 1 MiB.
   - **Servidor (E2):** acima de 1 MiB, 413 `too_large` com o tamanho e o limite. O corpo aceito na rota de salvamento sobe para 2 MiB, para que um documento um pouco maior que 1 MiB receba essa resposta, e não o erro genérico do servidor. O teto do corpo de uma função da Vercel é 4,5 MB.
   - **Editor (E4):** aviso a partir de 80% do limite, com o texto "O documento está perto do limite de tamanho. Remova conteúdo ou divida a apresentação.". Acima do limite, recusa o salvamento com a mensagem já existente, sem perder o que foi escrito. O texto da mensagem existente ainda diz "512 KB" e precisa passar a "1 MB" na E4.
+
+---
+
+## 11. Medições da E6 (2026-11-08)
+
+Medido no Edge do computador (o mesmo Chromium que imprime o PDF), com textos de exemplo de palavras comuns e fotos de teste geradas no próprio navegador. Na Vercel o Chromium é outro (`@sparticuz/chromium`) e a máquina é mais lenta; os tempos abaixo são uma referência, e não o tempo de produção.
+
+### 11.1 Quanto texto cabe em cada folha
+
+"Cabe" quer dizer que nenhuma parte passa da área entre o cabeçalho e o rodapé, nenhum texto fica escondido e nenhum espaço de imagem é esmagado.
+
+| Tipo e composição | Tudo no máximo (itens no limite, 2000 caracteres em cada texto longo) | Maior texto longo que cabe com o máximo de itens | Itens que cabem com 300 caracteres cada |
+|---|---|---|---|
+| Texto & conceito · Diagonal | Passa: introdução e blocos | 55 caracteres por bloco, com 12 blocos | 6 de 12 |
+| Texto & conceito · Lado a lado | Passa: introdução, blocos e imagens | Nenhum texto: 12 blocos só com título cabem | 4 de 12 |
+| Texto & conceito · Coluna | Passa: introdução e blocos | 12 blocos não cabem nem vazios; vazios, cabem 10 | 3 de 12 |
+| Texto & conceito · Destaque | Passa: blocos e imagens | 123 caracteres | 4 de 12 |
+| Texto & conceito · Livre | Passa: introdução e blocos | 55 caracteres | 6 de 12 |
+| Moodboard de materiais | Passa: materiais | 128 caracteres de observação por material, com 12 materiais | 4 de 12 |
+| Notas técnicas | Passa: introdução e notas | 58 caracteres por nota, com 12 notas | 6 de 12 |
+| Direitos autorais | Passa: direitos | 444 caracteres em cada um dos 5 campos | — |
+| Apresentação visual · Lado a lado | Passa: descrição e ficha | 658 caracteres na descrição e nas observações | — |
+| Apresentação visual · Dupla | Passa: imagens, programas e observações | 1215 | — |
+| Apresentação visual · Principal | Passa: imagens e ficha | 400 | — |
+| Apresentação visual · Isométrica | Passa: descrição e ficha | 687 | — |
+| Apresentação visual · Grade (8 imagens) | Passa: imagens, programas e observações | 1134 | — |
+| Desenho técnico · 1, 2, 3 e 4 desenhos | Passa: desenhos (o texto esmaga o desenho) | 1377, 1944, 1458 e 1215 caracteres de observações | — |
+
+**Limite de 12 blocos, materiais e notas.** Com texto de verdade (um parágrafo de 300 caracteres), cabem de 3 a 6 itens por folha; com 12, só títulos ou uma linha cada. Como o PDF recusa com a página e as partes, nada sai cortado. Por isso a E6 não muda os limites. Se você preferir que o editor não deixe chegar a uma folha que não cabe, a proposta é baixar o limite para 6 blocos, 6 materiais e 6 notas. Isso muda P31 e depende da sua aprovação.
+
+### 11.2 Tamanho de cada tipo de página cheia (que ainda cabe)
+
+PDF de uma folha, sem a capa, com as fotos de teste de 1600 px (o tamanho da visualização); com a foto original, a folha cresce na proporção da foto (ver 11.3).
+
+| Tipo e composição | PDF da folha | JSON da página |
+|---|---|---|
+| Texto & conceito (Diagonal, Lado, Destaque, Livre) | 117 a 149 KB | 1,4 a 3,0 KB |
+| Moodboard (12 materiais) | 182 KB | 4,4 KB |
+| Notas (12 notas) | 153 KB | 2,1 KB |
+| Direitos autorais | 113 KB | 2,5 KB |
+| Visual · Lado, Isométrica (1 imagem) | 784 a 788 KB | 1,7 KB |
+| Visual · Dupla, Principal | 1,4 MB e 2,1 MB | 3,0 e 1,5 KB |
+| Visual · Grade (8 imagens) | 5,3 MB | 3,8 KB |
+| Desenho técnico · 1 a 4 desenhos | 0,8 a 2,7 MB | 1,8 a 2,9 KB |
+
+Com tudo no máximo (o que não cabe), o JSON de uma página de texto, moodboard ou notas tem de 27,7 a 29,0 KB, como medido na E1.
+
+### 11.3 Documento grande e fotos na resolução original (R3)
+
+| Caso | Resultado | Tempo | PDF |
+|---|---|---|---|
+| 40 páginas (capa e 39 internas, todos os tipos, textos que cabem), sem fotos | Gera, 40 folhas | 0,5 s | 609 KB |
+| 15 páginas de fotos, 1 foto original por página (15 fotos de 4000 × 2667, 57,6 MB) | Gera, 16 folhas | 15 a 20 s | 57,9 MB |
+| 15 páginas de fotos, 3 fotos por página (45 fotos, 173 MB) | Não gera: o Chromium fecha ao receber o HTML | — | — |
+| 15 páginas de fotos, 8 fotos por página (120 fotos, 461 MB) | Não gera, idem | — | — |
+| 40 páginas com 1 foto original em cada espaço das páginas visuais e técnicas (50 fotos, 192 MB) | Não gera, idem | — | — |
+
+O PDF guarda as fotos quase do tamanho original: 15 fotos de 57,6 MB deram um PDF de 57,9 MB. As fotos de teste têm ruído e comprimem mal, então fotos reais tendem a ficar menores. Mesmo assim, a ordem de grandeza é essa.
+
+Quando o Chromium fecha, a rota responde 502 `pdf_failed` e nada é gravado, como na 6b. O PDF não sai cortado nem errado, mas uma apresentação com muitas fotos grandes não consegue gerar PDF. O limite fica entre 58 MB e 173 MB de fotos por documento, no computador; na Vercel deve ser menor.
+
+**Decisão sua (R3, P8).** As saídas possíveis são:
+1. Reduzir as fotos só no PDF, por exemplo para 3000 px no lado maior (cerca de 250 dpi numa folha A4). Isso muda P8.
+2. Manter a resolução original e passar as imagens ao Chromium uma a uma, em vez de dentro do HTML. Isso evita a queda, mas deixa PDFs de centenas de MB e usa mais memória na função.
+3. Limitar o total de fotos por apresentação.
+
+Nada disso foi feito na E6.

@@ -3,7 +3,7 @@
 Decisões aceitas pelo usuário em 2026-11-08. As decisões da 6a e da 6b continuam em `revisao-fase6b/decisoes.md` e valem aqui, salvo o que está abaixo.
 
 ## Estado
-- Desenhos 6c-01 a 6c-21 aprovados em 2026-11-08.
+- Desenhos 6c-01 a 6c-21 aprovados em 2026-11-08. 6c-22 (diálogo de remover página) desenhado na E6, com as escolhas aprovadas da E5.
 - E0 aprovada em 2026-11-08: o planejamento (`planejamento.md`) e as respostas às perguntas P29 a P37. O código começa na E1. Cada etapa seguinte depende de aprovação.
 
 ## Respostas às perguntas do planejamento (2026-11-08)
@@ -25,13 +25,18 @@ Decisões aceitas pelo usuário em 2026-11-08. As decisões da 6a e da 6b contin
 ## Decisões da E3 (2026-11-08)
 - Espaço de imagem vazio com a Prévia ligada e no PDF: continua como fundo bege, sem o texto em cinza, para a composição não mudar, como no arquivo offline e na capa em arco da 6b.
 
-## Escolhas da E5 (2026-11-08), para conferir
-- Diálogo de remover página (P34): o mesmo padrão da confirmação de remover imagem (6b-07), com "Remover a página NN?", o nome da página, "Não dá para desfazer." e, quando há, quantas imagens só aparecem nela. Botões "Cancelar" e "Remover página" (contorno, não Vinho). Esc e clique fora cancelam. Não foi desenhado no arquivo `.figcraft`; as capturas `6c-21-remover-dialogo-*` servem de desenho.
+## Escolhas da E6 (2026-11-08), para conferir
+- O PDF desenha todas as folhas na ordem da lista, com os mesmos componentes da Prévia ligada: a capa com a composição, a cor e a marca escolhidas (marca escura na Linho) e as páginas internas com "NN / TT". A rota, o nome, as versões, a pasta, o hash e o 409 `no_changes` são os da 6b, sem mudança na API nem no banco: o hash já cobre o documento inteiro, então mudar só a ordem das páginas gera versão nova.
+- Medição: cada folha interna é medida por partes (`data-part`), com nomes em pt-BR: cabeçalho, rodapé, sobretítulo, título, introdução, blocos, imagens, materiais, ficha, descrição, programas e observações, desenhos, observações, escala e unidade, notas e direitos. Uma parte passa do limite quando sai da área entre o cabeçalho e o rodapé ou quando tem texto escondido além de 30% da fonte (folga das letras de título, que desenham 2 a 3 px além da linha). Um espaço de imagem também passa do limite quando o texto o esmaga (menos de 40 px de altura ou mais de 4 vezes mais largo que alto): sem essa regra, observações longas deixavam o desenho técnico numa faixa fina e faziam sumir as imagens da grade, sem aviso. A capa continua com nome, dados e contato, agora com a coluna de cada composição.
+- Aviso de limite (P35): "O PDF não foi gerado: a página 03 passou do limite da folha em blocos e introdução. Encurte os textos dessa página e tente de novo.", com o botão "Ver a página 03" no computador. No celular, sem o botão. O texto geral, sem detalhe, deixou de dizer "da capa".
+
+## Escolhas da E5 (2026-11-08), aprovadas
+- Diálogo de remover página (P34): o mesmo padrão da confirmação de remover imagem, com "Remover a página NN?", o nome da página, "Não dá para desfazer." e, quando há, quantas imagens só aparecem nela. Botões "Cancelar" e "Remover página" (contorno, não Vinho). Esc e clique fora cancelam. Desenhado em 6c-22.
 - Página atual depois de remover: a que ficou no lugar dela ou, se era a última, a anterior. Depois de ↑ ↓: segue a página que estava sendo vista.
 - Adicionar página: a nova passa a ser a atual, e a aba Páginas continua aberta.
 - No limite de 40 páginas, os seis tipos ficam desligados, com o motivo escrito abaixo.
-- Aviso de Duplicar: o texto de 6c-21, como pedido, embora a regra da cópia já tenha sido decidida (P29).
-- Celular: ‹ › abaixo da folha para passar pelas páginas, sem edição. Não há desenho 6c para o celular.
+- Aviso de Duplicar: "Duplicar está em proposta e ainda não foi aprovado.", seguido de "A capa não pode ser movida, duplicada nem excluída.".
+- Celular: ‹ › abaixo da folha para passar pelas páginas, sem edição.
 
 ## Escolhas da E4 (2026-11-08), aprovadas
 - Itens da lista: clicar no item abre os campos dele logo abaixo, um por vez. Os desenhos 6c-15 a 6c-20 mostram só a lista fechada.

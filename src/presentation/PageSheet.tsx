@@ -66,7 +66,7 @@ export function PageSheet({
       data-composicao={'composicao' in page ? page.composicao : undefined}
       data-page={page.id}
     >
-      <div className="psheet__head">
+      <div className="psheet__head" data-part="cabeçalho">
         <span className="psheet__brandline">
           <span className="psheet__brand">{chrome.marca}</span>
           {chrome.projeto && <span>{chrome.projeto}</span>}
@@ -74,7 +74,7 @@ export function PageSheet({
         <span>{chrome.secao}</span>
       </div>
       <div className="psheet__body">{body(page, ctx, isotipoSrc)}</div>
-      <div className="psheet__foot">
+      <div className="psheet__foot" data-part="rodapé">
         <span>{chrome.esquerda}</span>
         <span>{chrome.numero}</span>
       </div>
@@ -108,11 +108,25 @@ function body(page: PresentationContentPage, ctx: Ctx, isotipoSrc: string): Reac
  * Texto de um campo. Preenchido: o valor. Vazio: com a Prévia desligada, o texto do que falta em cinza;
  * com a Prévia ligada, nada.
  */
-function T({ value, ph, className, ctx, as = 'span' }: { value: string; ph: string; className: string; ctx: Ctx; as?: 'span' | 'div' }) {
+function T({
+  value,
+  ph,
+  className,
+  ctx,
+  as = 'span',
+  part,
+}: {
+  value: string;
+  ph: string;
+  className: string;
+  ctx: Ctx;
+  as?: 'span' | 'div';
+  part?: string;
+}) {
   const Tag = as;
-  if (filled(value)) return <Tag className={className}>{value}</Tag>;
+  if (filled(value)) return <Tag className={className} data-part={part}>{value}</Tag>;
   if (ctx.mode !== 'edit') return null;
-  return <Tag className={`${className} is-pending`}>{ph}</Tag>;
+  return <Tag className={`${className} is-pending`} data-part={part}>{ph}</Tag>;
 }
 
 /** Linha com rótulo (ficha, materiais, direitos). Vazia some com a Prévia ligada. */
@@ -174,8 +188,8 @@ function Heading({
 }) {
   return (
     <>
-      <T value={eyebrow} ph={PH.sobretitulo} className="psheet__eyebrow" ctx={ctx} />
-      <T value={title} ph={titlePh} className={`psheet__title psheet__title--${size}`} ctx={ctx} as="div" />
+      <T value={eyebrow} ph={PH.sobretitulo} className="psheet__eyebrow" ctx={ctx} part="sobretítulo" />
+      <T value={title} ph={titlePh} className={`psheet__title psheet__title--${size}`} ctx={ctx} as="div" part="título" />
     </>
   );
 }
@@ -210,7 +224,7 @@ function TextImageView({ b, ctx, free, grow }: { b: TextBlockImage; ctx: Ctx; fr
 function TextPage({ page, ctx }: { page: PresentationTextPage; ctx: Ctx }) {
   const texts = page.blocos.filter((b): b is Extract<TextBlock, { tipo: 'texto' }> => b.tipo === 'texto');
   const imgs = page.blocos.filter((b): b is TextBlockImage => b.tipo === 'imagem');
-  const lead = <T value={page.introducao} ph={PH.introducaoTexto} className="psheet__lead" ctx={ctx} as="div" />;
+  const lead = <T value={page.introducao} ph={PH.introducaoTexto} className="psheet__lead" ctx={ctx} as="div" part="introdução" />;
 
   if (page.composicao === 'destaque') {
     return (
@@ -222,13 +236,13 @@ function TextPage({ page, ctx }: { page: PresentationTextPage; ctx: Ctx }) {
           {lead}
         </div>
         {texts.length > 0 && (
-          <div className="psheet__texts" style={{ gridTemplateColumns: `repeat(${Math.min(4, texts.length)}, minmax(0, 1fr))` }}>
+          <div className="psheet__texts" data-part="blocos" style={{ gridTemplateColumns: `repeat(${Math.min(4, texts.length)}, minmax(0, 1fr))` }}>
             {texts.map((b) => (
               <TextBlockView key={b.id} b={b} ctx={ctx} />
             ))}
           </div>
         )}
-        <div className="psheet__imgrow">
+        <div className="psheet__imgrow" data-part="imagens">
           {imgs.map((b, i) => (
             <TextImageView key={b.id} b={b} ctx={ctx} grow={i === 0} />
           ))}
@@ -241,19 +255,19 @@ function TextPage({ page, ctx }: { page: PresentationTextPage; ctx: Ctx }) {
   if (page.composicao === 'diagonal' || page.composicao === 'livre') {
     const free = page.composicao === 'livre';
     right = (
-      <div className={`psheet__blocks${free ? ' psheet__blocks--livre' : ''}`}>
+      <div className={`psheet__blocks${free ? ' psheet__blocks--livre' : ''}`} data-part="blocos">
         {page.blocos.map((b) => (b.tipo === 'texto' ? <TextBlockView key={b.id} b={b} ctx={ctx} /> : <TextImageView key={b.id} b={b} ctx={ctx} free={free} />))}
       </div>
     );
   } else if (page.composicao === 'lado') {
     right = (
       <div className="psheet__texto-lado">
-        <div className="psheet__blocks">
+        <div className="psheet__blocks" data-part="blocos">
           {texts.map((b) => (
             <TextBlockView key={b.id} b={b} ctx={ctx} />
           ))}
         </div>
-        <div className="psheet__imggrid" style={{ gridTemplateColumns: `repeat(${Math.min(6, Math.max(1, imgs.length))}, minmax(0, 1fr))` }}>
+        <div className="psheet__imggrid" data-part="imagens" style={{ gridTemplateColumns: `repeat(${Math.min(6, Math.max(1, imgs.length))}, minmax(0, 1fr))` }}>
           {imgs.map((b) => (
             <TextImageView key={b.id} b={b} ctx={ctx} grow />
           ))}
@@ -263,12 +277,12 @@ function TextPage({ page, ctx }: { page: PresentationTextPage; ctx: Ctx }) {
   } else {
     right = (
       <div className="psheet__texto-coluna">
-        <div className="psheet__stack psheet__stack--blocks">
+        <div className="psheet__stack psheet__stack--blocks" data-part="blocos">
           {texts.map((b) => (
             <TextBlockView key={b.id} b={b} ctx={ctx} />
           ))}
         </div>
-        <div className="psheet__stack psheet__stack--imgs">
+        <div className="psheet__stack psheet__stack--imgs" data-part="imagens">
           {imgs.map((b) => (
             <TextImageView key={b.id} b={b} ctx={ctx} grow />
           ))}
@@ -298,9 +312,9 @@ function MoodboardPage({ page, ctx }: { page: PresentationMoodboardPage; ctx: Ct
         <div className="psheet__stack psheet__stack--tight">
           <Heading eyebrow={page.sobretitulo} title={page.titulo} titlePh={PH.titulo} size="l" ctx={ctx} />
         </div>
-        <T value={page.introducao} ph={PH.introducaoMood} className="psheet__side psheet__side--mood" ctx={ctx} as="div" />
+        <T value={page.introducao} ph={PH.introducaoMood} className="psheet__side psheet__side--mood" ctx={ctx} as="div" part="introdução" />
       </div>
-      <div className="psheet__materials" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      <div className="psheet__materials" data-part="materiais" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
         {page.materiais.map((m) => (
           <div key={m.id} className="psheet__material">
             <Slot img={m.imagem} title={SLOT_TITLES.moodboard} ctx={ctx} className="psheet__slot--material" />
@@ -323,7 +337,7 @@ function MoodboardPage({ page, ctx }: { page: PresentationMoodboardPage; ctx: Ct
 function VisualFicha({ page, ctx, withImage, small }: { page: PresentationVisualPage; ctx: Ctx; withImage: boolean; small?: boolean }) {
   const cls = `psheet__ficha-row${small ? ' psheet__ficha-row--s' : ''}`;
   return (
-    <div className="psheet__ficha">
+    <div className="psheet__ficha" data-part="ficha">
       <Row label="Programas" value={page.programas} ph={PH.programas} ctx={ctx} className={cls} />
       <Row label="Observações" value={page.observacoes} ph={PH.observacoesVisual} ctx={ctx} className={cls} />
       {withImage && page.imagens[0] && (
@@ -350,8 +364,9 @@ function VisualPage({ page, ctx }: { page: PresentationVisualPage; ctx: Ctx }) {
         slotTitle={SLOT_TITLES.visual}
         shape={gridShape(page)}
         ctx={ctx}
+        parts={{ side: 'descrição', grid: 'imagens' }}
         footer={
-          <div className="psheet__line">
+          <div className="psheet__line" data-part="programas e observações">
             <Row label="Programas" value={page.programas} ph={PH.programas} ctx={ctx} className="psheet__line-row" />
             <Row label="Observações" value={page.observacoes} ph={PH.observacoesVisual} ctx={ctx} className="psheet__line-row" />
           </div>
@@ -367,8 +382,8 @@ function VisualPage({ page, ctx }: { page: PresentationVisualPage; ctx: Ctx }) {
         {mainSlot}
         <div className="psheet__stack psheet__stack--principal">
           <Heading eyebrow={page.sobretitulo} title={page.titulo} titlePh={PH.ambiente} size="s" ctx={ctx} />
-          <T value={page.descricao} ph={PH.descricaoCurta} className="psheet__desc psheet__desc--s" ctx={ctx} as="div" />
-          <div className="psheet__rest">
+          <T value={page.descricao} ph={PH.descricaoCurta} className="psheet__desc psheet__desc--s" ctx={ctx} as="div" part="descrição" />
+          <div className="psheet__rest" data-part="imagens">
             {shown.slice(1).map((i) => (
               <div key={i.id} className="psheet__rest-item">
                 <Slot img={i.imagem} title={SLOT_TITLES.visual} ctx={ctx} className="psheet__slot--grow" />
@@ -388,7 +403,7 @@ function VisualPage({ page, ctx }: { page: PresentationVisualPage; ctx: Ctx }) {
       {mainSlot}
       <div className="psheet__stack psheet__stack--visual">
         <Heading eyebrow={page.sobretitulo} title={page.titulo} titlePh={iso ? PH.peca : PH.ambiente} size={iso ? 'm' : 'l'} ctx={ctx} />
-        <T value={page.descricao} ph={iso ? PH.descricaoIso : PH.descricaoLado} className="psheet__desc" ctx={ctx} as="div" />
+        <T value={page.descricao} ph={iso ? PH.descricaoIso : PH.descricaoLado} className="psheet__desc" ctx={ctx} as="div" part="descrição" />
         <div className="psheet__bottom">
           {iso && <span className="psheet__ficha-title">Ficha técnica</span>}
           <VisualFicha page={page} ctx={ctx} withImage />
@@ -412,6 +427,7 @@ function GridPage({
   footer,
   tone,
   spanFirst,
+  parts,
 }: {
   eyebrow: string;
   title: string;
@@ -425,6 +441,8 @@ function GridPage({
   footer: ReactNode;
   tone?: 'white';
   spanFirst?: boolean;
+  /** Nomes das partes medidas no PDF: o texto ao lado e a grade. */
+  parts: { side: string; grid: string };
 }) {
   return (
     <>
@@ -432,9 +450,9 @@ function GridPage({
         <div className="psheet__stack psheet__stack--grid">
           <Heading eyebrow={eyebrow} title={title} titlePh={PH.titulo} size="s" ctx={ctx} />
         </div>
-        <T value={side} ph={sidePh} className="psheet__side" ctx={ctx} as="div" />
+        <T value={side} ph={sidePh} className="psheet__side" ctx={ctx} as="div" part={parts.side} />
       </div>
-      <div className="psheet__grid" style={{ gridTemplateColumns: shape.cols, gridTemplateRows: `repeat(${shape.rows}, minmax(0, 1fr))` }}>
+      <div className="psheet__grid" data-part={parts.grid} style={{ gridTemplateColumns: shape.cols, gridTemplateRows: `repeat(${shape.rows}, minmax(0, 1fr))` }}>
         {items.map((it, i) => (
           <div key={it.id} className="psheet__cell" style={spanFirst && i === 0 ? { gridRow: '1 / span 2' } : undefined}>
             <Slot img={it.img} title={slotTitle} ctx={ctx} className="psheet__slot--grow" tone={tone} />
@@ -469,10 +487,11 @@ function TechnicalPage({ page, ctx }: { page: PresentationTechnicalPage; ctx: Ct
       ctx={ctx}
       tone="white"
       spanFirst={page.composicao === '3'}
+      parts={{ side: 'observações', grid: 'desenhos' }}
       footer={
         hasScaleLine && (
           // Escala e unidade: só o texto digitado, numa linha simples.
-          <div className="psheet__line psheet__line--escala">
+          <div className="psheet__line psheet__line--escala" data-part="escala e unidade">
             <Row label="Escala" value={page.escala} ph={PH.escala} ctx={ctx} className="psheet__line-row" />
             <Row label="Unidade" value={page.unidade} ph={PH.unidade} ctx={ctx} className="psheet__line-row" />
           </div>
@@ -490,9 +509,9 @@ function NotesPage({ page, ctx }: { page: PresentationNotesPage; ctx: Ctx }) {
     <div className="psheet__notas">
       <div className="psheet__stack">
         <Heading eyebrow={page.sobretitulo} title={page.titulo} titlePh={PH.titulo} size="m" ctx={ctx} />
-        <T value={page.introducao} ph={PH.introducaoNotas} className="psheet__desc" ctx={ctx} as="div" />
+        <T value={page.introducao} ph={PH.introducaoNotas} className="psheet__desc" ctx={ctx} as="div" part="introdução" />
       </div>
-      <div className="psheet__notes">
+      <div className="psheet__notes" data-part="notas">
         {page.notas.map((n, i) => (
           <div key={n.id} className="psheet__note">
             <span className="psheet__note-num">{String(i + 1).padStart(2, '0')}</span>
@@ -516,7 +535,7 @@ function RightsPage({ page, ctx, isotipoSrc }: { page: PresentationRightsPage; c
         <Heading eyebrow={page.sobretitulo} title={page.titulo} titlePh={PH.titulo} size="l" ctx={ctx} />
         {ctx.mode === 'edit' && <span className="psheet__note-box">{RIGHTS_NOTE}</span>}
       </div>
-      <div className="psheet__rights">
+      <div className="psheet__rights" data-part="direitos">
         {RIGHTS_ROWS.map((r) => (
           <Row key={r.key} label={r.label} value={page[r.key]} ph={RIGHTS_MODELS[r.key]} ctx={ctx} className="psheet__rights-row" />
         ))}
