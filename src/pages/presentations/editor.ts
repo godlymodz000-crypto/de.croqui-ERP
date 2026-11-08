@@ -186,7 +186,7 @@ export function linkMoveLines(opts: { projectName: string; images: number; pdfVe
         : `${images} imagens: de Avulsos/Imagens para ${projectName}/Apresentações/Imagens. Passam a fazer parte da biblioteca do projeto.`,
     );
   }
-  if (pdfVersion) lines.push(`PDF v${pdfVersion}: de Avulsos para ${projectName}/Apresentações. Passa a aparecer em Arquivos do projeto.`);
+  if (pdfVersion) lines.push(`PDF v${pdfVersion} e versões antigas: de Avulsos para ${projectName}/Apresentações. Aparecem em Arquivos.`);
   lines.push('Nome, cliente e textos da capa continuam como estão.');
   return lines;
 }

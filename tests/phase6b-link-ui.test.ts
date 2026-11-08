@@ -44,9 +44,9 @@ describe('vincular a um projeto (6b-10)', () => {
   });
 
   it('o que muda de pasta', () => {
-    expect(linkMoveLines({ projectName: 'Projeto Teste', images: 2, pdfVersion: 1 })).toEqual([
+    expect(linkMoveLines({ projectName: 'Projeto Teste', images: 2, pdfVersion: 2 })).toEqual([
       '2 imagens: de Avulsos/Imagens para Projeto Teste/Apresentações/Imagens. Passam a fazer parte da biblioteca do projeto.',
-      'PDF v1: de Avulsos para Projeto Teste/Apresentações. Passa a aparecer em Arquivos do projeto.',
+      'PDF v2 e versões antigas: de Avulsos para Projeto Teste/Apresentações. Aparecem em Arquivos.',
       'Nome, cliente e textos da capa continuam como estão.',
     ]);
     expect(linkMoveLines({ projectName: 'Projeto Teste', images: 1, pdfVersion: null })[0]).toMatch(/^1 imagem: .*Passa a fazer parte/);
