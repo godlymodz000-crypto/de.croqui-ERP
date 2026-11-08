@@ -139,3 +139,697 @@
   height: 100%;
   user-select: none;
 }
+
+/* ---------- Capa, 6c (E3): composições, cores e marcas (desenhos 6c-01 a 6c-11) ---------- */
+/* Imagem lateral inteira: 46% da folha, à direita; a coluna de texto vai até 14 mm antes da imagem. */
+.pcover__photo {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 46%;
+  overflow: hidden;
+  background: var(--vinho-700);
+}
+.pcover[data-composicao='foto'] .pcover__heading,
+.pcover[data-composicao='foto'] .pcover__rule,
+.pcover[data-composicao='foto'] .pcover__data {
+  width: 493px;
+}
+.pcover[data-composicao='foto'] .pcover__data {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* Só tipografia: a coluna de texto ocupa a folha inteira, entre as margens de 16 mm. */
+.pcover[data-composicao='tipo'] .pcover__heading,
+.pcover[data-composicao='tipo'] .pcover__rule,
+.pcover[data-composicao='tipo'] .pcover__data {
+  width: 1003px;
+}
+.pcover[data-composicao='tipo'] .pcover__data {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* Marca: 12, 18 e 26 mm de altura na folha A4. Os outros textos não mudam de lugar. */
+.pcover[data-marca='m'] .pcover__logo {
+  width: auto;
+  height: 68px;
+}
+.pcover[data-marca='g'] .pcover__logo {
+  width: auto;
+  height: 98.3px;
+}
+/* Noite */
+.pcover[data-cor='noite'] {
+  background: var(--noite-900);
+}
+.pcover[data-cor='noite'] .pcover__arch,
+.pcover[data-cor='noite'] .pcover__photo {
+  background: var(--noite-800);
+}
+.pcover[data-cor='noite'] .pcover__type,
+.pcover[data-cor='noite'] .pcover__field dt,
+.pcover[data-cor='noite'] .pcover__contact {
+  color: var(--ardosia-300);
+}
+/* Linho: fundo claro, texto Noite e marca escura. */
+.pcover[data-cor='linho'] {
+  background: var(--linho-100);
+  color: var(--noite-900);
+}
+.pcover[data-cor='linho'] .pcover__arch,
+.pcover[data-cor='linho'] .pcover__photo {
+  background: var(--linho-200);
+}
+.pcover[data-cor='linho'] .pcover__type,
+.pcover[data-cor='linho'] .pcover__field dt,
+.pcover[data-cor='linho'] .pcover__contact {
+  color: var(--ardosia-700);
+}
+.pcover[data-cor='linho'] .pcover__rule {
+  background: var(--noite-900);
+  opacity: 0.3;
+}
+.pcover[data-cor='linho'] .pcover__window {
+  color: #fff;
+  opacity: 0.8;
+}
+.pcover[data-cor='linho'] .pcover__dashed {
+  border-color: var(--noite-900);
+  opacity: 0.3;
+}
+.pcover[data-cor='linho'] .pcover__pending-image {
+  color: var(--noite-900);
+}
+.pcover__photo .pcover__pending-image {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* ---------- Páginas internas, 6c (E3): seis tipos e composições (desenhos 6c-12 a 6c-20) ---------- */
+/* Mesmas medidas do arquivo offline, em mm da folha A4 (297 × 210 mm = 1123 × 794 px). */
+.psheet {
+  position: relative;
+  flex: none;
+  width: 1123px;
+  height: 794px;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #f7f3ed;
+  color: var(--noite-900);
+  font-family: var(--font-body);
+}
+.psheet[data-tipo='direitos'] {
+  background: var(--linho-200);
+}
+.psheet__head,
+.psheet__foot {
+  position: absolute;
+  left: 16mm;
+  right: 16mm;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8mm;
+  font: var(--weight-medium) 8px / 1 var(--font-body);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ardosia-700);
+}
+.psheet__head {
+  top: 9mm;
+}
+.psheet__foot {
+  bottom: 8mm;
+}
+.psheet__brandline {
+  display: flex;
+  gap: 3mm;
+  align-items: baseline;
+  min-width: 0;
+}
+.psheet__brand {
+  font: var(--weight-regular) 13px / 1 var(--font-display);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--noite-900);
+}
+.psheet__body {
+  position: absolute;
+  top: 19mm;
+  left: 16mm;
+  right: 16mm;
+  bottom: 15mm;
+  display: flex;
+  flex-direction: column;
+}
+/* Prévia desligada: o que falta preencher aparece em cinza e não sai no PDF. */
+.psheet .is-pending {
+  opacity: 0.42;
+}
+.psheet__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 5mm;
+  min-height: 0;
+  min-width: 0;
+}
+.psheet__stack--tight {
+  gap: 4mm;
+}
+.psheet__eyebrow {
+  align-self: flex-start;
+  font: var(--weight-medium) 9.5px / 1.3 var(--font-body);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vinho-800);
+}
+.psheet__title {
+  font-family: var(--font-display);
+  font-weight: var(--weight-light);
+  line-height: 1.04;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+.psheet__title--xl {
+  font-size: 44px;
+}
+.psheet__title--l {
+  font-size: 38px;
+}
+.psheet__title--m {
+  font-size: 36px;
+}
+.psheet__title--s {
+  font-size: 32px;
+}
+.psheet__lead {
+  font: var(--weight-light) 13px / 1.65 var(--font-body);
+  color: var(--ardosia-700);
+  text-wrap: pretty;
+  white-space: pre-line;
+}
+.psheet__desc {
+  font: var(--weight-light) 12.5px / 1.65 var(--font-body);
+  color: var(--ardosia-700);
+  text-wrap: pretty;
+  white-space: pre-line;
+}
+.psheet__desc--s {
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+.psheet__side {
+  flex: 0 1 110mm;
+  min-width: 0;
+  font: var(--weight-light) 11.5px / 1.6 var(--font-body);
+  color: var(--ardosia-700);
+  text-wrap: pretty;
+}
+.psheet__side--mood {
+  flex-basis: 108mm;
+  font-size: 12px;
+}
+.psheet__split {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12mm;
+  padding-top: 4mm;
+}
+.psheet__split--grid {
+  padding-top: 3mm;
+}
+.psheet__stack--grid {
+  gap: 3mm;
+}
+.psheet__label {
+  font: var(--weight-medium) 7.5px / 1.6 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ardosia-700);
+}
+
+/* Espaço de imagem */
+.psheet__slot {
+  position: relative;
+  overflow: hidden;
+  background: var(--linho-200);
+  border-radius: 2px;
+}
+.psheet__slot[data-tone='white'] {
+  background: #fff;
+  border: 1px solid rgba(20, 40, 65, 0.16);
+}
+.psheet__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+}
+.psheet__slot-empty {
+  position: absolute;
+  inset: 5px;
+  border: 1px dashed rgba(20, 40, 65, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  box-sizing: border-box;
+  text-align: center;
+  color: var(--noite-900);
+}
+.psheet__slot-title {
+  font: var(--weight-regular) 15px / 1.15 var(--font-display);
+}
+.psheet__slot-hint {
+  font: var(--weight-medium) 8.5px / 1.4 var(--font-body);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.psheet__slot--main {
+  min-height: 0;
+}
+.psheet__slot--grow {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Texto & conceito */
+.psheet__texto-side {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.5fr);
+  gap: 14mm;
+  padding-top: 5mm;
+}
+.psheet__blocks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8mm 10mm;
+  align-content: start;
+}
+.psheet__blocks--livre {
+  grid-auto-flow: row dense;
+}
+.psheet__block {
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+  border-top: 1px solid var(--noite-900);
+  padding-top: 3.5mm;
+  min-width: 0;
+}
+.psheet__block-title {
+  font: var(--weight-regular) 19px / 1.15 var(--font-display);
+}
+.psheet__block-text {
+  font: var(--weight-light) 12px / 1.6 var(--font-body);
+  text-wrap: pretty;
+  white-space: pre-line;
+}
+.psheet__figure {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5mm;
+  min-width: 0;
+  min-height: 0;
+}
+.psheet__figure > .psheet__shape {
+  position: relative;
+  height: 62mm;
+}
+.psheet__figure--grow {
+  flex: 1 1 0;
+}
+.psheet__figure--grow > .psheet__shape {
+  flex: 1;
+  height: auto;
+  min-height: 20mm;
+}
+.psheet__figure[data-posicao='esquerda'] {
+  grid-column: 1;
+}
+.psheet__figure[data-posicao='direita'] {
+  grid-column: 2;
+}
+.psheet__figure[data-posicao='largura'] {
+  grid-column: 1 / -1;
+}
+.psheet__figure[data-altura='p'] > .psheet__shape {
+  height: 42mm;
+}
+.psheet__figure[data-altura='g'] > .psheet__shape {
+  height: 92mm;
+}
+.psheet__shape > .psheet__slot {
+  position: absolute;
+  inset: 0;
+}
+/* Arco: cantos de cima redondos, com raio de metade do lado menor (desenho 6c-13). */
+.psheet__shape--arco {
+  container-type: size;
+}
+.psheet__shape--arco > .psheet__slot {
+  border-radius: min(50cqw, 50cqh) min(50cqw, 50cqh) 2px 2px;
+}
+.psheet__caption {
+  font: italic var(--weight-light) 13px / 1.35 var(--font-display);
+  color: var(--ardosia-700);
+}
+.psheet__texto-lado {
+  display: flex;
+  flex-direction: column;
+  gap: 8mm;
+  min-height: 0;
+}
+.psheet__imggrid {
+  flex: 1;
+  min-height: 40mm;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 6mm;
+}
+.psheet__texto-coluna {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10mm;
+  min-height: 0;
+}
+.psheet__stack--blocks {
+  gap: 8mm;
+}
+.psheet__stack--imgs {
+  gap: 6mm;
+}
+.psheet__texto-destaque {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6mm;
+  padding-top: 5mm;
+}
+.psheet__texto-top {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.5fr);
+  gap: 14mm;
+  align-items: end;
+}
+.psheet__texts {
+  display: grid;
+  gap: 6mm 10mm;
+}
+.psheet__imgrow {
+  flex: 1;
+  min-height: 40mm;
+  display: flex;
+  gap: 6mm;
+}
+.psheet__imgrow > .psheet__figure--grow:first-child {
+  flex: 2.4 1 0;
+}
+
+/* Moodboard */
+.psheet__materials {
+  flex: 1;
+  min-height: 0;
+  margin-top: 7mm;
+  display: grid;
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 6mm;
+}
+.psheet__material {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5mm;
+  min-height: 0;
+  min-width: 0;
+}
+.psheet__slot--material {
+  flex: 1;
+  min-height: 14mm;
+  border-radius: 14mm 14mm 2px 2px;
+}
+.psheet__material-name {
+  font: var(--weight-regular) 16px / 1.15 var(--font-display);
+}
+.psheet__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+}
+.psheet__meta-row {
+  display: flex;
+  gap: 2mm;
+  align-items: baseline;
+  font: var(--weight-light) 10px / 1.35 var(--font-body);
+}
+.psheet__meta-row > .psheet__label {
+  flex: 0 0 15mm;
+  font-size: 7px;
+  line-height: 1;
+  letter-spacing: 0.16em;
+}
+.psheet__meta-row > .psheet__value {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Apresentação visual */
+.psheet__visual {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  padding-top: 3mm;
+}
+.psheet__visual--lado {
+  grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+  gap: 11mm;
+}
+.psheet__visual--principal {
+  grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+  gap: 9mm;
+}
+.psheet__visual--iso {
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 12mm;
+}
+.psheet__stack--visual {
+  padding-top: 2mm;
+}
+.psheet__stack--principal {
+  gap: 4mm;
+}
+.psheet__bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+}
+.psheet__ficha-title {
+  font: var(--weight-medium) 8.5px / 1 var(--font-body);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vinho-800);
+  padding-bottom: 3mm;
+}
+.psheet__ficha {
+  display: flex;
+  flex-direction: column;
+}
+.psheet__ficha-row {
+  display: grid;
+  grid-template-columns: 22mm minmax(0, 1fr);
+  gap: 4mm;
+  padding: 2.6mm 0;
+  border-top: 1px solid rgba(20, 40, 65, 0.2);
+}
+.psheet__ficha-row > .psheet__value {
+  font: var(--weight-light) 11px / 1.5 var(--font-body);
+}
+.psheet__ficha-row--s {
+  grid-template-columns: 20mm minmax(0, 1fr);
+  gap: 3mm;
+  padding: 2mm 0;
+}
+.psheet__ficha-row--s > .psheet__label {
+  font-size: 7px;
+}
+.psheet__ficha-row--s > .psheet__value {
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+.psheet__rest {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 4mm;
+}
+.psheet__rest-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5mm;
+  min-height: 0;
+}
+.psheet__rest-caption {
+  font: var(--weight-light) 9.5px / 1.35 var(--font-body);
+  color: var(--ardosia-700);
+}
+
+/* Grade de imagens (visual) e desenho técnico */
+.psheet__grid {
+  flex: 1;
+  min-height: 0;
+  margin-top: 5mm;
+  display: grid;
+  gap: 5mm;
+}
+.psheet__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2mm;
+  min-height: 0;
+  min-width: 0;
+}
+.psheet__cell-caption {
+  display: flex;
+  gap: 2.5mm;
+  align-items: baseline;
+}
+.psheet__num {
+  font: var(--weight-medium) 8px / 1 var(--font-body);
+  letter-spacing: 0.16em;
+  color: var(--latao-500);
+}
+.psheet__cell-text {
+  flex: 1;
+  min-width: 0;
+  font: var(--weight-regular) 10.5px / 1.4 var(--font-body);
+}
+/* Linha final: programas e observações (visual) ou escala e unidade (técnico), só texto digitado. */
+.psheet__line {
+  margin-top: 4mm;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 8mm;
+}
+.psheet__line-row {
+  display: flex;
+  gap: 3mm;
+  align-items: baseline;
+  border-top: 1px solid rgba(20, 40, 65, 0.2);
+  padding-top: 2.5mm;
+}
+.psheet__line-row > .psheet__label {
+  flex-shrink: 0;
+}
+.psheet__line-row > .psheet__value {
+  flex: 1;
+  min-width: 0;
+  font: var(--weight-light) 10.5px / 1.5 var(--font-body);
+}
+
+/* Notas técnicas */
+.psheet__notas {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 2fr);
+  gap: 12mm;
+  padding-top: 5mm;
+}
+.psheet__notas .psheet__desc {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.psheet__notes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 7mm 10mm;
+  align-content: start;
+}
+.psheet__note {
+  display: grid;
+  grid-template-columns: 10mm minmax(0, 1fr);
+  gap: 3mm;
+  border-top: 1px solid var(--noite-900);
+  padding-top: 3mm;
+}
+.psheet__note-num {
+  font: var(--weight-light) 22px / 1 var(--font-display);
+  color: var(--latao-500);
+}
+.psheet__note-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.8mm;
+  min-width: 0;
+}
+.psheet__note-cat {
+  align-self: flex-start;
+  font: var(--weight-medium) 8px / 1.3 var(--font-body);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vinho-800);
+}
+.psheet__note-title {
+  font: var(--weight-regular) 16px / 1.2 var(--font-display);
+}
+.psheet__note-text {
+  font: var(--weight-light) 11px / 1.55 var(--font-body);
+  text-wrap: pretty;
+  white-space: pre-line;
+}
+
+/* Direitos autorais */
+.psheet__direitos {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr);
+  gap: 14mm;
+  padding-top: 5mm;
+}
+.psheet__isotipo {
+  height: 16mm;
+  width: auto;
+  align-self: flex-start;
+  display: block;
+  margin-bottom: 4mm;
+}
+.psheet__direitos .psheet__title {
+  line-height: 1.05;
+}
+.psheet__note-box {
+  margin-top: auto;
+  font: var(--weight-light) 11px / 1.5 var(--font-body);
+  color: var(--noite-900);
+  border: 1px dashed rgba(20, 40, 65, 0.35);
+  padding: 3mm 4mm;
+}
+.psheet__rights {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.psheet__rights-row {
+  display: grid;
+  grid-template-columns: 34mm minmax(0, 1fr);
+  gap: 5mm;
+  padding: 3.5mm 0;
+  border-top: 1px solid rgba(20, 40, 65, 0.22);
+}
+.psheet__rights-row > .psheet__label {
+  font-size: 8px;
+}
+.psheet__rights-row > .psheet__value {
+  font: var(--weight-light) 11.5px / 1.6 var(--font-body);
+  text-wrap: pretty;
+  white-space: pre-line;
+}
