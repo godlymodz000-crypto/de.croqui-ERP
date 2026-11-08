@@ -25,22 +25,38 @@ const MAX_FIT_PASSES = 200;
 
 type Assets = { css: string; logo: string };
 let assetsPromise: Promise<Assets> | null = null;
+let tokensPromise: Promise<string> | null = null;
+
+const read = (path: string) => readFile(new URL(path, SRC), 'utf8');
+
+/**
+ * Tokens do design system com as fontes embutidas como data:, para o Chromium não buscar nada fora da
+ * página. Usado também pelo PDF da apresentação (presentation-pdf.ts).
+ */
+export function designTokensCss(): Promise<string> {
+  tokensPromise ??= (async () => {
+    const tokens = await Promise.all(TOKEN_FILES.map((name) => read(`design-system/tokens/${name}.css`)));
+    const fonts = await Promise.all(
+      [...tokens[0].matchAll(/url\('\.\.\/fonts\/([\w-]+\.woff2)'\)/g)].map(async ([match, file]) => {
+        const data = await readFile(new URL(`design-system/fonts/${file}`, SRC));
+        return [match, `url('data:font/woff2;base64,${data.toString('base64')}')`] as const;
+      }),
+    );
+    for (const [match, inline] of fonts) tokens[0] = tokens[0].replace(match, inline);
+    return tokens.join('\n');
+  })().catch((err) => {
+    tokensPromise = null;
+    throw err;
+  });
+  return tokensPromise;
+}
 
 async function loadAssets(): Promise<Assets> {
-  const read = (path: string) => readFile(new URL(path, SRC), 'utf8');
-  const tokens = await Promise.all(TOKEN_FILES.map((name) => read(`design-system/tokens/${name}.css`)));
-  // As fontes entram como data: para o Chromium não buscar nada fora da página.
-  const fonts = await Promise.all(
-    [...tokens[0].matchAll(/url\('\.\.\/fonts\/([\w-]+\.woff2)'\)/g)].map(async ([match, file]) => {
-      const data = await readFile(new URL(`design-system/fonts/${file}`, SRC));
-      return [match, `url('data:font/woff2;base64,${data.toString('base64')}')`] as const;
-    }),
-  );
-  for (const [match, inline] of fonts) tokens[0] = tokens[0].replace(match, inline);
+  const tokens = await designTokensCss();
   const sheets = await read('budget/sheets.css');
   const logo = `data:image/svg+xml;base64,${Buffer.from(await read(LOGO)).toString('base64')}`;
   const page = 'html,body{margin:0;padding:0;background:var(--linho-50)}.bsheet{box-shadow:none}';
-  return { css: [...tokens, sheets, page].join('\n'), logo };
+  return { css: [tokens, sheets, page].join('\n'), logo };
 }
 
 /** HTML completo das folhas, pronto para o Chromium. `limits` é a divisão medida dos ambientes. */
@@ -104,23 +120,30 @@ export interface BudgetPdfRenderer {
 }
 
 /**
- * Gerador com um navegador por instância da função: abre no primeiro PDF e fica aberto para os seguintes.
- * Se o navegador cair, o próximo pedido abre outro.
+ * Navegador compartilhado da instância da função: abre no primeiro PDF (orçamento ou apresentação) e fica
+ * aberto para os seguintes. Se cair, o próximo pedido abre outro.
  */
-export function createPdfRenderer(executablePath?: string): BudgetPdfRenderer {
-  let browser: Promise<Browser> | null = null;
-  const open = () => {
-    browser ??= launchPdfBrowser(executablePath).then(
+const browsers = new Map<string, Promise<Browser>>();
+export function sharedPdfBrowser(executablePath?: string): Promise<Browser> {
+  const key = executablePath ?? '';
+  let browser = browsers.get(key);
+  if (!browser) {
+    browser = launchPdfBrowser(executablePath).then(
       (b) => {
-        b.on('disconnected', () => (browser = null));
+        b.on('disconnected', () => browsers.delete(key));
         return b;
       },
       (err) => {
-        browser = null;
+        browsers.delete(key);
         throw err;
       },
     );
-    return browser;
-  };
-  return { render: async (data) => renderBudgetPdf(await open(), data) };
+    browsers.set(key, browser);
+  }
+  return browser;
+}
+
+/** Gerador do orçamento sobre o navegador compartilhado. */
+export function createPdfRenderer(executablePath?: string): BudgetPdfRenderer {
+  return { render: async (data) => renderBudgetPdf(await sharedPdfBrowser(executablePath), data) };
 }

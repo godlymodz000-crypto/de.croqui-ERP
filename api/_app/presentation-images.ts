@@ -56,12 +56,16 @@ async function childFolder(drive: DriveClient, parentId: string, name: string): 
   return (await drive.findChildFolder(parentId, name)) ?? drive.createFolder(name, parentId);
 }
 
+/** Pasta dos PDFs: "<projeto>/Apresentações" ou "De.Croqui ERP/Avulsos", como no orçamento. Criada se faltar. */
+export async function presentationsFolderId(db: Db, drive: DriveClient, projectFolderId: string | null): Promise<string> {
+  return projectFolderId
+    ? projectSubfolderId(drive, projectFolderId, 'presentations')
+    : childFolder(drive, await ensureRootFolder(db, drive), LOOSE_BUDGETS_FOLDER);
+}
+
 /** Pasta das imagens: "<projeto>/Apresentações/Imagens" ou "De.Croqui ERP/Avulsos/Imagens". Criada no primeiro envio. */
 export async function imagesFolderId(db: Db, drive: DriveClient, projectFolderId: string | null): Promise<string> {
-  const parent = projectFolderId
-    ? await projectSubfolderId(drive, projectFolderId, 'presentations')
-    : await childFolder(drive, await ensureRootFolder(db, drive), LOOSE_BUDGETS_FOLDER);
-  return childFolder(drive, parent, IMAGES_FOLDER);
+  return childFolder(drive, await presentationsFolderId(db, drive, projectFolderId), IMAGES_FOLDER);
 }
 
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];

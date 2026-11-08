@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
 import { AppIcon } from '../../ui/AppIcon';
 import { AppLoading } from '../../ui/AppLoading';
@@ -21,22 +21,31 @@ import {
   coverNotice,
   isTooLarge,
   pageKindLabel,
+  PDF_ERROR_TEXTS,
+  pdfFailure,
+  pdfSavedLabel,
+  pdfUnchangedText,
   presentationNameError,
   projectTabHelp,
   SAVE_MESSAGES,
   saveFailure,
   saveLabel,
+  type PdfState,
   type SaveState,
 } from './editor';
 import { canWritePresentations } from './list';
 import { LinkProjectDialog } from './LinkProjectDialog';
+import { ExportPdfDialog } from './ExportPdfDialog';
 import '../budgets/budgets.css';
 import './editor.css';
+import './pdf.css';
 
 /** Espera depois da última digitação antes de salvar. */
 const SAVE_DELAY_MS = 800;
 /** Nova tentativa automática depois de uma falha ao salvar. */
 const RETRY_MS = 10_000;
+/** Antes do PDF, espera o salvamento em andamento terminar, como no orçamento. */
+const PDF_SAVE_WAIT_MS = 15_000;
 
 type PanelTab = 'projeto' | 'paginas' | 'pagina';
 
@@ -60,6 +69,8 @@ export function PresentationEditorPage() {
   const [tab, setTab] = useState<PanelTab>('pagina');
   const [nameDraft, setNameDraft] = useState('');
   const [linking, setLinking] = useState(false);
+  const [pdf, setPdf] = useState<PdfState>({ kind: 'idle' });
+  const [exporting, setExporting] = useState(false);
 
   const dataRef = useRef<PresentationData | null>(null);
   const baseRef = useRef('');
@@ -201,6 +212,29 @@ export function PresentationEditorPage() {
   // Sair do editor pelo "Voltar" salva o que estiver pendente.
   useEffect(() => () => void flush(), [flush]);
 
+  /**
+   * Depois do diálogo (6b-11): salva o que estiver pendente e pede o PDF ao servidor, que gera com o que está
+   * gravado. O editor continua livre enquanto isso: só o botão mostra "Gerando PDF".
+   */
+  const exportPdf = useCallback(async () => {
+    setExporting(false);
+    setPdf({ kind: 'working' });
+    const started = Date.now();
+    while (inFlightRef.current && Date.now() - started < PDF_SAVE_WAIT_MS) await new Promise((r) => setTimeout(r, 150));
+    await flush();
+    if (dirtyRef.current || inFlightRef.current || blockedRef.current) {
+      setPdf({ kind: 'error', reason: 'unsaved' });
+      return;
+    }
+    try {
+      const { presentation: saved } = await presentationsApi.exportPdf(id);
+      setPresentation((p) => (p ? { ...p, pdf: saved.pdf } : p));
+      setPdf({ kind: 'idle' });
+    } catch (err) {
+      setPdf(pdfFailure(err));
+    }
+  }, [flush, id]);
+
   const back = backTarget(location.state);
 
   if (state === 'loading') return <AppLoading />;
@@ -222,16 +256,44 @@ export function PresentationEditorPage() {
 
   const hasProject = !!presentation.projectId;
 
+  const readOnly = !canWrite;
+  const nameError = readOnly || isMobile ? null : presentationNameError(nameDraft);
+  const shownName = nameError || readOnly || isMobile ? presentation.name : cleanPresentationName(nameDraft);
+  const pdfWorking = pdf.kind === 'working';
+  const pdfDialog = exporting && (
+    <ExportPdfDialog
+      presentation={presentation}
+      name={shownName}
+      issueDate={data.projeto.data}
+      onCancel={() => setExporting(false)}
+      onConfirm={() => void exportPdf()}
+    />
+  );
+  const pdfAlert = (pdf.kind === 'error' || pdf.kind === 'unchanged') && (
+    <PdfAlert pdf={pdf} onRetry={() => void exportPdf()} onClose={() => setPdf({ kind: 'idle' })} />
+  );
+
   if (isMobile) {
-    return <MobileView presentation={presentation} data={data} back={back} save={save} canExport={canWrite} cover={cover} />;
+    return (
+      <MobileView
+        presentation={presentation}
+        data={data}
+        back={back}
+        save={save}
+        canExport={canWrite}
+        cover={cover}
+        working={pdfWorking}
+        onExport={() => setExporting(true)}
+      >
+        {pdfAlert && <div className="toast-slot beditor__toast pmobile__toast">{pdfAlert}</div>}
+        {pdfDialog}
+      </MobileView>
+    );
   }
 
-  const readOnly = !canWrite;
   const mode: CoverMode = readOnly || preview ? 'print' : 'edit';
   const setProject = (key: keyof PresentationProject, value: string) =>
     update((d) => ({ ...d, projeto: { ...d.projeto, [key]: value } }));
-  const nameError = readOnly ? null : presentationNameError(nameDraft);
-  const shownName = nameError || readOnly ? presentation.name : cleanPresentationName(nameDraft);
 
   return (
     <div className="beditor peditor">
@@ -264,6 +326,11 @@ export function PresentationEditorPage() {
           ) : (
             <>
               <SaveIndicator save={save} />
+              {presentation.pdf && (
+                <a className="peditor__pdf" href={presentation.pdf.url} target="_blank" rel="noreferrer" title={presentation.pdf.name ?? undefined}>
+                  {pdfSavedLabel(presentation.pdf)}
+                </a>
+              )}
               <button
                 type="button"
                 className={`peditor__toggle${preview ? ' is-on' : ''}`}
@@ -275,9 +342,8 @@ export function PresentationEditorPage() {
                 </span>
                 Prévia
               </button>
-              {/* O PDF chega na etapa E9: até lá o botão fica no lugar, desativado. */}
-              <button type="button" className="peditor__primary" disabled title="Disponível em breve">
-                Salvar em PDF
+              <button type="button" className="peditor__primary" disabled={pdfWorking} aria-busy={pdfWorking} onClick={() => setExporting(true)}>
+                {pdfWorking ? 'Gerando PDF' : 'Salvar em PDF'}
               </button>
             </>
           )}
@@ -346,9 +412,12 @@ export function PresentationEditorPage() {
         />
       )}
 
-      {(save.kind === 'error' || save.kind === 'conflict' || save.kind === 'too_large') && (
+      {pdfDialog}
+
+      {(save.kind === 'error' || save.kind === 'conflict' || save.kind === 'too_large' || pdfAlert) && (
         <div className="toast-slot beditor__toast">
-          {save.kind === 'conflict' ? (
+          {pdfAlert}
+          {save.kind === 'saved' || save.kind === 'saving' ? null : save.kind === 'conflict' ? (
             <div className="save-alert save-alert--warning" role="alert">
               <p>{SAVE_MESSAGES.conflict}</p>
               <button type="button" className="link-button" onClick={() => void load()}>
@@ -372,6 +441,46 @@ export function PresentationEditorPage() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Avisos do PDF (6b-11): sem alterações (ardósia) e erro (terracota), no canto, como os de 6b-05. */
+function PdfAlert({ pdf, onRetry, onClose }: { pdf: PdfState; onRetry: () => void; onClose: () => void }) {
+  if (pdf.kind === 'unchanged') {
+    return (
+      <div className="save-alert save-alert--info palert" role="status">
+        <p>{pdfUnchangedText(pdf.version)}</p>
+        <div className="palert__actions">
+          <a className="link-button" href={pdf.url} target="_blank" rel="noreferrer" title={pdf.name ?? undefined}>
+            Abrir PDF atual
+          </a>
+          <span aria-hidden>·</span>
+          <button type="button" className="link-button" onClick={onClose}>
+            Fechar
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (pdf.kind !== 'error') return null;
+  return (
+    <div className="save-alert save-alert--danger palert" role="alert">
+      <p>{PDF_ERROR_TEXTS[pdf.reason]}</p>
+      <div className="palert__actions">
+        {/* Além do limite, tentar de novo daria no mesmo: só fecha. */}
+        {pdf.reason !== 'overflow' && (
+          <>
+            <button type="button" className="link-button" onClick={onRetry}>
+              Tentar de novo
+            </button>
+            <span aria-hidden>·</span>
+          </>
+        )}
+        <button type="button" className="link-button" onClick={onClose}>
+          Fechar
+        </button>
+      </div>
     </div>
   );
 }
@@ -606,6 +715,9 @@ function MobileView({
   save,
   canExport,
   cover,
+  working,
+  onExport,
+  children,
 }: {
   presentation: PresentationWithData;
   data: PresentationData;
@@ -613,6 +725,12 @@ function MobileView({
   save: SaveState;
   canExport: boolean;
   cover: CoverImage;
+  /** O PDF está sendo gerado: o botão mostra "Gerando PDF". */
+  working: boolean;
+  /** Abre o diálogo de exportar, o mesmo do computador. */
+  onExport: () => void;
+  /** Avisos do PDF e o diálogo. */
+  children?: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [z, setZ] = useState(0.32);
@@ -654,14 +772,27 @@ function MobileView({
         </div>
         <p className="pmobile__label">{pageNavLabel(0, data.paginas.length)} · Capa</p>
       </div>
-      {canExport && (
-        <div className="pmobile__bottom">
-          {/* O PDF chega na etapa E9: até lá o botão fica no lugar, desativado. */}
-          <button type="button" className="peditor__primary peditor__primary--full" disabled title="Disponível em breve">
-            Salvar em PDF
-          </button>
+      {(presentation.pdf || canExport) && (
+        <div className="pmobile__foot">
+          {/* PDF salvo: quem só lê também abre no Drive. */}
+          {presentation.pdf && (
+            <div className="pmobile__pdf">
+              <span>{pdfSavedLabel(presentation.pdf, true)}</span>
+              <a href={presentation.pdf.url} target="_blank" rel="noreferrer" title={presentation.pdf.name ?? undefined}>
+                Abrir no Drive
+              </a>
+            </div>
+          )}
+          {canExport && (
+            <div className="pmobile__bottom">
+              <button type="button" className="peditor__primary peditor__primary--full" disabled={working} aria-busy={working} onClick={onExport}>
+                {working ? 'Gerando PDF' : 'Salvar em PDF'}
+              </button>
+            </div>
+          )}
         </div>
       )}
+      {children}
     </div>
   );
 }

@@ -95,3 +95,11 @@ Decisões aceitas pelo usuário em 2026-11-04 (6a) e em 2026-11-06/07 (6b, plane
 ## Testes
 - Prévias da Vercel não são usadas para gravar dados, porque ainda apontam para o banco de produção. Testes de gravação são feitos em banco de teste (PGlite).
 - Regras de produção continuam valendo: migração, deploy e teste que grava dados só com aprovação explícita do usuário, a cada vez.
+
+## Salvar em PDF (E9, 2026-11-07)
+- Diálogo da apresentação avulsa: "O PDF vai para o Drive, em De.Croqui ERP/Avulsos." e o nome do arquivo, sem a linha de Arquivos do projeto.
+- Conteúdo além do limite da página: o servidor mede a folha no Chromium e recusa o PDF (422). O editor mostra o aviso terracota "O PDF não foi gerado: o texto da capa passou do limite da página. Encurte os textos mais longos e tente de novo.", só com Fechar. O desenho próprio desse estado continua previsto para a 6c.
+- Celular: "Salvar em PDF" abre o mesmo diálogo, na largura da tela, com os botões empilhados. A faixa "PDF v1 salvo às 10:45 · Abrir no Drive" fica acima do botão; o leitor vê só a faixa.
+- Alteração ainda não salva na hora do PDF: aviso da 6a, "O PDF não foi gerado porque as últimas alterações ainda não foram salvas. Tente de novo quando aparecer "Salvo"."
+- Data no nome (P7): a data de emissão da aba Projeto quando é um dia que existe; sem ela, a data de hoje em São Paulo.
+- Versões antigas do PDF de avulsa vinculada a projeto: vão junto para a pasta do projeto e aparecem em Arquivos. O ERP acha cada versão pelo registro "presentation.export" do histórico, só lendo.

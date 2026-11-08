@@ -190,3 +190,52 @@ export function linkMoveLines(opts: { projectName: string; images: number; pdfVe
   lines.push('Nome, cliente e textos da capa continuam como estão.');
   return lines;
 }
+
+// ---------- Salvar em PDF (desenho 6b-11 e faixa do celular em 6b-13) ----------
+
+/** Situação da exportação: o botão mostra "Gerando PDF"; os avisos ficam no canto, como os de 6b-05. */
+export type PdfState =
+  | { kind: 'idle' }
+  | { kind: 'working' }
+  | { kind: 'unchanged'; version: number; url: string; name: string | null }
+  | { kind: 'error'; reason: 'failed' | 'unsaved' | 'overflow' };
+
+/** Aviso de Tamanho real, no diálogo de exportar de qualquer apresentação (P25). */
+export const PDF_REAL_SIZE_TITLE = 'Tamanho real';
+export const PDF_REAL_SIZE_TEXT =
+  'Para imprimir, escolha Tamanho real ou Escala 100% na janela de impressão, nunca Ajustar à página. Assim as medidas das folhas saem como estão no PDF.';
+
+/** Para onde vai o PDF e o nome do arquivo, no diálogo. A avulsa vai para Avulsos e não tem Arquivos de projeto. */
+export function pdfDialogLines(opts: { projectName: string | null; fileName: string }): string[] {
+  return [
+    opts.projectName
+      ? `O PDF vai para o Drive, em ${opts.projectName}/Apresentações, e aparece em Arquivos do projeto.`
+      : 'O PDF vai para o Drive, em De.Croqui ERP/Avulsos.',
+    `Nome do arquivo: ${opts.fileName}`,
+  ];
+}
+
+/** Versão que a próxima exportação vai receber, para o nome mostrado no diálogo. */
+export const nextPdfVersion = (pdf: { version: number } | null | undefined) => (pdf?.version ?? 0) + 1;
+
+/** "PDF v1 às 10:45", na barra do editor. No celular: "PDF v1 salvo às 10:45". */
+export const pdfSavedLabel = (pdf: { version: number; exportedAt: string | null }, mobile = false) =>
+  `PDF v${pdf.version}${mobile ? ' salvo' : ''}${pdf.exportedAt ? ` às ${clock(new Date(pdf.exportedAt))}` : ''}`;
+
+export const pdfUnchangedText = (version: number) => `Nenhuma alteração desde o último PDF. O PDF v${version} continua no Drive.`;
+
+export const PDF_ERROR_TEXTS: Record<'failed' | 'unsaved' | 'overflow', string> = {
+  failed: 'Não foi possível salvar o PDF no Drive. A apresentação continua salva; tente de novo em instantes.',
+  unsaved: 'O PDF não foi gerado porque as últimas alterações ainda não foram salvas. Tente de novo quando aparecer "Salvo".',
+  overflow: 'O PDF não foi gerado: o texto da capa passou do limite da página. Encurte os textos mais longos e tente de novo.',
+};
+
+/** Resposta do servidor para o aviso: sem mudança (409), além do limite (422) ou falha. */
+export function pdfFailure(err: unknown): PdfState {
+  if (err instanceof ApiError && err.code === 'no_changes') {
+    const file = err.body.file as { version?: number; url?: string; name?: string | null } | undefined;
+    if (file?.url) return { kind: 'unchanged', version: file.version ?? 1, url: file.url, name: file.name ?? null };
+  }
+  if (err instanceof ApiError && err.code === 'content_overflow') return { kind: 'error', reason: 'overflow' };
+  return { kind: 'error', reason: 'failed' };
+}

@@ -6,7 +6,7 @@
   "regions": ["gru1"],
   "functions": {
     "api/index.ts": {
-      "includeFiles": "src/{budget/sheets.css,design-system/tokens/*.css,design-system/fonts/*.woff2,design-system/assets/logo/decroqui-imagotipo-horizontal-escuro.svg}"
+      "includeFiles": "src/{budget/sheets.css,presentation/sheets.css,design-system/tokens/*.css,design-system/fonts/*.woff2,design-system/assets/logo/decroqui-imagotipo-horizontal-escuro.svg,design-system/assets/logo/decroqui-imagotipo-horizontal-claro.svg}"
     }
   },
   "rewrites": [

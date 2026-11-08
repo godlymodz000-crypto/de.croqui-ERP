@@ -23,6 +23,7 @@ import { notificationsRoutes } from './routes/notifications.js';
 import { stagesRoutes } from './routes/stages.js';
 import { createAdminDrive, type DriveClient } from './drive.js';
 import type { BudgetPdfRenderer } from './budget-pdf.js';
+import type { PresentationPdfRenderer } from './presentation-pdf.js';
 import { createAdminCalendar, type CalendarClient } from './calendar.js';
 import { createCalendarSync } from './calendar-sync.js';
 import { eventsRoutes } from './routes/events.js';
@@ -51,6 +52,8 @@ export interface AppDeps {
   drive?: DriveClient;
   /** Gerador do PDF do orçamento. Nos testes, um falso que não abre navegador. */
   pdf?: BudgetPdfRenderer;
+  /** Gerador do PDF da apresentação (Fase 6b). Nos testes, um falso que não abre navegador. */
+  presentationPdf?: PresentationPdfRenderer;
   /** Google Agenda (token do administrador). Substituível nos testes. */
   calendar?: CalendarClient;
   logger?: boolean;
@@ -58,7 +61,7 @@ export interface AppDeps {
   extraProtectedRoutes?: FastifyPluginAsync;
 }
 
-export async function buildApp({ config, db, google, drive, pdf, calendar, logger = false, extraProtectedRoutes }: AppDeps) {
+export async function buildApp({ config, db, google, drive, pdf, presentationPdf, calendar, logger = false, extraProtectedRoutes }: AppDeps) {
   const app = Fastify({ logger, trustProxy: true });
   const googleClient =
     google ??
@@ -192,7 +195,11 @@ export async function buildApp({ config, db, google, drive, pdf, calendar, logge
     const sync = createCalendarSync({ db, calendar: calendar ?? createAdminCalendar({ config, db }) });
     await protectedRoutes.register(eventsRoutes, { db, sync });
     await protectedRoutes.register(budgetsRoutes, { db, drive: driveClient, pdf: pdf ?? lazyPdfRenderer(config.pdfBrowserPath) });
-    await protectedRoutes.register(presentationsRoutes, { db, drive: driveClient });
+    await protectedRoutes.register(presentationsRoutes, {
+      db,
+      drive: driveClient,
+      pdf: presentationPdf ?? lazyPresentationPdfRenderer(config.pdfBrowserPath),
+    });
     await protectedRoutes.register(presentationImagesRoutes, {
       db,
       drive: driveClient,
@@ -222,6 +229,26 @@ export function lazyPdfRenderer(executablePath?: string, load = () => import('./
         },
       );
       return (await renderer).render(data);
+    },
+  };
+}
+
+/** Gerador do PDF da apresentação, carregado só no primeiro pedido, como o do orçamento. */
+export function lazyPresentationPdfRenderer(
+  executablePath?: string,
+  load = () => import('./presentation-pdf.js'),
+): PresentationPdfRenderer {
+  let renderer: Promise<PresentationPdfRenderer> | null = null;
+  return {
+    async render(input) {
+      renderer ??= load().then(
+        (m) => m.createPresentationPdfRenderer(executablePath),
+        (err) => {
+          renderer = null;
+          throw err;
+        },
+      );
+      return (await renderer).render(input);
     },
   };
 }

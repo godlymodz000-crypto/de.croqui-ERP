@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import type { PresentationImageRef, PresentationProject } from '../shared/presentation-data';
-import { coverFields, coverImageStyle, coverTexts, type CoverMode } from './cover';
+import type { PresentationImageRef, PresentationProject } from '../shared/presentation-data.js';
+import { coverFields, coverImageStyle, coverTexts, type CoverMode } from './cover.js';
 
 /**
  * Capa da apresentação, em A4 deitado (1123 × 794 px), composição "Imagem em arco" na cor vinho

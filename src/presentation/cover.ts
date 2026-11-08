@@ -1,4 +1,4 @@
-import type { PresentationProject } from '../shared/presentation-data';
+import type { PresentationProject } from '../shared/presentation-data.js';
 
 // Regras da capa (desenhos 6b-04, 6b-12 e 6b-13), sem React: o editor, a visualização no celular e,
 // na E9, o PDF usam as mesmas. Na E7 a capa tem só a composição "Imagem em arco", na cor vinho e com a

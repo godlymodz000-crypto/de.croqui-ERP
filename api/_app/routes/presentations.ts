@@ -1,11 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
-import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { auditLog, presentationImages, presentations, projects, users, type Presentation } from '../db/schema.js';
+import { auditLog, presentationImages, presentations, projectFiles, projects, users, type Presentation } from '../db/schema.js';
 import { audit } from '../audit.js';
 import { fileViewUrl, type DriveClient } from '../drive.js';
-import { ImagesUnavailableError, syncImageUses, trashUnusedImages } from '../presentation-images.js';
+import { ImagesUnavailableError, presentationsFolderId, syncImageUses, trashUnusedImages } from '../presentation-images.js';
+import { pdfIssueDate, presentationPdfName, presentationSourceHash } from '../presentation-files.js';
+import type { PdfImage, PresentationPdf, PresentationPdfRenderer } from '../presentation-pdf.js';
+import { IMAGE_MAX_BYTES } from '../../../src/shared/presentation-calc.js';
 import { linkPresentationToProject } from '../presentation-link.js';
 import {
   emptyPresentation,
@@ -18,7 +21,7 @@ import {
 
 // Apresentações (Fase 6b, etapas E3 e E4): lista, leitura, criação e salvamento automático, com os vínculos
 // das imagens e a regra da lixeira. Envio e biblioteca em routes/presentation-images.ts. Vínculo a projeto
-// (E5) em POST /presentations/:id/link. PDF entra na etapa seguinte. Mesmo padrão de routes/budgets.ts.
+// (E5) em POST /presentations/:id/link. PDF (E9) em POST /presentations/:id/pdf. Mesmo padrão de routes/budgets.ts.
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_NAME = 120;
@@ -52,7 +55,10 @@ interface UpdateBody {
 /** Ações do histórico que contam como "alterado por" na lista. */
 const EDIT_ACTIONS = ['presentation.create', 'presentation.update'];
 
-export async function presentationsRoutes(app: FastifyInstance, { db, drive }: { db: Db; drive: DriveClient }) {
+export async function presentationsRoutes(
+  app: FastifyInstance,
+  { db, drive, pdf }: { db: Db; drive: DriveClient; pdf: PresentationPdfRenderer },
+) {
   async function activeProject(id: string) {
     if (!UUID_RE.test(id)) return undefined;
     const [p] = await db
@@ -119,7 +125,7 @@ export async function presentationsRoutes(app: FastifyInstance, { db, drive }: {
   }
   const dto = async (p: Presentation, withData: boolean) => (await dtos([p], withData))[0];
 
-  /** PDF mais recente no Drive (gerado a partir da E9). */
+  /** PDF mais recente no Drive. */
   function pdfDto(p: Presentation) {
     if (!p.pdfDriveFileId) return null;
     return {
@@ -350,4 +356,158 @@ export async function presentationsRoutes(app: FastifyInstance, { db, drive }: {
       return dto(result.presentation, true);
     },
   );
+
+  /**
+   * "Salvar em PDF" (E9, desenho 6b-11): o servidor gera o PDF com o que está gravado e o envia ao Drive, na
+   * pasta Apresentações do projeto ou em "De.Croqui ERP/Avulsos". Cada exportação cria um arquivo novo (-v2, -v3
+   * no nome) e a apresentação aponta para o mais recente. Mesma ordem e mesmas respostas do orçamento:
+   * 409 `no_changes` sem mudança desde o último PDF, 422 `content_overflow` com conteúdo além do limite da
+   * página, 502 `pdf_failed` ou `drive_failed` sem gravar nada. A permissão é conferida aqui, não só no botão.
+   */
+  app.post<{ Params: { id: string } }>('/presentations/:id/pdf', { config: { permission: 'documents.export' } }, async (request, reply) => {
+    const current = await find(request.params.id);
+    if (!current) return reply.code(404).send({ error: 'not_found' });
+    const parsed = parsePresentationData(current.data);
+    if ('error' in parsed) return reply.code(422).send({ error: 'invalid_data' });
+    const data = parsed.data;
+    const project = current.projectId ? await activeProject(current.projectId) : null;
+    if (current.projectId && !project) return reply.code(404).send({ error: 'not_found' });
+
+    // Nada mudou desde o último PDF: não gera outro igual. Se o arquivo foi apagado do Drive, exporta de novo.
+    const sourceHash = presentationSourceHash({ data, name: current.name, projectId: current.projectId, number: current.number });
+    if (current.pdfDriveFileId && current.pdfSourceHash === sourceHash) {
+      let existing;
+      try {
+        existing = await drive.getFile(current.pdfDriveFileId);
+      } catch (err) {
+        request.log.error({ err: (err as Error)?.message ?? err }, 'falha no Google Drive');
+        return reply.code(502).send({ error: 'drive_failed' });
+      }
+      if (existing && !existing.trashed) return reply.code(409).send({ error: 'no_changes', file: pdfDto(current) });
+    }
+
+    // Imagens na resolução do arquivo guardado (P8), baixadas antes de reservar a versão.
+    const images = new Map<string, PdfImage>();
+    const ids = presentationImageIds(data);
+    if (ids.length) {
+      const rows = await db
+        .select({ id: presentationImages.id, driveFileId: presentationImages.driveFileId })
+        .from(presentationImages)
+        .where(inArray(presentationImages.id, ids));
+      try {
+        for (const row of rows) {
+          const file = await drive.download(row.driveFileId, IMAGE_MAX_BYTES);
+          if (!file) throw new Error(`imagem ${row.id} indisponível no Drive`);
+          images.set(row.id, { contentType: file.contentType, body: new Uint8Array(file.body) });
+        }
+        if (images.size !== ids.length) throw new Error('imagem citada fora da biblioteca');
+      } catch (err) {
+        request.log.error({ err: (err as Error)?.message ?? err }, 'falha ao baixar imagem do Google Drive para o PDF');
+        return reply.code(502).send({ error: 'drive_failed' });
+      }
+    }
+
+    // Reserva a versão antes de gerar: duas exportações ao mesmo tempo nunca recebem o mesmo nome.
+    const [reserved] = await db
+      .update(presentations)
+      .set({ pdfVersion: sql`${presentations.pdfVersion} + 1` })
+      .where(eq(presentations.id, current.id))
+      .returning({ version: presentations.pdfVersion });
+    const version = reserved.version;
+    // Se der errado, devolve o número quando nenhuma outra exportação passou na frente, para não pular versão.
+    const giveBack = () =>
+      db
+        .update(presentations)
+        .set({ pdfVersion: sql`${presentations.pdfVersion} - 1` })
+        .where(
+          and(
+            eq(presentations.id, current.id),
+            eq(presentations.pdfVersion, version),
+            sql`${presentations.pdfDriveFileId} is not distinct from ${current.pdfDriveFileId}`,
+          ),
+        )
+        .then(
+          () => undefined,
+          () => undefined,
+        );
+
+    const name = presentationPdfName({ name: current.name, number: current.number, issueDate: pdfIssueDate(data.projeto.data, new Date()), version });
+    let rendered: PresentationPdf;
+    try {
+      rendered = await pdf.render({ data, images });
+    } catch (err) {
+      await giveBack();
+      request.log.error({ err: (err as Error)?.message ?? err }, 'falha ao gerar o PDF da apresentação');
+      return reply.code(502).send({ error: 'pdf_failed' });
+    }
+    if (!rendered.ok) {
+      // Conteúdo além do limite da página: o PDF nunca sai cortado (P14).
+      await giveBack();
+      return reply.code(422).send({ error: 'content_overflow', overflow: rendered.overflow });
+    }
+
+    let file;
+    try {
+      const folderId = await presentationsFolderId(db, drive, project?.driveFolderId ?? null);
+      file = await drive.uploadFile({ name, mimeType: 'application/pdf', parentId: folderId, body: rendered.pdf });
+    } catch (err) {
+      await giveBack();
+      request.log.error({ err: (err as Error)?.message ?? err }, 'falha no Google Drive');
+      return reply.code(502).send({ error: 'drive_failed' });
+    }
+
+    const actor = request.user!;
+    const exportedAt = new Date();
+    const pages = rendered.pages;
+    try {
+      const updated = await db.transaction(async (tx) => {
+        // Só vira o "mais recente" se nenhuma exportação mais nova foi reservada depois desta. O updated_at
+        // não muda: exportar não altera o documento nem gera conflito com o editor aberto.
+        const [p] = await tx
+          .update(presentations)
+          .set({ pdfDriveFileId: file.id, pdfName: file.name, pdfExportedAt: exportedAt, pdfSourceHash: sourceHash })
+          .where(and(eq(presentations.id, current.id), eq(presentations.pdfVersion, version)))
+          .returning();
+        if (project) {
+          // Também aparece nos arquivos do projeto, como os PDFs do orçamento. As imagens não aparecem.
+          await tx.insert(projectFiles).values({
+            projectId: project.id,
+            driveFileId: file.id,
+            name: file.name,
+            mimeType: 'application/pdf',
+            sizeBytes: file.size,
+            subfolder: 'presentations',
+            source: 'pdf_export',
+            uploadedBy: actor.id,
+          });
+        }
+        await audit(tx, {
+          userId: actor.id,
+          action: 'presentation.export',
+          entity: 'presentation',
+          entityId: current.id,
+          payload: {
+            number: current.number,
+            fileName: file.name,
+            version,
+            driveFileId: file.id,
+            sizeBytes: file.size,
+            pages,
+            folder: project ? 'projeto' : 'avulsos',
+            projectId: project?.id ?? null,
+          },
+        });
+        return p ?? (await tx.select().from(presentations).where(eq(presentations.id, current.id)))[0];
+      });
+      return reply.code(201).send({
+        file: { driveFileId: file.id, name: file.name, version, exportedAt: exportedAt.toISOString(), url: fileViewUrl(file.id), pages },
+        presentation: await dto(updated, true),
+      });
+    } catch (err) {
+      // O banco falhou depois do envio: o arquivo vai para a lixeira do Drive, para não ficar solto.
+      await drive.trashFile(file.id).catch(() => {});
+      await giveBack();
+      throw err;
+    }
+  });
 }

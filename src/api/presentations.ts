@@ -49,4 +49,13 @@ export const presentationsApi = {
     mutate(request<Presentation>('POST', `/presentations/${id}/link`, { projectId }), 'presentations'),
   save: (id: string, input: { data: PresentationData; baseUpdatedAt: string; name?: string }) =>
     mutate(request<PresentationWithData>('PATCH', `/presentations/${id}`, input), 'presentations'),
+  /**
+   * "Salvar em PDF" (E9): o servidor gera com o que está gravado e salva no Drive. Sem mudança desde o último
+   * PDF responde 409 `no_changes` com o arquivo atual; conteúdo além do limite da página, 422 `content_overflow`.
+   */
+  exportPdf: (id: string) =>
+    mutate(
+      request<{ file: PresentationPdf & { pages: number }; presentation: PresentationWithData }>('POST', `/presentations/${id}/pdf`),
+      'presentations',
+    ),
 };

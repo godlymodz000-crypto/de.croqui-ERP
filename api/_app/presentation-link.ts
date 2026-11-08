@@ -1,18 +1,19 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import type { Db } from './db/client.js';
-import { presentationImages, presentations, projectFiles, type Presentation } from './db/schema.js';
+import { auditLog, presentationImages, presentations, projectFiles, type Presentation } from './db/schema.js';
 import { audit } from './audit.js';
 import { projectSubfolderId, type DriveClient } from './drive.js';
 import { IMAGES_FOLDER } from './presentation-images.js';
 
 // Vincular uma apresentação avulsa a um projeto (Fase 6b, etapa E5; P21 e P27). As imagens da biblioteca
-// da avulsa vão para "<projeto>/Apresentações/Imagens" e o PDF mais recente para "<projeto>/Apresentações".
+// da avulsa vão para "<projeto>/Apresentações/Imagens" e os PDFs para "<projeto>/Apresentações": o mais recente e,
+// desde a E9, as versões anteriores exportadas enquanto ela era avulsa, para a pasta do projeto ficar completa.
 // O ID de cada arquivo no Drive não muda ao trocar de pasta. Ordem: primeiro o Drive, depois o banco numa
 // transação só. Se o Drive falhar no meio, o que já foi movido volta para a pasta de antes e o banco não
 // muda; se o banco falhar depois, os arquivos também voltam.
 
 export type LinkResult =
-  | { ok: true; presentation: Presentation; moved: { images: number; pdf: boolean } }
+  | { ok: true; presentation: Presentation; moved: { images: number; pdf: boolean; pdfs: number } }
   | { ok: false; error: 'already_linked' }
   | { ok: false; error: 'drive_failed'; rolledBack: boolean };
 
@@ -56,18 +57,32 @@ export async function linkPresentationToProject(input: {
     return ok;
   }
 
-  let pdf: { id: string; name: string; size: number } | null = null;
+  // PDFs da avulsa: cada exportação fica registrada no histórico (presentation.export) com o arquivo no Drive.
+  // Só leitura do histórico. O mais recente vem primeiro na lista.
+  const exports = await db
+    .select({ payload: auditLog.payload })
+    .from(auditLog)
+    .where(and(eq(auditLog.entity, 'presentation'), eq(auditLog.entityId, p.id), eq(auditLog.action, 'presentation.export')))
+    .orderBy(asc(auditLog.at));
+  const pdfIds = [
+    ...new Set(
+      [p.pdfDriveFileId, ...exports.reverse().map((e) => (e.payload as { driveFileId?: unknown } | null)?.driveFileId)].filter(
+        (id): id is string => typeof id === 'string' && !!id,
+      ),
+    ),
+  ];
+
+  const pdfs: { id: string; name: string; size: number }[] = [];
   try {
     const presentationsFolder = await projectSubfolderId(drive, project.driveFolderId, 'presentations');
-    if (p.pdfDriveFileId) {
-      const file = await drive.getFile(p.pdfDriveFileId);
+    for (const id of pdfIds) {
+      const file = await drive.getFile(id);
       // PDF apagado no Drive (lixeira ou sumiu): não há o que mover nem mostrar em Arquivos.
-      if (file && !file.trashed) {
-        const from = await drive.moveFile(file.id, presentationsFolder);
-        if (from) {
-          moved.push({ fileId: file.id, from });
-          pdf = { id: file.id, name: file.name, size: file.size };
-        }
+      if (!file || file.trashed) continue;
+      const from = await drive.moveFile(file.id, presentationsFolder);
+      if (from) {
+        moved.push({ fileId: file.id, from });
+        pdfs.push({ id: file.id, name: file.name, size: file.size });
       }
     }
     if (toMove.length) {
@@ -83,6 +98,8 @@ export async function linkPresentationToProject(input: {
     return { ok: false, error: 'drive_failed', rolledBack: await rollback() };
   }
 
+  /** O PDF mais recente, se ele estava no Drive e foi movido. */
+  const latest = pdfs.find((f) => f.id === p.pdfDriveFileId) ?? null;
   try {
     const updated = await db.transaction(async (tx) => {
       // Só vincula se ainda for avulsa: outro pedido pode ter vinculado nesse meio tempo.
@@ -96,18 +113,20 @@ export async function linkPresentationToProject(input: {
         .update(presentationImages)
         .set({ projectId: project.id, ownerPresentationId: null })
         .where(eq(presentationImages.ownerPresentationId, p.id));
-      if (pdf) {
-        // O PDF movido passa a aparecer em Arquivos do projeto, como os PDFs exportados.
-        await tx.insert(projectFiles).values({
-          projectId: project.id,
-          driveFileId: pdf.id,
-          name: pdf.name,
-          mimeType: 'application/pdf',
-          sizeBytes: pdf.size,
-          subfolder: 'presentations',
-          source: 'pdf_export',
-          uploadedBy: actorId,
-        });
+      if (pdfs.length) {
+        // Os PDFs movidos passam a aparecer em Arquivos do projeto, como os PDFs exportados.
+        await tx.insert(projectFiles).values(
+          pdfs.map((f) => ({
+            projectId: project.id,
+            driveFileId: f.id,
+            name: f.name,
+            mimeType: 'application/pdf',
+            sizeBytes: f.size,
+            subfolder: 'presentations' as const,
+            source: 'pdf_export' as const,
+            uploadedBy: actorId,
+          })),
+        );
       }
       await audit(tx, {
         userId: actorId,
@@ -117,13 +136,14 @@ export async function linkPresentationToProject(input: {
         payload: {
           projectId: project.id,
           images: images.length,
-          movedImages: moved.length - (pdf ? 1 : 0),
-          pdf: pdf ? { driveFileId: pdf.id, name: pdf.name } : null,
+          movedImages: moved.length - pdfs.length,
+          pdf: latest ? { driveFileId: latest.id, name: latest.name } : null,
+          pdfs: pdfs.map((f) => ({ driveFileId: f.id, name: f.name })),
         },
       });
       return row;
     });
-    return { ok: true, presentation: updated, moved: { images: moved.length - (pdf ? 1 : 0), pdf: !!pdf } };
+    return { ok: true, presentation: updated, moved: { images: moved.length - pdfs.length, pdf: !!latest, pdfs: pdfs.length } };
   } catch (err) {
     if (err instanceof AlreadyLinkedError) {
       // Outro pedido vinculou primeiro. Os arquivos só voltam se ele vinculou a outro projeto.
