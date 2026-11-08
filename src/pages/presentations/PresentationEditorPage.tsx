@@ -29,6 +29,7 @@ import {
   type SaveState,
 } from './editor';
 import { canWritePresentations } from './list';
+import { LinkProjectDialog } from './LinkProjectDialog';
 import '../budgets/budgets.css';
 import './editor.css';
 
@@ -58,6 +59,7 @@ export function PresentationEditorPage() {
   const [preview, setPreview] = useState(false);
   const [tab, setTab] = useState<PanelTab>('pagina');
   const [nameDraft, setNameDraft] = useState('');
+  const [linking, setLinking] = useState(false);
 
   const dataRef = useRef<PresentationData | null>(null);
   const baseRef = useRef('');
@@ -234,12 +236,22 @@ export function PresentationEditorPage() {
   return (
     <div className="beditor peditor">
       <header className="beditor__bar">
-        <Link to={back.to} className="beditor__back">
-          <AppIcon name="arrow-left" size={18} />
-          <span>{back.label}</span>
-        </Link>
+        <div className="peditor__left">
+          <Link to={back.to} className="beditor__back">
+            <AppIcon name="arrow-left" size={18} />
+            <span>{back.label}</span>
+          </Link>
+          {!readOnly && !hasProject && (
+            <button type="button" className="peditor__link" onClick={() => setLinking(true)}>
+              Vincular a um projeto
+            </button>
+          )}
+        </div>
         <div className="beditor__title">
-          <span className="beditor__eyebrow peditor__eyebrow">Apresentação nº {presentation.number}</span>
+          <span className="beditor__eyebrow peditor__eyebrow">
+            Apresentação nº {presentation.number}
+            {hasProject ? '' : ' · Sem projeto'}
+          </span>
           <span className="beditor__name">{shownName}</span>
         </div>
         <div className="beditor__actions peditor__actions">
@@ -321,6 +333,18 @@ export function PresentationEditorPage() {
       </div>
 
       {!readOnly && <CoverImageLayers cover={cover} projectName={presentation.project?.name ?? null} />}
+      {linking && (
+        <LinkProjectDialog
+          presentation={presentation}
+          images={cover.library?.length ?? 0}
+          beforeLink={flush}
+          onClose={() => setLinking(false)}
+          onLinked={() => {
+            setLinking(false);
+            void load();
+          }}
+        />
+      )}
 
       {(save.kind === 'error' || save.kind === 'conflict' || save.kind === 'too_large') && (
         <div className="toast-slot beditor__toast">

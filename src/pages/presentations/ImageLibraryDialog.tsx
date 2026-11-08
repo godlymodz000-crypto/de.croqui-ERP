@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { LibraryImage } from '../../api/presentationImages';
-import { libraryCaption } from './editor';
+import { LAST_USE_TEXT, libraryCaption } from './editor';
 
 /**
  * "Escolher imagem para a capa" (desenho 6b-09). Mostra a biblioteca do projeto ou, na avulsa, a da própria
@@ -12,6 +12,7 @@ export function ImageLibraryDialog({
   hasProject,
   projectName,
   thumbSrc,
+  currentLastUse,
   onClose,
   onUse,
   onUpload,
@@ -21,6 +22,8 @@ export function ImageLibraryDialog({
   hasProject: boolean;
   projectName: string | null;
   thumbSrc: (id: string) => string;
+  /** A imagem atual da capa não é usada em outra apresentação: trocar a manda para a lixeira (6b-07). */
+  currentLastUse: boolean;
   onClose: () => void;
   onUse: (img: LibraryImage) => void;
   onUpload: () => void;
@@ -78,6 +81,12 @@ export function ImageLibraryDialog({
             );
           })}
         </div>
+
+        {currentLastUse && selected !== selectedId && (
+          <p className="plibrary__notice" role="status">
+            {LAST_USE_TEXT}
+          </p>
+        )}
 
         <div className="plibrary__footer">
           <button type="button" className="pbtn pbtn--outline pbtn--lg" onClick={onUpload}>

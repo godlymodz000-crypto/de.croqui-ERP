@@ -390,3 +390,167 @@
   color: var(--noite-900);
   cursor: pointer;
 }
+
+/* ---------- Aviso ao trocar a imagem que perde o último uso (6b-07) ---------- */
+.plibrary__notice {
+  margin: 0;
+  padding: 14px 16px;
+  border-left: 2px solid var(--ardosia-700);
+  background: #e4e9ef;
+  font: var(--weight-regular) 13px / 1.5 var(--font-body);
+  color: var(--noite-900);
+}
+
+/* ---------- Vincular a um projeto (6b-10) ---------- */
+.plink {
+  width: 620px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 32px;
+  background: var(--surface-card);
+  box-shadow: 0 16px 40px rgba(20, 40, 65, 0.2);
+}
+.plink__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.plink__label {
+  font: var(--weight-medium) 10px / 1.4 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ardosia-700);
+}
+.plink__select-wrap {
+  position: relative;
+  display: block;
+}
+.plink__select-wrap svg {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--noite-900);
+}
+.plink__select {
+  width: 100%;
+  height: 44px;
+  padding: 0 40px 0 14px;
+  border: 1px solid var(--border-default);
+  border-radius: 2px;
+  background: var(--linho-100);
+  font: var(--weight-regular) 14px / 1 var(--font-body);
+  color: var(--noite-900);
+  appearance: none;
+}
+.plink__select:disabled {
+  color: var(--text-secondary);
+}
+.plink__select:focus-visible {
+  outline: 2px solid var(--noite-900);
+  outline-offset: 2px;
+}
+.plink__box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+}
+.plink__box p {
+  margin: 0;
+  font: var(--weight-regular) 13px / 1.6 var(--font-body);
+  color: var(--noite-900);
+}
+.plink__box--info {
+  background: #e4e9ef;
+}
+.plink__box--danger {
+  border: 1px solid var(--feedback-danger);
+  background: #ecd2c6;
+}
+.plink__box-title {
+  margin-bottom: 6px;
+  font: var(--weight-medium) 10px / 1.4 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ardosia-700);
+}
+/* Andamento sem contagem: a barra corre até o fim, sem dizer quantos arquivos faltam. */
+.plink__progress {
+  position: relative;
+  height: 3px;
+  margin-top: 10px;
+  overflow: hidden;
+  background: #b9c3cf;
+}
+.plink__progress > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30%;
+  background: var(--noite-900);
+  animation: plink-run 1.4s ease-in-out infinite;
+}
+@keyframes plink-run {
+  from {
+    left: -30%;
+  }
+  to {
+    left: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plink__progress > span {
+    animation: none;
+    left: 0;
+    width: 100%;
+    opacity: 0.4;
+  }
+}
+.plink__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.plink__busy:disabled {
+  background: var(--ardosia-500);
+  opacity: 1;
+}
+
+/* Link "Vincular a um projeto" na barra do editor (6b-10). */
+.peditor__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: var(--weight-medium) 11px / 1.4 var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--noite-900);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.peditor__left {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  min-width: 0;
+}
+/* Até 1279 px não cabe tudo numa linha: o link fica embaixo do Voltar e o título mantém o espaço. */
+@media (max-width: 1279px) {
+  .peditor__left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .peditor__left .peditor__link {
+    font-size: 10px;
+  }
+}
+.peditor .peditor__eyebrow {
+  white-space: nowrap;
+}

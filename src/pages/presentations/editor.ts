@@ -144,3 +144,49 @@ export function dragFrame(start: { x: number; y: number }, dx: number, dy: numbe
     y: clamp(start.y - (dy / box.height) * (100 / zoom)),
   };
 }
+
+/** Aviso de 6b-07 quando a imagem perde o último uso ao sair da capa (remover ou trocar). */
+export const LAST_USE_TEXT = 'Esta imagem não é usada em nenhuma outra apresentação. Ela vai para a lixeira ao sair da capa.';
+
+/**
+ * A imagem da capa não é usada em outra apresentação? `usedBy` conta os usos já salvos, inclusive o desta
+ * apresentação; zero quer dizer que a imagem acabou de ser colocada e ainda não foi salva.
+ */
+export const isLastUse = (img: { usedBy: number } | null | undefined) => !!img && img.usedBy <= 1;
+
+/** Texto da confirmação de remover (6b-07). */
+export function removeImageText(lastUse: boolean, hasProject: boolean): string {
+  if (lastUse) return LAST_USE_TEXT;
+  return `Ela continua na biblioteca ${hasProject ? 'do projeto' : 'desta apresentação'} e pode ser usada de novo. Só vai para a lixeira do Drive quando nenhuma apresentação a usar.`;
+}
+
+// ---------- Vincular a um projeto (6b-10) ----------
+
+export const LINK_MOVING_TEXT = 'Movendo arquivos para o projeto';
+
+/** Erro do vínculo: as mensagens da E5, conforme os arquivos já movidos voltaram ou não. */
+export function linkFailureText(err: unknown): string {
+  const body = err instanceof ApiError ? err.body : {};
+  if (err instanceof ApiError && err.code === 'drive_failed' && body.rolledBack === false) {
+    return 'Não foi possível vincular. Alguns arquivos ficaram na pasta do projeto, e a apresentação continua abrindo normalmente.';
+  }
+  // Volta confirmada, ou recusa antes de mexer no Drive: os arquivos estão na pasta anterior. Sem resposta do
+  // servidor, a tela confere a apresentação antes de mostrar o erro (se o vínculo chegou a ser feito, segue).
+  return 'Não foi possível vincular. Os arquivos voltaram para a pasta anterior.';
+}
+
+/** Linhas de "O que muda de pasta". */
+export function linkMoveLines(opts: { projectName: string; images: number; pdfVersion: number | null }): string[] {
+  const lines: string[] = [];
+  const { projectName, images, pdfVersion } = opts;
+  if (images > 0) {
+    lines.push(
+      images === 1
+        ? `1 imagem: de Avulsos/Imagens para ${projectName}/Apresentações/Imagens. Passa a fazer parte da biblioteca do projeto.`
+        : `${images} imagens: de Avulsos/Imagens para ${projectName}/Apresentações/Imagens. Passam a fazer parte da biblioteca do projeto.`,
+    );
+  }
+  if (pdfVersion) lines.push(`PDF v${pdfVersion}: de Avulsos para ${projectName}/Apresentações. Passa a aparecer em Arquivos do projeto.`);
+  lines.push('Nome, cliente e textos da capa continuam como estão.');
+  return lines;
+}

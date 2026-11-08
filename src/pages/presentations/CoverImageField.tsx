@@ -6,6 +6,8 @@ import type { PresentationImageRef } from '../../shared/presentation-data';
 import { prepareImage } from '../../presentation/imageReduce';
 import {
   dragFrame,
+  isLastUse,
+  removeImageText,
   extraFilesNotice,
   imagePlacedLine,
   imageZoomIn,
@@ -39,6 +41,8 @@ export interface CoverImage {
   libraryOpen: boolean;
   removing: boolean;
   hasProject: boolean;
+  /** A imagem da capa não é usada em nenhuma outra apresentação: ao sair da capa, vai para a lixeira (P22). */
+  lastUse: boolean;
   pickFiles: () => void;
   handleFiles: (files: File[]) => void;
   retry: () => void;
@@ -90,9 +94,10 @@ export function useCoverImage({
     }
   }, [presentationId]);
 
+  // Ao vincular a um projeto, a biblioteca passa a ser a do projeto.
   useEffect(() => {
     if (enabled) void loadLibrary();
-  }, [enabled, loadLibrary]);
+  }, [enabled, loadLibrary, hasProject]);
 
   // Sair do editor cancela um envio em andamento e libera as cópias locais.
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -160,6 +165,7 @@ export function useCoverImage({
 
   const placed = imagem && library ? (library.find((i) => i.id === imagem.id) ?? null) : null;
   const missing = !!imagem && (failedId === imagem.id || (library !== null && !placed && !local[imagem.id]));
+  const lastUse = isLastUse(placed);
   const src = imagem && !missing ? (local[imagem.id] ?? presentationImagesApi.imageUrl(imagem.id)) : null;
 
   const input = (
@@ -188,6 +194,7 @@ export function useCoverImage({
     libraryOpen,
     removing,
     hasProject,
+    lastUse,
     pickFiles,
     handleFiles: (files) => void handleFiles(files),
     retry: () => {
@@ -213,7 +220,11 @@ export function useCoverImage({
     setFrame: (change) => {
       if (imagem) setImagem({ ...imagem, ...change });
     },
-    askRemove: setRemoving,
+    askRemove: (open) => {
+      setRemoving(open);
+      // O texto depende de a imagem ser usada em outra apresentação: confere com a biblioteca atual.
+      if (open) void loadLibrary();
+    },
     remove: () => {
       setRemoving(false);
       setImagem(null);
@@ -388,6 +399,7 @@ export function CoverImageLayers({ cover, projectName }: { cover: CoverImage; pr
           hasProject={cover.hasProject}
           projectName={projectName}
           thumbSrc={cover.thumbSrc}
+          currentLastUse={!!cover.imagem && cover.lastUse}
           onClose={cover.closeLibrary}
           onUse={cover.place}
           onUpload={() => {
@@ -402,11 +414,7 @@ export function CoverImageLayers({ cover, projectName }: { cover: CoverImage; pr
             <h2 id="pconfirm-title" className="pconfirm__title">
               Remover a imagem desta página?
             </h2>
-            <p className="pconfirm__text">
-              {cover.hasProject
-                ? 'Ela continua na biblioteca do projeto e pode ser usada de novo. Só vai para a lixeira do Drive quando nenhuma apresentação a usar.'
-                : 'Ela continua na biblioteca desta apresentação e pode ser usada de novo. Só vai para a lixeira do Drive quando nenhuma apresentação a usar.'}
-            </p>
+            <p className="pconfirm__text">{removeImageText(cover.lastUse, cover.hasProject)}</p>
             <div className="pconfirm__actions">
               <button type="button" className="pbtn pbtn--text" onClick={() => cover.askRemove(false)}>
                 Cancelar
