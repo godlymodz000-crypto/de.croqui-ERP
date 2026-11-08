@@ -25,7 +25,15 @@ Decisões aceitas pelo usuário em 2026-11-08. As decisões da 6a e da 6b contin
 ## Decisões da E3 (2026-11-08)
 - Espaço de imagem vazio com a Prévia ligada e no PDF: continua como fundo bege, sem o texto em cinza, para a composição não mudar, como no arquivo offline e na capa em arco da 6b.
 
-## Escolhas da E4 (2026-11-08), para conferir
+## Escolhas da E5 (2026-11-08), para conferir
+- Diálogo de remover página (P34): o mesmo padrão da confirmação de remover imagem (6b-07), com "Remover a página NN?", o nome da página, "Não dá para desfazer." e, quando há, quantas imagens só aparecem nela. Botões "Cancelar" e "Remover página" (contorno, não Vinho). Esc e clique fora cancelam. Não foi desenhado no arquivo `.figcraft`; as capturas `6c-21-remover-dialogo-*` servem de desenho.
+- Página atual depois de remover: a que ficou no lugar dela ou, se era a última, a anterior. Depois de ↑ ↓: segue a página que estava sendo vista.
+- Adicionar página: a nova passa a ser a atual, e a aba Páginas continua aberta.
+- No limite de 40 páginas, os seis tipos ficam desligados, com o motivo escrito abaixo.
+- Aviso de Duplicar: o texto de 6c-21, como pedido, embora a regra da cópia já tenha sido decidida (P29).
+- Celular: ‹ › abaixo da folha para passar pelas páginas, sem edição. Não há desenho 6c para o celular.
+
+## Escolhas da E4 (2026-11-08), aprovadas
 - Itens da lista: clicar no item abre os campos dele logo abaixo, um por vez. Os desenhos 6c-15 a 6c-20 mostram só a lista fechada.
 - Apresentação visual: "+ Imagem" só fica ligado em "Várias imagens do ambiente", até 8. Nas outras composições fica desligado, com o motivo escrito. Os desenhos 6c-17 e 6c-18 não mostram "+ item".
 - Desenho técnico: sem "+ item". A quantidade de desenhos vem da composição, como no arquivo offline.

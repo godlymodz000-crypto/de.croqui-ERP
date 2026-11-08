@@ -1,0 +1,167 @@
+/* Aba Páginas (Fase 6c, E5; desenho 6c-21). */
+
+.ppages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: -6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ppages__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 53px;
+  padding-right: 10px;
+  border: 1px solid rgb(20 40 65 / 0.14);
+  border-radius: 2px;
+  background: var(--linho-50);
+}
+.ppages__row.is-active {
+  border-color: var(--noite-900);
+}
+.ppages__open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0 10px 10px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.ppages__open:focus-visible {
+  outline: 1.5px solid var(--border-strong);
+  outline-offset: -3px;
+}
+.ppages__number {
+  width: 18px;
+  flex: none;
+  font: var(--weight-light) 18px / 1.2 var(--font-display);
+  color: var(--latao-500);
+}
+.ppages__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.ppages__kind {
+  font: var(--weight-medium) 9px / 1.4 var(--font-body);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ardosia-700);
+}
+.ppages__name {
+  overflow: hidden;
+  font: var(--weight-regular) 13.5px / 1.4 var(--font-body);
+  color: var(--text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ppages__actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.ppages__actions button {
+  min-width: 20px;
+  height: 26px;
+  padding: 0 3px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  font: var(--weight-medium) 11px / 1 var(--font-body);
+  color: var(--ardosia-700);
+  cursor: pointer;
+}
+.ppages__actions .ppages__dup {
+  padding: 0 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+}
+.ppages__actions button:hover:not(:disabled) {
+  color: var(--noite-900);
+  background: var(--linho-100);
+}
+.ppages__actions button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+/* Duplicar aparece como em 6c-21; o aviso abaixo da lista explica que é proposta. */
+.ppages__actions .ppages__dup:disabled {
+  opacity: 0.8;
+}
+.ppages__actions button:focus-visible {
+  outline: 1.5px solid var(--border-strong);
+  outline-offset: 1px;
+}
+
+/* ---------- Adicionar página ---------- */
+.ppages__add {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: -6px;
+}
+.ppages__type {
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid rgb(20 40 65 / 0.24);
+  border-radius: 2px;
+  background: var(--linho-50);
+  font: var(--weight-regular) 13px / 1.3 var(--font-body);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.ppages__type:hover:not(:disabled) {
+  border-color: var(--noite-900);
+}
+.ppages__type:disabled {
+  color: var(--ardosia-700);
+  opacity: 0.6;
+  cursor: default;
+}
+.ppages__type:focus-visible {
+  outline: 1.5px solid var(--border-strong);
+  outline-offset: 2px;
+}
+
+/* Diálogo de remover página: dois parágrafos no corpo. */
+.pconfirm__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---------- Celular: ‹ › entre as páginas ---------- */
+.pmobile__nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.pmobile__nav .pmobile__label {
+  flex: 1;
+  margin: 0;
+  text-align: center;
+}
+.pmobile__step {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgb(20 40 65 / 0.24);
+  border-radius: 2px;
+  background: var(--linho-50);
+  font: var(--weight-regular) 18px / 1 var(--font-body);
+  color: var(--noite-900);
+  cursor: pointer;
+}
+.pmobile__step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

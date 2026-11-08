@@ -10,6 +10,7 @@ import { presentationsApi, type PresentationWithData } from '../../api/presentat
 import {
   presentationBytes,
   presentationImageIds,
+  type AddablePageKind,
   type PresentationContentPage,
   type PresentationCover,
   type PresentationData,
@@ -56,10 +57,13 @@ import {
   COVER_LAYOUT_OPTIONS,
   itemImage,
   NEAR_LIMIT_TEXT,
+  PAGE_KIND_LABELS,
   pageItems,
   setItemField,
   sizeLevel,
 } from './pageEditor';
+import { PagesTab, RemovePageDialog } from './PagesTab';
+import { addPage, canStep, currentAfterMove, currentAfterRemove, movePage, removePage, stepPage } from './pagesList';
 import { LinkProjectDialog } from './LinkProjectDialog';
 import { ExportPdfDialog } from './ExportPdfDialog';
 import '../budgets/budgets.css';
@@ -104,6 +108,8 @@ export function PresentationEditorPage() {
   const [current, setCurrent] = useState(0);
   /** Item aberto na aba Página: o espaço de imagem dele usa a biblioteca. */
   const [openItem, setOpenItem] = useState<string | null>(null);
+  /** Página à espera da confirmação de remover (P34). */
+  const [removingPage, setRemovingPage] = useState<number | null>(null);
 
   const dataRef = useRef<PresentationData | null>(null);
   const baseRef = useRef('');
@@ -238,6 +244,39 @@ export function PresentationEditorPage() {
       }),
     [update],
   );
+  /** Muda a página atual (visualização, aba Página e lista da aba Páginas). */
+  const goTo = useCallback((index: number) => {
+    setCurrent(index);
+    setOpenItem(null);
+  }, []);
+  /** Ações da aba Páginas: mudam só o documento e passam pelo salvamento automático. */
+  const addPageAfter = useCallback(
+    (tipo: AddablePageKind) => {
+      if (!dataRef.current) return;
+      const added = addPage(dataRef.current, tipo, at, newId);
+      if (added.data === dataRef.current) return;
+      update(() => added.data);
+      goTo(added.index);
+    },
+    [at, update, goTo],
+  );
+  const movePageBy = useCallback(
+    (index: number, dir: -1 | 1) => {
+      if (!dataRef.current) return;
+      const total = dataRef.current.paginas.length;
+      update((d) => movePage(d, index, dir));
+      setCurrent(currentAfterMove(at, index, dir, total));
+    },
+    [at, update],
+  );
+  const confirmRemovePage = useCallback(() => {
+    const index = removingPage;
+    setRemovingPage(null);
+    if (index === null || !dataRef.current) return;
+    const total = dataRef.current.paginas.length;
+    update((d) => removePage(d, index));
+    goTo(currentAfterRemove(at, index, total));
+  }, [removingPage, at, update, goTo]);
   const updateCover = useCallback(
     (change: Partial<PresentationCover>) =>
       update((d) => ({ ...d, paginas: d.paginas.map((pg, i) => (i === 0 ? { ...pg, ...change } : pg)) as PresentationData['paginas'] })),
@@ -472,7 +511,17 @@ export function PresentationEditorPage() {
                 onBlur={() => void flush()}
               />
             )}
-            {tab === 'paginas' && <PagesTab onOpen={() => setTab('pagina')} />}
+            {tab === 'paginas' && (
+              <PagesTab
+                data={data}
+                current={at}
+                readOnly={readOnly}
+                onSelect={goTo}
+                onMove={movePageBy}
+                onAskRemove={setRemovingPage}
+                onAdd={addPageAfter}
+              />
+            )}
             {tab === 'pagina' &&
               (currentPage && currentPage.tipo !== 'capa' ? (
                 <PageTab
@@ -502,10 +551,7 @@ export function PresentationEditorPage() {
         <Preview
           data={data}
           index={at}
-          onIndex={(i) => {
-            setCurrent(i);
-            setOpenItem(null);
-          }}
+          onIndex={goTo}
           mode={mode}
           kind={readOnly ? 'readonly' : mode}
           cover={cover}
@@ -528,6 +574,9 @@ export function PresentationEditorPage() {
       )}
 
       {pdfDialog}
+      {!readOnly && removingPage !== null && data.paginas[removingPage] && (
+        <RemovePageDialog data={data} index={removingPage} onCancel={() => setRemovingPage(null)} onConfirm={confirmRemovePage} />
+      )}
 
       {(save.kind === 'error' || save.kind === 'conflict' || save.kind === 'too_large' || save.kind === 'invalid' || pdfAlert || (!readOnly && sizeLevel(size) === 'near')) && (
         <div className="toast-slot beditor__toast">
@@ -658,11 +707,11 @@ function Preview({
   return (
     <section className="ppreview" aria-label="Visualização">
       <div className="ppreview__bar">
-        <button type="button" className="ppreview__step" aria-label="Página anterior" disabled={index <= 0} onClick={() => onIndex(index - 1)}>
+        <button type="button" className="ppreview__step" aria-label="Página anterior" disabled={!canStep(index, -1, total)} onClick={() => onIndex(stepPage(index, -1, total))}>
           ‹
         </button>
         <span className="ppreview__page">{pageNavLabel(index, total)}</span>
-        <button type="button" className="ppreview__step" aria-label="Próxima página" disabled={index >= total - 1} onClick={() => onIndex(index + 1)}>
+        <button type="button" className="ppreview__step" aria-label="Próxima página" disabled={!canStep(index, 1, total)} onClick={() => onIndex(stepPage(index, 1, total))}>
           ›
         </button>
         <span className="ppreview__kind">{pageKindLabel(kind, compact, page.tipo)}</span>
@@ -790,28 +839,6 @@ function ProjectTab({
   );
 }
 
-function PagesTab({ onOpen }: { onOpen: () => void }) {
-  return (
-    <>
-      <div className="ppanel__section ppanel__section--row">
-        <h2 className="ppanel__section-title">Páginas</h2>
-        <span className="ppanel__count">1 página</span>
-      </div>
-      <button type="button" className="ppage is-active" onClick={onOpen}>
-        <span className="ppage__number">01</span>
-        <span className="ppage__text">
-          <span className="ppage__kind">Capa · Imagem em arco</span>
-          <span className="ppage__name">Capa</span>
-        </span>
-      </button>
-      <div className="ppanel__section">
-        <h2 className="ppanel__section-title">Outras páginas</h2>
-        <p className="ppanel__help">Nesta versão, a apresentação tem só a capa. A capa não pode ser movida, duplicada nem excluída.</p>
-      </div>
-    </>
-  );
-}
-
 /** Opções da capa guardadas no documento. */
 function coverOptions(page: PresentationData['paginas'][0]): CoverOptions {
   return { composicao: page.composicao, cor: page.cor, marca: page.marca };
@@ -898,6 +925,10 @@ function MobileView({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [z, setZ] = useState(0.32);
+  const [index, setIndex] = useState(0);
+  const total = data.paginas.length;
+  const at = Math.min(index, total - 1);
+  const page = data.paginas[at];
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -925,18 +956,33 @@ function MobileView({
         <p className="pmobile__intro">Edição só no computador. Aqui você vê a apresentação como vai sair no PDF.</p>
         <div ref={ref} className="pmobile__sheet">
           <div className="ppreview__sheet" style={{ zoom: zoomCss(z) }}>
-            <CoverSheet
-              projeto={data.projeto}
-              mode="print"
-              logoSrc={logo}
-              logoDarkSrc={logoDark}
-              options={coverOptions(data.paginas[0])}
-              image={coverImage(data.paginas[0], cover)}
-              onImageError={cover.imageFailed}
-            />
+            {page.tipo === 'capa' ? (
+              <CoverSheet
+                projeto={data.projeto}
+                mode="print"
+                logoSrc={logo}
+                logoDarkSrc={logoDark}
+                options={coverOptions(page)}
+                image={coverImage(page, cover)}
+                onImageError={cover.imageFailed}
+              />
+            ) : (
+              <PageSheet page={page} projeto={data.projeto} mode="print" index={at} total={total} imageSrc={cover.imageSrc} isotipoSrc={isotipo} />
+            )}
           </div>
         </div>
-        <p className="pmobile__label">{pageNavLabel(0, data.paginas.length)} · Capa</p>
+        {/* Navega entre as páginas sem editar (E5). */}
+        <div className="pmobile__nav">
+          <button type="button" className="pmobile__step" aria-label="Página anterior" disabled={!canStep(at, -1, total)} onClick={() => setIndex(stepPage(at, -1, total))}>
+            ‹
+          </button>
+          <p className="pmobile__label">
+            {pageNavLabel(at, total)} · {PAGE_KIND_LABELS[page.tipo]}
+          </p>
+          <button type="button" className="pmobile__step" aria-label="Próxima página" disabled={!canStep(at, 1, total)} onClick={() => setIndex(stepPage(at, 1, total))}>
+            ›
+          </button>
+        </div>
       </div>
       {(presentation.pdf || canExport) && (
         <div className="pmobile__foot">
