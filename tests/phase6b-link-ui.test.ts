@@ -49,6 +49,15 @@ describe('vincular a um projeto (6b-10)', () => {
       'PDF v2 e versões antigas: de Avulsos para Projeto Teste/Apresentações. Aparecem em Arquivos.',
       'Nome, cliente e textos da capa continuam como estão.',
     ]);
+    // Só a v1: sem "versões antigas" (variante do 6b-10).
+    expect(linkMoveLines({ projectName: 'Projeto Teste', images: 2, pdfVersion: 1 })).toEqual([
+      '2 imagens: de Avulsos/Imagens para Projeto Teste/Apresentações/Imagens. Passam a fazer parte da biblioteca do projeto.',
+      'PDF v1: de Avulsos para Projeto Teste/Apresentações. Aparece em Arquivos.',
+      'Nome, cliente e textos da capa continuam como estão.',
+    ]);
+    expect(linkMoveLines({ projectName: 'Projeto Teste', images: 0, pdfVersion: 3 })[0]).toBe(
+      'PDF v3 e versões antigas: de Avulsos para Projeto Teste/Apresentações. Aparecem em Arquivos.',
+    );
     expect(linkMoveLines({ projectName: 'Projeto Teste', images: 1, pdfVersion: null })[0]).toMatch(/^1 imagem: .*Passa a fazer parte/);
     expect(linkMoveLines({ projectName: 'Projeto Teste', images: 0, pdfVersion: null })).toEqual(['Nome, cliente e textos da capa continuam como estão.']);
   });
