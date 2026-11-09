@@ -10,6 +10,7 @@ import {
   newTextBlock,
   newVisualImage,
   parsePresentationData,
+  PRESENTATION_MAX_BLOCKS,
   PRESENTATION_MAX_BYTES,
   PRESENTATION_MAX_PAGES,
   PRESENTATION_MAX_SHORT,
@@ -249,17 +250,18 @@ describe('Fase 6c · E1 · limites', () => {
     expect(refused(json(d))).toMatchObject({ error: 'invalid', reason: 'too_many_pages' });
   });
 
-  it('12 blocos, 12 materiais e 12 notas são aceitos; o 13º é recusado', () => {
-    const lists: [number, string, () => unknown][] = [
-      [1, 'blocos', () => newTextBlock(newId)],
-      [2, 'materiais', () => newMaterial(newId)],
-      [5, 'notas', () => newNote(newId)],
+  it('6 blocos, 12 materiais e 12 notas são aceitos; o item seguinte é recusado', () => {
+    expect(PRESENTATION_MAX_BLOCKS).toBe(6);
+    const lists: [number, string, number, () => unknown][] = [
+      [1, 'blocos', 6, () => newTextBlock(newId)],
+      [2, 'materiais', 12, () => newMaterial(newId)],
+      [5, 'notas', 12, () => newNote(newId)],
     ];
-    for (const [i, key, make] of lists) {
+    for (const [i, key, max, make] of lists) {
       const d = json(fullDoc());
-      d.paginas[i][key] = Array.from({ length: 12 }, make);
+      d.paginas[i][key] = Array.from({ length: max }, make);
       expect(accepted(d).paginas[i]).toHaveProperty(key);
-      d.paginas[i][key] = Array.from({ length: 13 }, make);
+      d.paginas[i][key] = Array.from({ length: max + 1 }, make);
       expect(refused(d), key).toMatchObject({ error: 'invalid', reason: 'too_many_items', pagina: i, campo: key });
     }
   });
@@ -332,6 +334,9 @@ describe('Fase 6c · E1 · limites', () => {
     expect(presentationDataMessage({ reason: 'too_many_pages' })).toBe('A apresentação pode ter até 40 páginas, com a capa.');
     expect(presentationDataMessage({ reason: 'second_cover', pagina: 2 })).toBe('A apresentação só pode ter uma capa. Há outra capa na página 03.');
     expect(presentationDataMessage({ reason: 'too_many_items', pagina: 4 })).toBe('A lista na página 05 passou do limite de itens.');
+    expect(presentationDataMessage({ reason: 'too_many_items', pagina: 1, campo: 'blocos' })).toBe('A página 02 pode ter até 6 blocos, contando os de imagem.');
+    expect(presentationDataMessage({ reason: 'too_many_items', pagina: 2, campo: 'materiais' })).toBe('A página 03 pode ter até 12 materiais.');
+    expect(presentationDataMessage({ reason: 'too_many_items', pagina: 5, campo: 'notas' })).toBe('A página 06 pode ter até 12 notas.');
     expect(presentationDataMessage({ reason: 'cover_first', pagina: 0 })).toBe('A capa precisa ser a primeira página.');
     for (const reason of ['format', 'project', 'base64', 'no_pages', 'page_type', 'page_id', 'field', 'text_too_long', 'image', 'too_few_items'] as const) {
       const m = presentationDataMessage({ reason, pagina: 1 });
@@ -352,7 +357,7 @@ describe('Fase 6c · E1 · limites', () => {
       fill(p);
       for (const k of ['introducao', 'descricao', 'observacoes', 'autoria', 'escritorio', 'uso', 'restricoes']) if (k in p) p[k] = L;
     }
-    pages[0].blocos = Array.from({ length: 12 }, () => ({ ...newTextBlock(newId), titulo: S, texto: L }));
+    pages[0].blocos = Array.from({ length: PRESENTATION_MAX_BLOCKS }, () => ({ ...newTextBlock(newId), titulo: S, texto: L }));
     pages[1].materiais = Array.from({ length: 12 }, () => ({ ...newMaterial(newId), imagem: img(IMG_A), nome: S, fabricante: S, codigo: S, acabamento: S, ambiente: S, observacoes: L }));
     pages[2].composicao = 'grade';
     pages[2].imagens = Array.from({ length: 8 }, () => ({ ...newVisualImage(newId), imagem: img(IMG_A), legenda: S }));
@@ -360,10 +365,10 @@ describe('Fase 6c · E1 · limites', () => {
     const out = accepted(d);
     const sizes = Object.fromEntries(out.paginas.slice(1).map((p) => [p.tipo, presentationBytes(p)]));
     console.info('Tamanho de uma página cheia, em bytes:', JSON.stringify(sizes));
-    // Página de texto cheia: 12 blocos de 2000 caracteres, cerca de 29 KB. Cabem 35 delas em 1 MiB; com o
+    // Página de texto cheia: 6 blocos de 2000 caracteres, cerca de 16 KB. Cabem 65 delas em 1 MiB; com o
     // moodboard cheio (cerca de 40 KB), 25. O limite de 40 páginas só é alcançado com páginas mais leves.
     expect(PRESENTATION_MAX_BYTES).toBe(1024 * 1024);
-    expect(Math.floor(PRESENTATION_MAX_BYTES / sizes.texto)).toBe(35);
+    expect(Math.floor(PRESENTATION_MAX_BYTES / sizes.texto)).toBe(65);
     expect(Math.floor(PRESENTATION_MAX_BYTES / sizes.moodboard)).toBe(25);
   });
 });

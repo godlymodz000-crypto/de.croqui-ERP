@@ -57,8 +57,8 @@ export function refusedSize(err: unknown): number | undefined {
 
 /** Recusa 400 da API: o motivo em pt-BR, com a página quando há. */
 export function invalidMessage(err: unknown): string {
-  const de = err instanceof ApiError ? (err.body.dataError as { reason?: PresentationDataReason; pagina?: number } | undefined) : undefined;
-  const motivo = de?.reason ? presentationDataMessage({ reason: de.reason, pagina: de.pagina }) : 'O documento tem um campo fora do formato.';
+  const de = err instanceof ApiError ? (err.body.dataError as { reason?: PresentationDataReason; pagina?: number; campo?: string } | undefined) : undefined;
+  const motivo = de?.reason ? presentationDataMessage({ reason: de.reason, pagina: de.pagina, campo: typeof de.campo === 'string' ? de.campo : undefined }) : 'O documento tem um campo fora do formato.';
   return `A última alteração não foi salva. ${motivo} O que você escreveu continua aqui.`;
 }
 

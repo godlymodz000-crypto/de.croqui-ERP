@@ -9,7 +9,7 @@ Decisões aceitas pelo usuário em 2026-11-08. As decisões da 6a e da 6b contin
 ## Respostas às perguntas do planejamento (2026-11-08)
 - P29: duplicar página mantém a decisão P11 da 6b: a cópia cria um arquivo novo no Drive, para que apagar uma página não afete a outra.
 - P30: a página nova começa com os títulos e as categorias do arquivo offline, como nos desenhos, e os textos longos vazios.
-- P31: limites aprovados: 12 blocos de texto, 12 materiais, 12 notas, de 4 a 8 imagens em "Várias imagens do ambiente" e 40 páginas.
+- P31: limites aprovados: 12 blocos de texto, 12 materiais, 12 notas, de 4 a 8 imagens em "Várias imagens do ambiente" e 40 páginas. Revisto na E6 (abaixo): blocos de texto baixam para 6.
 - P32: imagens que sobram ao trocar para uma composição com menos imagens ficam guardadas e escondidas, como no arquivo offline.
 - P33: a imagem escolhida fica guardada na capa "Só tipografia", mas não aparece na folha nem no PDF.
 - P34: remover página pede confirmação; remover item não pede. O diálogo de página é desenhado junto da E5.
@@ -24,6 +24,14 @@ Decisões aceitas pelo usuário em 2026-11-08. As decisões da 6a e da 6b contin
 
 ## Decisões da E3 (2026-11-08)
 - Espaço de imagem vazio com a Prévia ligada e no PDF: continua como fundo bege, sem o texto em cinza, para a composição não mudar, como no arquivo offline e na capa em arco da 6b.
+
+## Decisões da E6 ajustada (2026-11-08)
+- P8 muda: no PDF, cada foto com lado maior acima de 3000 px é reduzida para 3000 px, com a proporção mantida (cerca de 250 dpi na folha A4). Foto menor entra como está, sem ampliar nem recodificar. A redução vale só para a exportação: a foto guardada no Drive e a visualização do editor (1600 px) não mudam. Motivo: na resolução original o Chromium fechava a partir de cerca de 45 fotos (medição da E6, `planejamento.md`, seção 11.3).
+- Como a redução é feita: no próprio Chromium que imprime o PDF, uma foto por vez, numa aba própria, antes de montar as folhas. PNG continua PNG (pode ter transparência); JPEG e WebP viram JPEG com qualidade 0,9, a mesma do envio. A orientação gravada na foto é aplicada ao desenhar. As fotos não vão mais embutidas no HTML do PDF: cada uma chega à página num pedido próprio, que o gerador responde, e qualquer outro endereço é bloqueado. Sem isso, só a redução não bastava: com 45 fotos o HTML passava de 100 MB e o Chromium fechava (`planejamento.md`, seção 11.4). Nenhuma dependência nova: a biblioteca `sharp` foi tentada e descartada, porque precisa de um script de instalação que o npm do projeto bloqueia e poderia quebrar o build na Vercel.
+- P31 muda: o limite de blocos da página Texto & conceito baixa de 12 para 6, contando os blocos de imagem. Vale no módulo de regras (`presentation-data.ts`), que a API usa para validar, e no "+ item" do editor. Materiais e notas continuam com 12, até a medição com 12 itens cheios.
+- "+ item" no limite: "Limite de 6 blocos nesta página, contando os de imagem. Com mais, os textos não cabem na folha do PDF."
+- Recusa da API com lista acima do limite: o editor diz a página e o limite da lista, por exemplo "A página 02 pode ter até 6 blocos, contando os de imagem.", "A página 03 pode ter até 12 materiais." e "A página 06 pode ter até 12 notas.". Sem a lista, continua o texto geral.
+- Documento salvo antes com mais de 6 blocos numa página continua abrindo no editor, mas o salvamento é recusado com essa mensagem e o PDF responde 422 `invalid_data`, até a página voltar a 6 blocos. Só existe em dados locais de teste: a 6c não foi para produção.
 
 ## Escolhas da E6 (2026-11-08), para conferir
 - O PDF desenha todas as folhas na ordem da lista, com os mesmos componentes da Prévia ligada: a capa com a composição, a cor e a marca escolhidas (marca escura na Linho) e as páginas internas com "NN / TT". A rota, o nome, as versões, a pasta, o hash e o 409 `no_changes` são os da 6b, sem mudança na API nem no banco: o hash já cobre o documento inteiro, então mudar só a ordem das páginas gera versão nova.

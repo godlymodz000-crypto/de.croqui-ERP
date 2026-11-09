@@ -205,15 +205,15 @@ describe('"+ item" no limite', () => {
     return page;
   };
 
-  it('texto, moodboard e notas param em 12, com o motivo escrito', () => {
+  it('texto para em 6 blocos; moodboard e notas em 12, com o motivo escrito', () => {
     const cases = [
-      ['texto', 'texto', 'Limite de 12 blocos de conteúdo nesta página.'],
-      ['moodboard', 'material', 'Limite de 12 materiais nesta página.'],
-      ['notas', 'nota', 'Limite de 12 notas nesta página.'],
+      ['texto', 'texto', 6, 'Limite de 6 blocos nesta página, contando os de imagem. Com mais, os textos não cabem na folha do PDF.'],
+      ['moodboard', 'material', 12, 'Limite de 12 materiais nesta página.'],
+      ['notas', 'nota', 12, 'Limite de 12 notas nesta página.'],
     ] as const;
-    for (const [tipo, kind, reason] of cases) {
+    for (const [tipo, kind, max, reason] of cases) {
       const page = fill(newPresentationPage(tipo, newId), kind);
-      expect(pageItems(page)).toHaveLength(12);
+      expect(pageItems(page)).toHaveLength(max);
       expect(addState(page)).toEqual({ enabled: false, reason });
       expect(addItem(page, kind, newId)).toBe(page);
       expect(valid(page)).toBe(true);
@@ -229,10 +229,10 @@ describe('"+ item" no limite', () => {
     expect(html).not.toMatch(/class="padd__button" disabled/);
   });
 
-  it('o bloco de imagem também conta para o limite de 12 blocos', () => {
+  it('o bloco de imagem também conta para o limite de 6 blocos', () => {
     let page: PresentationContentPage = newPresentationPage('texto', newId);
     for (let i = 0; i < 20; i++) page = addItem(page, i % 2 ? 'imagem' : 'texto', newId);
-    expect(pageItems(page)).toHaveLength(12);
+    expect(pageItems(page)).toHaveLength(6);
     expect(addState(page).enabled).toBe(false);
   });
 
@@ -369,8 +369,9 @@ describe('tamanho do documento', () => {
     const err = new ApiError(400, 'invalid_data', {}, { error: 'invalid_data', dataError: { reason: 'too_many_items', pagina: 2, campo: 'notas' } });
     expect(saveFailure(err)).toBe('invalid');
     const msg = invalidMessage(err);
-    expect(msg).toContain('na página 03');
-    expect(msg).toContain('O que você escreveu continua aqui.');
+    expect(msg).toBe('A última alteração não foi salva. A página 03 pode ter até 12 notas. O que você escreveu continua aqui.');
+    const blocos = new ApiError(400, 'invalid_data', {}, { error: 'invalid_data', dataError: { reason: 'too_many_items', pagina: 1, campo: 'blocos' } });
+    expect(invalidMessage(blocos)).toContain('A página 02 pode ter até 6 blocos, contando os de imagem.');
     expect(msg).not.toContain('!');
     expect(saveFailure(new ApiError(400, 'invalid_data'))).toBe('error');
   });

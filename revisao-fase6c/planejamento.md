@@ -365,7 +365,7 @@ Medido no Edge do computador (o mesmo Chromium que imprime o PDF), com textos de
 | Apresentação visual · Grade (8 imagens) | Passa: imagens, programas e observações | 1134 | — |
 | Desenho técnico · 1, 2, 3 e 4 desenhos | Passa: desenhos (o texto esmaga o desenho) | 1377, 1944, 1458 e 1215 caracteres de observações | — |
 
-**Limite de 12 blocos, materiais e notas.** Com texto de verdade (um parágrafo de 300 caracteres), cabem de 3 a 6 itens por folha; com 12, só títulos ou uma linha cada. Como o PDF recusa com a página e as partes, nada sai cortado. Por isso a E6 não muda os limites. Se você preferir que o editor não deixe chegar a uma folha que não cabe, a proposta é baixar o limite para 6 blocos, 6 materiais e 6 notas. Isso muda P31 e depende da sua aprovação.
+**Limite de 12 blocos, materiais e notas** (texto da medição da E6; os blocos baixaram para 6 depois, ver 11.4). Com texto de verdade (um parágrafo de 300 caracteres), cabem de 3 a 6 itens por folha; com 12, só títulos ou uma linha cada. Como o PDF recusa com a página e as partes, nada sai cortado. Por isso a E6 não muda os limites. Se você preferir que o editor não deixe chegar a uma folha que não cabe, a proposta é baixar o limite para 6 blocos, 6 materiais e 6 notas. Isso muda P31 e depende da sua aprovação.
 
 ### 11.2 Tamanho de cada tipo de página cheia (que ainda cabe)
 
@@ -403,4 +403,37 @@ Quando o Chromium fecha, a rota responde 502 `pdf_failed` e nada é gravado, com
 2. Manter a resolução original e passar as imagens ao Chromium uma a uma, em vez de dentro do HTML. Isso evita a queda, mas deixa PDFs de centenas de MB e usa mais memória na função.
 3. Limitar o total de fotos por apresentação.
 
-Nada disso foi feito na E6.
+Nada disso foi feito na E6. A decisão veio depois: a saída 1 (ver 11.4).
+
+### 11.4 E6 ajustada: fotos a 3000 px e 6 blocos de texto (2026-11-08)
+
+Decisões aprovadas: no PDF, fotos reduzidas para 3000 px no lado maior, só na exportação (P8 muda); blocos da página Texto & conceito baixam de 12 para 6 (P31 muda); materiais e notas continuam 12. Medido no mesmo Edge e com o mesmo roteiro da E6, com fotos de teste de 4000 × 2667 (o maior lado guardado no Drive).
+
+**Só a redução não bastou.** Na primeira medição, com as fotos reduzidas mas ainda embutidas no HTML, 39 fotos geraram, mas 45 (15 × 3) e 50 (40 páginas) continuaram derrubando o Chromium, com o mesmo erro da E6: o HTML com todas as fotos passava de 100 MB e o Chromium fechava ao recebê-lo. Por isso o gerador passou também a entregar cada foto num pedido próprio, que ele mesmo responde, em vez de embutir as fotos no HTML (era a saída 2 da 11.3, agora com as fotos já reduzidas). Nada sai para a rede: qualquer outro endereço é bloqueado. A tabela abaixo é a medição final, com as duas mudanças.
+
+| Caso | Fotos (originais) | PDF | Tempo | Resultado |
+|---|---|---|---|---|
+| 40 páginas sem fotos | — | 609 KB | 0,5 s | Gera, 40 folhas |
+| 15 páginas, 1 foto por página | 15 (57,6 MB) | 26,6 MB (era 57,9 MB) | 13,8 s | Gera, 16 folhas |
+| 15 páginas, 3 fotos por página | 45 (173 MB) | 79,5 MB | 40,6 s | Gera, 16 folhas (antes não gerava) |
+| 39 páginas, 1 foto por página | 39 (150 MB) | 69,1 MB | 34,9 s | Gera, 40 folhas |
+| 40 páginas, 1 foto em cada espaço das visuais e técnicas | 50 (192 MB) | 88,7 MB | 37,8 s | Gera, 40 folhas (antes não gerava) |
+| 15 páginas, 8 fotos por página | 120 (461 MB) | — | 98 s | Não gera: um passo do navegador passa do prazo de 30 s. A API responde 502 `pdf_failed` e nada é gravado |
+
+O tempo inclui a redução, feita uma foto por vez. As fotos de teste têm ruído e comprimem mal; fotos reais tendem a dar PDFs menores. Na Vercel a máquina é mais lenta, e o limite da função é 300 s.
+
+**Texto & conceito com 6 blocos.**
+
+| Composição | 6 blocos com 2000 caracteres cada | Maior texto por bloco que cabe com 6 blocos | Blocos que cabem com 300 caracteres | PDF da folha cheia que cabe |
+|---|---|---|---|---|
+| Diagonal | Passa: introdução e blocos | 356 caracteres | 6 de 6 | 140 KB |
+| Lado a lado | Passa: introdução, blocos e imagens | 204 | 4 de 6 | 139 KB |
+| Coluna | Passa: introdução e blocos | 55 | 3 de 6 | 133 KB |
+| Destaque | Passa: blocos e imagens | 243 | 4 de 6 | 139 KB |
+| Livre | Passa: introdução e blocos | 356 | 6 de 6 | 140 KB |
+
+Com 6 blocos, todas as composições cabem com os blocos vazios (com 12, a Coluna não cabia nem vazia). O PDF continua recusando com a página e as partes quando o texto passa.
+
+**Outros tipos de página cheia** (sem mudança de limite): os resultados são os mesmos de 11.1 e 11.2. Moodboard: 128 caracteres por material com 12 materiais, 182 KB. Notas: 58 por nota com 12 notas, 153 KB. Direitos: 444 por campo, 113 KB. Visual: de 400 a 1215 caracteres, de 0,8 a 5,3 MB. Técnico: de 1215 a 1944 caracteres, de 0,8 a 2,7 MB. Com tudo no máximo, todos passam do limite e o PDF recusa. Os tamanhos das folhas visuais e técnicas são com fotos de 1600 px, abaixo de 3000, que entram sem redução.
+
+**O que fica em aberto.** Materiais e notas continuam com 12. Com 12 itens só cabe uma linha em cada um (58 caracteres por nota e 128 por material), e com 300 caracteres cabem de 4 a 6 itens. Mudar esses limites é decisão sua, depois da medição com 12 itens cheios. Documentos com mais de cerca de 50 fotos de 4000 px também podem não gerar, como mostra o caso de 120 fotos.

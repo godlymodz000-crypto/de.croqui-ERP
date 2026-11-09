@@ -16,7 +16,7 @@ import type { Db } from '../api/_app/db/client.js';
 import * as schema from '../api/_app/db/schema.js';
 import { createSession } from '../api/_app/auth.js';
 import { randomToken } from '../api/_app/crypto.js';
-import { presentationHtml, type PresentationPdf, type PresentationPdfInput, type PresentationPdfRenderer } from '../api/_app/presentation-pdf.js';
+import { PDF_IMAGE_ORIGIN, pdfImageSize, PDF_IMAGE_MAX_SIDE, presentationHtml, type PdfImage, type PresentationPdf, type PresentationPdfInput, type PresentationPdfRenderer } from '../api/_app/presentation-pdf.js';
 import {
   emptyPresentation,
   newPresentationPage,
@@ -342,6 +342,10 @@ describe('HTML do PDF com todas as folhas', () => {
     const body = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
     const html = await presentationHtml({ data: d, images: new Map([[id, { contentType: 'image/jpeg', body }]]) });
     expect(html.split(`data:image/jpeg;base64,${Buffer.from(body).toString('base64')}`)).toHaveLength(3);
+    // No PDF, a foto não vai dentro do HTML: entra pelo endereço interno, que o gerador responde.
+    const linked = await presentationHtml({ data: d, images: new Map([[id, { contentType: 'image/jpeg', body }]]) }, { linked: true });
+    expect(linked).not.toContain('data:image/jpeg');
+    expect(linked.split(`src="${PDF_IMAGE_ORIGIN}${id}"`)).toHaveLength(3);
   });
 });
 
@@ -351,6 +355,21 @@ const BROWSER = [
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
 ].find((p): p is string => !!p && existsSync(p));
+
+describe('fotos no PDF reduzidas para 3000 px (P8, E6 da 6c)', () => {
+  it('lado maior acima de 3000 px vira 3000, com a proporção mantida', () => {
+    expect(PDF_IMAGE_MAX_SIDE).toBe(3000);
+    expect(pdfImageSize(4000, 2500)).toEqual({ width: 3000, height: 1875 });
+    expect(pdfImageSize(2250, 4000)).toEqual({ width: 1688, height: 3000 });
+    expect(pdfImageSize(3001, 3001)).toEqual({ width: 3000, height: 3000 });
+  });
+
+  it('foto com 3000 px ou menos entra como está, sem ampliar', () => {
+    expect(pdfImageSize(3000, 2000)).toBeNull();
+    expect(pdfImageSize(1200, 800)).toBeNull();
+    expect(pdfImageSize(1, 1)).toBeNull();
+  });
+});
 
 describe.skipIf(!BROWSER)('PDF real no Chromium local', () => {
   const pdfPages = (bytes: Uint8Array) => Buffer.from(bytes).toString('latin1').match(/\/Type\s*\/Page\b/g)?.length ?? 0;
@@ -402,6 +421,52 @@ describe.skipIf(!BROWSER)('PDF real no Chromium local', () => {
       expect(r.overflow[0].parts).toContain('blocos');
       expect(r.overflow[1].parts).toContain('notas');
       expect(r.overflow[2].parts).toEqual(['desenhos']);
+    } finally {
+      await browser.close();
+    }
+  }, 60_000);
+
+  it('reduz no navegador a foto acima de 3000 px, mantém a proporção e não amplia a menor', async () => {
+    const { reducePdfImages, renderPresentationPdf } = await import('../api/_app/presentation-pdf.js');
+    const { launchPdfBrowser } = await import('../api/_app/budget-pdf.js');
+    const browser = await launchPdfBrowser(BROWSER);
+    try {
+      const page = await browser.newPage();
+      // Fotos de teste desenhadas no próprio navegador: nenhuma vem de fora.
+      const make = async (w: number, h: number, type: string): Promise<PdfImage> => {
+        const url = (await page.evaluate(`(() => { const c = document.createElement('canvas'); c.width = ${w}; c.height = ${h};
+          const g = c.getContext('2d'); g.fillStyle = '#8a3b2f'; g.fillRect(0, 0, ${w}, ${h}); g.fillStyle = '#f3ede4'; g.fillRect(0, 0, ${w / 2}, ${h / 2});
+          return c.toDataURL('${type}', 0.9); })()`)) as string;
+        return { contentType: type, body: new Uint8Array(Buffer.from(url.split(',')[1], 'base64')) };
+      };
+      const size = async (img: PdfImage) =>
+        (await page.evaluate(`(async () => { const i = new Image(); i.src = 'data:${img.contentType};base64,${Buffer.from(img.body).toString('base64')}';
+          await i.decode(); return [i.naturalWidth, i.naturalHeight]; })()`)) as [number, number];
+      const images = new Map<string, PdfImage>([
+        ['deitada', await make(4000, 2500, 'image/jpeg')],
+        ['em-pe', await make(2250, 4000, 'image/png')],
+        ['menor', await make(1200, 800, 'image/jpeg')],
+      ]);
+      const out = await reducePdfImages(browser, images);
+      expect(await size(out.get('deitada')!)).toEqual([3000, 1875]);
+      expect(out.get('deitada')!.contentType).toBe('image/jpeg');
+      expect(await size(out.get('em-pe')!)).toEqual([1688, 3000]);
+      expect(out.get('em-pe')!.contentType).toBe('image/png');
+      // A menor não é ampliada nem recodificada: os mesmos bytes.
+      expect(out.get('menor')).toBe(images.get('menor'));
+      // O original continua como veio (no Drive nada muda: a redução é só da cópia do PDF).
+      expect(await size(images.get('deitada')!)).toEqual([4000, 2500]);
+      await page.close();
+
+      // No PDF: a foto reduzida entra na página e o PDF sai.
+      const d = base();
+      const visual = newPresentationPage('visual', randomUUID);
+      visual.imagens = visual.imagens.map((im, i) => (i === 0 ? { ...im, imagem: { id: 'deitada', ajuste: 'fill' as const, zoom: 1, x: 50, y: 50 } } : im)) as typeof visual.imagens;
+      d.paginas = [d.paginas[0], visual] as PresentationData['paginas'];
+      const r = await renderPresentationPdf(browser, { data: d, images: new Map([['deitada', images.get('deitada')!]]) });
+      expect(r).toMatchObject({ ok: true, pages: 2 });
+      // A foto chegou pelo endereço interno e está no PDF.
+      if (r.ok) expect(Buffer.from(r.pdf).toString('latin1')).toMatch(/\/Subtype\s*\/Image/);
     } finally {
       await browser.close();
     }

@@ -14,8 +14,12 @@ import { designTokensCss, sharedPdfBrowser } from './budget-pdf.js';
  * Prévia ligada: a capa com a composição, a cor e a marca escolhidas (marca escura na Linho) e as páginas
  * internas na ordem da lista, com "NN / TT" no rodapé.
  *
- * As imagens entram na resolução do arquivo guardado no Drive (P8), embutidas como data:, para o Chromium não
- * buscar nada fora da página. Uma imagem usada em várias páginas é convertida uma vez.
+ * As imagens não vêm da rede: no PDF, cada foto chega à página por um endereço interno que o gerador responde
+ * (PDF_IMAGE_ORIGIN); na prévia do HTML, como data:. Antes de montar as
+ * folhas, cada foto com lado maior acima de 3000 px é reduzida para 3000 px, com a proporção mantida (P8,
+ * revisto na E6 da 6c: a resolução original derrubava o Chromium a partir de cerca de 45 fotos). Foto menor
+ * entra como está, sem ampliar. A redução vale só para o PDF: o arquivo no Drive e a visualização não mudam.
+ * Uma imagem usada em várias páginas é reduzida e convertida uma vez.
  *
  * Antes de imprimir, cada folha é medida: conteúdo que passa do limite da página bloqueia o PDF, que nunca
  * sai cortado (P14), e a resposta diz a página e as partes.
@@ -59,10 +63,74 @@ async function loadAssets(): Promise<Assets> {
   return { css: [tokens, sheets, page].join('\n'), logo: await svg(LOGO), logoDark: await svg(LOGO_DARK), isotipo: await svg(ISOTIPO) };
 }
 
+/** Lado maior das fotos no PDF: cerca de 250 dpi na folha A4 deitada (P8, E6 da 6c). */
+export const PDF_IMAGE_MAX_SIDE = 3000;
+/** Qualidade do JPEG gerado na redução, a mesma do envio (IMAGE_JPEG_QUALITY). */
+const PDF_JPEG_QUALITY = 0.9;
+
+/** Medidas da foto no PDF, ou nulo quando ela já cabe em 3000 px e entra como está. */
+export function pdfImageSize(width: number, height: number): { width: number; height: number } | null {
+  const side = Math.max(width, height);
+  if (!(side > PDF_IMAGE_MAX_SIDE)) return null;
+  const s = PDF_IMAGE_MAX_SIDE / side;
+  return { width: Math.max(1, Math.round(width * s)), height: Math.max(1, Math.round(height * s)) };
+}
+
+/**
+ * Reduz no navegador uma foto acima de 3000 px. Roda numa aba própria, uma foto por vez, para que só uma foto
+ * na resolução original fique na memória. PNG continua PNG (pode ter transparência); JPEG e WebP viram JPEG.
+ * A orientação gravada na foto é aplicada pelo navegador ao desenhar. Arquivo que o navegador não lê entra
+ * como veio.
+ */
+export const REDUCE_IMAGE = `async (src, max, type, quality) => {
+  const img = new Image();
+  img.src = src;
+  try { await img.decode(); } catch { return null; }
+  const w = img.naturalWidth, h = img.naturalHeight, side = Math.max(w, h);
+  if (!(side > max)) return null;
+  const s = max / side;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(w * s));
+  canvas.height = Math.max(1, Math.round(h * s));
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const out = canvas.toDataURL(type, quality);
+  canvas.width = 0;
+  canvas.height = 0;
+  return out;
+}`;
+
+/** Fotos do documento prontas para o PDF: as acima de 3000 px reduzidas, as outras como vieram. */
+export async function reducePdfImages(browser: Browser, images: Map<string, PdfImage>): Promise<Map<string, PdfImage>> {
+  const out = new Map<string, PdfImage>();
+  for (const [id, img] of images) {
+    const page = await browser.newPage();
+    try {
+      const type = img.contentType === 'image/png' ? 'image/png' : 'image/jpeg';
+      const reduced = (await page.evaluate(`(${REDUCE_IMAGE})(${JSON.stringify(dataUrl(img))}, ${PDF_IMAGE_MAX_SIDE}, '${type}', ${PDF_JPEG_QUALITY})`)) as string | null;
+      out.set(id, reduced ? { contentType: type, body: new Uint8Array(Buffer.from(reduced.slice(reduced.indexOf(',') + 1), 'base64')) } : img);
+    } finally {
+      await page.close().catch(() => {});
+    }
+  }
+  return out;
+}
+
 const dataUrl = (img: PdfImage) => `data:${img.contentType};base64,${Buffer.from(img.body).toString('base64')}`;
 
-/** HTML completo das folhas, na ordem da lista, pronto para o Chromium. */
-export async function presentationHtml({ data, images }: PresentationPdfInput): Promise<string> {
+/**
+ * Endereço interno das fotos no PDF. Não existe na rede: o gerador responde a cada pedido da página com a foto
+ * já reduzida, e qualquer outro endereço é bloqueado.
+ */
+export const PDF_IMAGE_ORIGIN = 'https://imagens.pdf.invalid/';
+
+/**
+ * HTML completo das folhas, na ordem da lista, pronto para o Chromium. Com `linked`, as fotos entram pelo
+ * endereço interno, e não como data: dentro do HTML: o HTML com todas as fotos embutidas passava de 100 MB a
+ * partir de cerca de 45 fotos, e o Chromium fechava ao recebê-lo.
+ */
+export async function presentationHtml({ data, images }: PresentationPdfInput, opts: { linked?: boolean } = {}): Promise<string> {
   assetsPromise ??= loadAssets().catch((err) => {
     assetsPromise = null;
     throw err;
@@ -74,7 +142,7 @@ export async function presentationHtml({ data, images }: PresentationPdfInput): 
     if (!urls.has(id)) {
       const img = images.get(id);
       if (!img) return undefined;
-      urls.set(id, dataUrl(img));
+      urls.set(id, opts.linked ? PDF_IMAGE_ORIGIN + encodeURIComponent(id) : dataUrl(img));
     }
     return urls.get(id);
   };
@@ -165,11 +233,21 @@ export const MEASURE_SHEETS = `(() => {
 
 /** Gera o PDF numa aba nova do navegador já aberto, medindo as folhas antes de imprimir. */
 export async function renderPresentationPdf(browser: Browser, input: PresentationPdfInput): Promise<PresentationPdf> {
+  const images = await reducePdfImages(browser, input.images);
   const page = await browser.newPage();
   try {
+    // Cada foto chega à página num pedido próprio, respondido daqui; nada sai para a rede.
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+      const url = req.url();
+      if (url.startsWith('data:')) return void req.continue().catch(() => {});
+      const img = url.startsWith(PDF_IMAGE_ORIGIN) ? images.get(decodeURIComponent(url.slice(PDF_IMAGE_ORIGIN.length))) : undefined;
+      if (!img) return void req.abort().catch(() => {});
+      req.respond({ status: 200, contentType: img.contentType, body: Buffer.from(img.body) }).catch(() => {});
+    });
     // 297 mm a 96 dpi: a largura da folha deitada na visualização.
     await page.setViewport({ width: 1123, height: 794 });
-    await page.setContent(await presentationHtml(input), { waitUntil: 'load' });
+    await page.setContent(await presentationHtml({ data: input.data, images }, { linked: true }), { waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
     const overflow = (await page.evaluate(MEASURE_SHEETS)) as PdfOverflow[];
     if (overflow.length) return { ok: false, overflow };

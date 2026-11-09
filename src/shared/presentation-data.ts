@@ -16,8 +16,12 @@ export const PRESENTATION_MAX_TEXT = 2000;
 export const PRESENTATION_MAX_SHORT = 200;
 /** Páginas por apresentação, com a capa (P31). */
 export const PRESENTATION_MAX_PAGES = 40;
-/** Itens por lista (P31). */
-export const PRESENTATION_MAX_BLOCKS = 12;
+/**
+ * Itens por lista (P31). Blocos de texto: 6 desde a E6 da 6c (decisão de 2026-11-08), porque com 12 só cabia
+ * uma linha em cada bloco e, na composição Coluna, 12 blocos não cabiam nem vazios. Materiais e notas
+ * continuam 12, até a medição com 12 itens cheios.
+ */
+export const PRESENTATION_MAX_BLOCKS = 6;
 export const PRESENTATION_MAX_MATERIALS = 12;
 export const PRESENTATION_MAX_NOTES = 12;
 /** "Várias imagens do ambiente": de 4 a 8 imagens (P31). É também o máximo guardado em qualquer composição. */
@@ -390,7 +394,15 @@ export interface PresentationDataFailure {
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
 /** Mensagem em pt-BR para o motivo da recusa. */
-export function presentationDataMessage(f: Pick<PresentationDataFailure, 'reason' | 'pagina'>): string {
+/** Limite de cada lista, para a recusa dizer quantos itens a página aceita. */
+const LIST_LIMITS: Record<string, string> = {
+  blocos: `${PRESENTATION_MAX_BLOCKS} blocos, contando os de imagem`,
+  materiais: `${PRESENTATION_MAX_MATERIALS} materiais`,
+  notas: `${PRESENTATION_MAX_NOTES} notas`,
+  imagens: `${PRESENTATION_MAX_VISUAL_IMAGES} imagens`,
+};
+
+export function presentationDataMessage(f: Pick<PresentationDataFailure, 'reason' | 'pagina' | 'campo'>): string {
   const onde = f.pagina !== undefined ? ` na página ${pad2(f.pagina + 1)}` : '';
   switch (f.reason) {
     case 'base64':
@@ -407,8 +419,11 @@ export function presentationDataMessage(f: Pick<PresentationDataFailure, 'reason
       return `Tipo de página não aceito${onde}.`;
     case 'text_too_long':
       return `Um texto${onde} passou do limite de caracteres.`;
-    case 'too_many_items':
+    case 'too_many_items': {
+      const limit = f.campo ? LIST_LIMITS[f.campo] : undefined;
+      if (limit && f.pagina !== undefined) return `A página ${pad2(f.pagina + 1)} pode ter até ${limit}.`;
       return `A lista${onde} passou do limite de itens.`;
+    }
     case 'too_few_items':
       return `A composição${onde} tem menos espaços de imagem do que precisa.`;
     case 'image':

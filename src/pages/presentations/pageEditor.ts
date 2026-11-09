@@ -278,7 +278,7 @@ export function addState(page: PresentationContentPage): { enabled: boolean; rea
   const full = (max: number, reason: string) => (n >= max ? { enabled: false, reason } : { enabled: true, reason: null });
   switch (page.tipo) {
     case 'texto':
-      return full(PRESENTATION_MAX_BLOCKS, `Limite de ${PRESENTATION_MAX_BLOCKS} blocos de conteúdo nesta página.`);
+      return full(PRESENTATION_MAX_BLOCKS, `Limite de ${PRESENTATION_MAX_BLOCKS} blocos nesta página, contando os de imagem. Com mais, os textos não cabem na folha do PDF.`);
     case 'moodboard':
       return full(PRESENTATION_MAX_MATERIALS, `Limite de ${PRESENTATION_MAX_MATERIALS} materiais nesta página.`);
     case 'notas':
