@@ -5,6 +5,7 @@ Decisões aceitas pelo usuário em 2026-11-08. As decisões da 6a e da 6b contin
 ## Estado
 - Desenhos 6c-01 a 6c-21 aprovados em 2026-11-08. 6c-22 (diálogo de remover página) desenhado na E6, com as escolhas aprovadas da E5.
 - E0 aprovada em 2026-11-08: o planejamento (`planejamento.md`) e as respostas às perguntas P29 a P37. O código começa na E1. Cada etapa seguinte depende de aprovação.
+- E6 fechada em 2026-11-15, no commit `54c7555` da branch `feat/fase-6c-apresentacao`, com as decisões da E6 ajustada (abaixo). 827 testes e o build passando. A E7 depende de aprovação.
 
 ## Respostas às perguntas do planejamento (2026-11-08)
 - P29: duplicar página mantém a decisão P11 da 6b: a cópia cria um arquivo novo no Drive, para que apagar uma página não afete a outra.
