@@ -133,11 +133,13 @@
   top: auto;
   left: auto;
 }
-.pcover__arch.is-draggable {
+.pcover__arch.is-draggable,
+.pcover__photo.is-draggable {
   cursor: grab;
   touch-action: none;
 }
-.pcover__arch.is-draggable:active {
+.pcover__arch.is-draggable:active,
+.pcover__photo.is-draggable:active {
   cursor: grabbing;
 }
 
@@ -553,4 +555,11 @@
 }
 .peditor .peditor__eyebrow {
   white-space: nowrap;
+}
+
+/* ---------- Teto de fotos da apresentação (decisão de 2026-11-15) ---------- */
+.pfield__cap {
+  margin: 0;
+  font: var(--weight-light) 12.5px / 1.5 var(--font-body);
+  color: var(--ardosia-700);
 }

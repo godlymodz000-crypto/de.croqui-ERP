@@ -51,7 +51,7 @@ describe('estados do PDF', () => {
   });
 
   it('além do limite (422) e falhas', () => {
-    expect(pdfFailure(new ApiError(422, 'content_overflow'))).toEqual({ kind: 'error', reason: 'overflow' });
+    expect(pdfFailure(new ApiError(422, 'content_overflow'))).toEqual({ kind: 'error', reason: 'overflow', overflow: [] });
     expect(pdfFailure(new ApiError(502, 'drive_failed'))).toEqual({ kind: 'error', reason: 'failed' });
     expect(pdfFailure(new ApiError(502, 'pdf_failed'))).toEqual({ kind: 'error', reason: 'failed' });
     expect(pdfFailure(new TypeError('Failed to fetch'))).toEqual({ kind: 'error', reason: 'failed' });
@@ -59,7 +59,8 @@ describe('estados do PDF', () => {
 
   it('textos aprovados, em pt-BR, sem exclamação', () => {
     expect(PDF_ERROR_TEXTS.failed).toBe('Não foi possível salvar o PDF no Drive. A apresentação continua salva; tente de novo em instantes.');
-    expect(PDF_ERROR_TEXTS.overflow).toBe('O PDF não foi gerado: o texto da capa passou do limite da página. Encurte os textos mais longos e tente de novo.');
+    // 6c (E6): o texto geral não fala mais só da capa; com o detalhe da API, o aviso diz a página (pdfOverflowText).
+    expect(PDF_ERROR_TEXTS.overflow).toBe('O PDF não foi gerado: o texto passou do limite da página. Encurte os textos mais longos e tente de novo.');
     expect(PDF_ERROR_TEXTS.unsaved).toBe('O PDF não foi gerado porque as últimas alterações ainda não foram salvas. Tente de novo quando aparecer "Salvo".');
     for (const t of [...Object.values(PDF_ERROR_TEXTS), PDF_REAL_SIZE_TEXT, pdfUnchangedText(3)]) expect(t).not.toContain('!');
   });

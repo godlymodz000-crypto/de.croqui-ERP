@@ -14,6 +14,7 @@ import {
   emptyPresentation,
   parsePresentationData,
   PRESENTATION_MAX_BYTES,
+  PRESENTATION_MAX_PHOTOS,
   presentationBytes,
   presentationImageIds,
   type PresentationData,
@@ -26,10 +27,11 @@ import {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_NAME = 120;
 /**
- * Corpo do salvamento automático. Maior que o limite do documento (512 KB), para que um documento grande
- * demais chegue à rota e receba a resposta própria (413 `too_large`), e não o erro genérico do servidor.
+ * Corpo do salvamento automático. Maior que o limite do documento (1 MiB desde a 6c), para que um documento
+ * grande demais chegue à rota e receba a resposta própria (413 `too_large`, com o tamanho e o limite), e não o
+ * erro genérico do servidor. Fica bem abaixo do teto de 4,5 MB do corpo de uma função da Vercel.
  */
-const BODY_LIMIT = 1024 * 1024;
+const BODY_LIMIT = 2 * 1024 * 1024;
 
 function cleanName(value: unknown): string {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
@@ -236,21 +238,35 @@ export async function presentationsRoutes(
       const name = body.name === undefined ? current.name : cleanName(body.name);
       const err = nameError(name);
       if (err) fields.name = err;
-      // Limite de 512 KB conferido no documento como chegou, antes de descartar campos desconhecidos.
+      // Limite do documento (1 MiB) conferido como chegou, antes de descartar campos desconhecidos.
       if (body.data !== undefined) {
         const size = presentationBytes(body.data);
         if (size > PRESENTATION_MAX_BYTES) return reply.code(413).send({ error: 'too_large', size, limit: PRESENTATION_MAX_BYTES });
       }
       let data: PresentationData | null = null;
+      // 6c: além do código da 6b em `fields.data`, o motivo da recusa e a página, para a mensagem do editor.
+      let dataError: { reason: string; pagina?: number; campo?: string } | null = null;
       if (body.data !== undefined) {
         const parsed = parsePresentationData(body.data);
-        if ('error' in parsed) fields.data = parsed.error;
-        else data = parsed.data;
+        if ('error' in parsed) {
+          fields.data = parsed.error;
+          dataError = { reason: parsed.reason, ...(parsed.pagina !== undefined ? { pagina: parsed.pagina } : {}), ...(parsed.campo ? { campo: parsed.campo } : {}) };
+        } else data = parsed.data;
       }
       if (body.baseUpdatedAt !== undefined && typeof body.baseUpdatedAt !== 'string') fields.baseUpdatedAt = 'invalid';
-      if (Object.keys(fields).length) return reply.code(400).send({ error: 'validation', fields });
+      if (Object.keys(fields).length) return reply.code(400).send({ error: 'validation', fields, ...(dataError ? { dataError } : {}) });
 
       if (data) {
+        // Teto de fotos (decisão de 2026-11-15): recusa só o que aumenta a conta acima do teto. Um documento que já
+        // passava dele continua salvando enquanto não ganha foto nova.
+        const count = presentationImageIds(data).length;
+        if (count > PRESENTATION_MAX_PHOTOS) {
+          const stored = parsePresentationData(current.data);
+          const before = 'data' in stored ? presentationImageIds(stored.data).length : 0;
+          if (count > before) {
+            return reply.code(400).send({ error: 'validation', fields: { data: 'too_many_photos' }, dataError: { reason: 'too_many_photos' }, count, limit: PRESENTATION_MAX_PHOTOS });
+          }
+        }
         const foreign = await foreignImages(current, presentationImageIds(data));
         if (foreign.length) return reply.code(400).send({ error: 'validation', fields: { data: 'image_not_in_library' }, images: foreign });
       }

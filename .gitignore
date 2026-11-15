@@ -11,3 +11,7 @@ Thumbs.db
 # Evidências de teste da Fase 6a: ficam só no disco (o relatório continua no git)
 revisao-fase6a/*
 !revisao-fase6a/relatorio.md
+
+# Imagens da Fase 6c: ficam só no disco (as telas aprovadas estão em design/moldura-erp.figcraft)
+revisao-fase6c/capturas-*/
+revisao-fase6c/desenhos/

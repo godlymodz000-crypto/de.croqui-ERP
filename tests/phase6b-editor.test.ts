@@ -1,5 +1,5 @@
 // Fase 6b, etapa E7, lado da tela: capa com a Prévia desligada e ligada, regras do salvamento automático
-// (conflito, limite de 512 KB e erro), "Voltar" para a origem e textos do painel. A capa é renderizada sem
+// (conflito, limite do documento e erro), "Voltar" para a origem e textos do painel. A capa é renderizada sem
 // navegador com react-dom/server; o salvamento usa um fetch falso, sem rede.
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
@@ -109,11 +109,11 @@ describe('salvamento automático', () => {
     expect(saveFailure(new Error('x'))).toBe('error');
   });
 
-  it('o documento acima de 512 KB nem é enviado', () => {
+  it('o documento acima do limite (1 MiB desde a 6c) nem é enviado', () => {
     const d = novo();
     expect(isTooLarge(d)).toBe(false);
-    // Bem acima do que a capa permite: 300 campos de 2000 caracteres.
-    const grande = { ...d, extra: Array.from({ length: 300 }, () => 'x'.repeat(PRESENTATION_MAX_TEXT)) };
+    // Bem acima do limite: 600 campos de 2000 caracteres, cerca de 1,2 MB.
+    const grande = { ...d, extra: Array.from({ length: 600 }, () => 'x'.repeat(PRESENTATION_MAX_TEXT)) };
     expect(isTooLarge(grande as typeof d)).toBe(true);
   });
 
@@ -144,7 +144,7 @@ describe('salvamento automático', () => {
     expect(SAVE_MESSAGES.conflict).toBe(
       'Esta apresentação foi alterada em outra aba ou por outra pessoa. Recarregue para ver a versão atual antes de continuar.',
     );
-    expect(SAVE_MESSAGES.too_large).toContain('passou do limite de 512 KB');
+    expect(SAVE_MESSAGES.too_large).toContain('passou do limite de 1 MB');
   });
 
   it('indicador da barra', () => {

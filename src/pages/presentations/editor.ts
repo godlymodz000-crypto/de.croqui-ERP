@@ -1,6 +1,15 @@
 import { ApiError } from '../../api/http';
-import { PRESENTATION_MAX_BYTES, presentationBytes, type PresentationData } from '../../shared/presentation-data';
+import {
+  PRESENTATION_MAX_BYTES,
+  PRESENTATION_MAX_PHOTOS,
+  presentationBytes,
+  presentationDataMessage,
+  type PresentationData,
+  type PresentationDataReason,
+  type PresentationPageKind,
+} from '../../shared/presentation-data';
 import type { CoverMode } from '../../presentation/cover';
+import { PAGE_KIND_LABELS } from './pageEditor';
 
 // Regras do editor de apresentação (desenhos 6b-04, 6b-05, 6b-12 e 6b-13), separadas da tela para os testes.
 
@@ -10,23 +19,68 @@ export type SaveState =
   | { kind: 'saving' }
   | { kind: 'error' }
   | { kind: 'conflict' }
-  | { kind: 'too_large' };
+  /** Acima de 1 MB: `size` é o tamanho do documento recusado, quando se sabe. */
+  | { kind: 'too_large'; size?: number }
+  /** A API recusou o documento (400) e disse o motivo. Tentar de novo daria no mesmo. */
+  | { kind: 'invalid'; message: string };
 
 /** O que fazer depois de uma falha ao salvar. */
-export function saveFailure(err: unknown): 'conflict' | 'too_large' | 'error' {
+export function saveFailure(err: unknown): 'conflict' | 'too_large' | 'invalid' | 'error' {
   if (err instanceof ApiError && err.status === 409) return 'conflict';
   if (err instanceof ApiError && (err.status === 413 || err.code === 'too_large')) return 'too_large';
+  if (err instanceof ApiError && err.status === 400 && err.body.dataError) return 'invalid';
   return 'error';
 }
 
-/** Antes de enviar: o documento passa do limite de 512 KB? */
+/** Antes de enviar: o documento passa do limite de 1 MB? */
 export const isTooLarge = (data: PresentationData) => presentationBytes(data) > PRESENTATION_MAX_BYTES;
+
+/** "1,2 MB" ou "840 KB", com uma casa nos MB. */
+export function docSize(bytes: number): string {
+  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1).replace('.', ',')} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+/**
+ * Aviso de 6b-05 para o documento acima do limite. Com o tamanho que a API (413) ou o editor mediu, diz
+ * quanto o documento tem. O que foi escrito continua na tela.
+ */
+export function tooLargeMessage(size?: number): string {
+  if (!size) return SAVE_MESSAGES.too_large;
+  return `A apresentação tem ${docSize(size)} e passou do limite de 1 MB. A última alteração não foi salva. Remova conteúdo ou divida a apresentação para voltar a salvar. O que você escreveu continua aqui.`;
+}
+
+/** Tamanho do documento recusado pela API (413), quando ela informa. */
+export function refusedSize(err: unknown): number | undefined {
+  const size = err instanceof ApiError ? err.body.size : undefined;
+  return typeof size === 'number' && size > 0 ? size : undefined;
+}
+
+/** Aviso do teto de fotos (decisão de 2026-11-15). */
+export const PHOTO_CAP_MESSAGE = `Esta apresentação já tem ${PRESENTATION_MAX_PHOTOS} fotos, o limite para gerar o PDF. Remova alguma foto para adicionar outra.`;
+
+/**
+ * O espaço de imagem chegou ao teto de fotos? `ids` são as fotos diferentes da apresentação inteira. A foto do
+ * próprio espaço conta como livre quando só ele a usa, porque trocá-la não aumenta a conta. Uma foto que já está
+ * na apresentação sempre pode ser usada de novo.
+ */
+export function photoCapReached(ids: readonly string[], current: string | null, usedElsewhere: boolean): boolean {
+  const freed = current && !usedElsewhere && ids.includes(current) ? 1 : 0;
+  return ids.length - freed >= PRESENTATION_MAX_PHOTOS;
+}
+
+/** Recusa 400 da API: o motivo em pt-BR, com a página quando há. */
+export function invalidMessage(err: unknown): string {
+  const de = err instanceof ApiError ? (err.body.dataError as { reason?: PresentationDataReason; pagina?: number; campo?: string } | undefined) : undefined;
+  const motivo = de?.reason ? presentationDataMessage({ reason: de.reason, pagina: de.pagina, campo: typeof de.campo === 'string' ? de.campo : undefined }) : 'O documento tem um campo fora do formato.';
+  return `A última alteração não foi salva. ${motivo} O que você escreveu continua aqui.`;
+}
 
 export const SAVE_MESSAGES = {
   error: 'Não foi possível salvar as últimas alterações. Elas continuam aqui e o ERP tenta de novo sozinho.',
   conflict: 'Esta apresentação foi alterada em outra aba ou por outra pessoa. Recarregue para ver a versão atual antes de continuar.',
   too_large:
-    'A apresentação passou do limite de 512 KB e a última alteração não foi salva. Encurte os textos mais longos para voltar a salvar. O que você escreveu continua aqui.',
+    'A apresentação passou do limite de 1 MB e a última alteração não foi salva. Remova conteúdo ou divida a apresentação para voltar a salvar. O que você escreveu continua aqui.',
 } as const;
 
 /** "14:32", na hora local. */
@@ -35,7 +89,7 @@ export const clock = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${St
 /** Texto do indicador da barra. */
 export function saveLabel(s: SaveState): string {
   if (s.kind === 'saving') return 'Salvando';
-  if (s.kind === 'error' || s.kind === 'too_large') return 'Não salvo';
+  if (s.kind === 'error' || s.kind === 'too_large' || s.kind === 'invalid') return 'Não salvo';
   if (s.kind === 'conflict') return 'Alterado em outra aba';
   return s.at ? `Salvo às ${clock(s.at)}` : 'Salvo';
 }
@@ -53,11 +107,12 @@ export function backTarget(origin: unknown): { to: string; label: string } {
   return { to: `/apresentacoes${search}`, label: 'Voltar para Apresentações' };
 }
 
-/** Texto ao lado de "Página 01 de 01". */
-export function pageKindLabel(mode: CoverMode | 'readonly', compact = false): string {
-  if (compact) return 'Capa';
-  if (mode === 'readonly') return 'Capa · somente leitura';
-  return mode === 'edit' ? 'Capa · campos pendentes em cinza' : 'Capa · prévia de impressão';
+/** Texto ao lado de "Página 01 de 01": o tipo da página atual e o modo. */
+export function pageKindLabel(mode: CoverMode | 'readonly', compact = false, tipo: PresentationPageKind = 'capa'): string {
+  const kind = PAGE_KIND_LABELS[tipo];
+  if (compact) return kind;
+  if (mode === 'readonly') return `${kind} · somente leitura`;
+  return mode === 'edit' ? `${kind} · campos pendentes em cinza` : `${kind} · prévia de impressão`;
 }
 
 /** Aviso da aba Página da capa: a frase sobre o projeto só aparece quando a apresentação veio de um projeto. */
@@ -116,11 +171,12 @@ export function uploadRefusal(file: { name: string; type: string; size: number }
   return null;
 }
 
-/** Aviso de 6b-08 quando chegam vários arquivos para o único espaço da capa. */
-export function extraFilesNotice(extras: number): string {
+/** Aviso de 6b-08 quando chegam vários arquivos para um espaço de imagem (da capa ou de um item). */
+export function extraFilesNotice(extras: number, where: 'capa' | 'item' = 'capa'): string {
+  const start = where === 'capa' ? 'A capa tem um espaço de imagem.' : 'Este espaço tem uma imagem só.';
   return extras === 1
-    ? 'A capa tem um espaço de imagem. A primeira foi usada; a outra ficou na biblioteca.'
-    : `A capa tem um espaço de imagem. A primeira foi usada; as outras ${extras} ficaram na biblioteca.`;
+    ? `${start} A primeira foi usada; a outra ficou na biblioteca.`
+    : `${start} A primeira foi usada; as outras ${extras} ficaram na biblioteca.`;
 }
 
 /** Legenda de cada imagem da biblioteca (6b-09). */
@@ -154,9 +210,13 @@ export const LAST_USE_TEXT = 'Esta imagem não é usada em nenhuma outra apresen
  */
 export const isLastUse = (img: { usedBy: number } | null | undefined) => !!img && img.usedBy <= 1;
 
+/** Mesmo aviso para a imagem de um item de página (6c). */
+export const LAST_USE_ITEM_TEXT =
+  'Esta imagem não é usada em nenhuma outra apresentação nem em outra página desta. Ela vai para a lixeira ao sair da página.';
+
 /** Texto da confirmação de remover (6b-07). */
-export function removeImageText(lastUse: boolean, hasProject: boolean): string {
-  if (lastUse) return LAST_USE_TEXT;
+export function removeImageText(lastUse: boolean, hasProject: boolean, where: 'capa' | 'item' = 'capa'): string {
+  if (lastUse) return where === 'capa' ? LAST_USE_TEXT : LAST_USE_ITEM_TEXT;
   return `Ela continua na biblioteca ${hasProject ? 'do projeto' : 'desta apresentação'} e pode ser usada de novo. Só vai para a lixeira do Drive quando nenhuma apresentação a usar.`;
 }
 
@@ -199,7 +259,12 @@ export type PdfState =
   | { kind: 'idle' }
   | { kind: 'working' }
   | { kind: 'unchanged'; version: number; url: string; name: string | null }
-  | { kind: 'error'; reason: 'failed' | 'unsaved' | 'overflow' };
+  | { kind: 'error'; reason: 'failed' | 'unsaved' }
+  /** Além do limite da folha: as páginas (0 é a capa) e as partes, como a API devolveu. */
+  | { kind: 'error'; reason: 'overflow'; overflow: PdfOverflowItem[] };
+
+/** Uma folha que passou do limite, na resposta 422 `content_overflow`. */
+export type PdfOverflowItem = { page: number; parts: string[] };
 
 /** Aviso de Tamanho real, no diálogo de exportar de qualquer apresentação (P25). */
 export const PDF_REAL_SIZE_TITLE = 'Tamanho real';
@@ -228,8 +293,36 @@ export const pdfUnchangedText = (version: number) => `Nenhuma alteração desde 
 export const PDF_ERROR_TEXTS: Record<'failed' | 'unsaved' | 'overflow', string> = {
   failed: 'Não foi possível salvar o PDF no Drive. A apresentação continua salva; tente de novo em instantes.',
   unsaved: 'O PDF não foi gerado porque as últimas alterações ainda não foram salvas. Tente de novo quando aparecer "Salvo".',
-  overflow: 'O PDF não foi gerado: o texto da capa passou do limite da página. Encurte os textos mais longos e tente de novo.',
+  overflow: 'O PDF não foi gerado: o texto passou do limite da página. Encurte os textos mais longos e tente de novo.',
 };
+
+/** Lê a lista de folhas da resposta 422, ignorando o que vier fora do formato. */
+function overflowItems(raw: unknown): PdfOverflowItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((o): o is { page: number; parts: unknown[] } => !!o && typeof o.page === 'number' && Number.isInteger(o.page) && o.page >= 0 && Array.isArray(o.parts))
+    .map((o) => ({ page: o.page, parts: o.parts.filter((p): p is string => typeof p === 'string') }));
+}
+
+const andList = (items: string[]) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`);
+const sheetName = (page: number) => (page === 0 ? 'a capa' : `a página ${String(page + 1).padStart(2, '0')}`);
+
+/**
+ * Aviso terracota da 6b com o número da página (P35): qual folha passou do limite da página e em quais partes.
+ * A parte pode ser de imagem ("imagens", "desenhos", "materiais") quando o texto esmagou o espaço dela: por isso
+ * o pedido é encurtar os textos da página, e não só os da parte.
+ * Sem detalhe na resposta, o texto geral.
+ */
+export function pdfOverflowText(overflow: PdfOverflowItem[]): string {
+  if (!overflow.length) return PDF_ERROR_TEXTS.overflow;
+  const one = (o: PdfOverflowItem) => (o.parts.length ? `${sheetName(o.page)} (${andList(o.parts)})` : sheetName(o.page));
+  if (overflow.length === 1) {
+    const [o] = overflow;
+    const where = o.parts.length ? ` em ${andList(o.parts)}` : '';
+    return `O PDF não foi gerado: ${sheetName(o.page)} passou do limite da folha${where}. Encurte os textos dessa página e tente de novo.`;
+  }
+  return `O PDF não foi gerado: ${andList(overflow.map(one))} passaram do limite da folha. Encurte os textos dessas páginas e tente de novo.`;
+}
 
 /** Resposta do servidor para o aviso: sem mudança (409), além do limite (422) ou falha. */
 export function pdfFailure(err: unknown): PdfState {
@@ -237,6 +330,6 @@ export function pdfFailure(err: unknown): PdfState {
     const file = err.body.file as { version?: number; url?: string; name?: string | null } | undefined;
     if (file?.url) return { kind: 'unchanged', version: file.version ?? 1, url: file.url, name: file.name ?? null };
   }
-  if (err instanceof ApiError && err.code === 'content_overflow') return { kind: 'error', reason: 'overflow' };
+  if (err instanceof ApiError && err.code === 'content_overflow') return { kind: 'error', reason: 'overflow', overflow: overflowItems(err.body.overflow) };
   return { kind: 'error', reason: 'failed' };
 }

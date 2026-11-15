@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
 import { AppIcon } from '../../ui/AppIcon';
 import { AppLoading } from '../../ui/AppLoading';
@@ -7,33 +7,64 @@ import { useIsMobile, useMediaQuery } from '../../ui/useMediaQuery';
 import { useSession } from '../../session';
 import { ApiError } from '../../api/http';
 import { presentationsApi, type PresentationWithData } from '../../api/presentations';
-import type { PresentationData, PresentationImageRef, PresentationProject } from '../../shared/presentation-data';
+import {
+  presentationBytes,
+  presentationImageIds,
+  type AddablePageKind,
+  type PresentationContentPage,
+  type PresentationCover,
+  type PresentationData,
+  type PresentationImageRef,
+  type PresentationProject,
+} from '../../shared/presentation-data';
 import { fitZoom, pageNavLabel, zoomCss, zoomIn, zoomLabel, zoomOut } from '../../shared/presentation-calc';
 import { CoverSheet } from '../../presentation/CoverSheet';
-import type { CoverMode } from '../../presentation/cover';
+import { PageSheet } from '../../presentation/PageSheet';
+import { coverLook, type CoverMode, type CoverOptions } from '../../presentation/cover';
 import '../../presentation/sheets.css';
 import logo from '../../design-system/assets/logo/decroqui-imagotipo-horizontal-claro.svg';
+import logoDark from '../../design-system/assets/logo/decroqui-imagotipo-horizontal-escuro.svg';
+import isotipo from '../../design-system/assets/logo/decroqui-isotipo-escuro.svg';
 import { CoverImageField, CoverImageLayers, ImageTools, useCoverImage, useImageDrag, type CoverImage } from './CoverImageField';
 import {
   backTarget,
   cleanPresentationName,
   clock,
   coverNotice,
+  invalidMessage,
   isTooLarge,
   pageKindLabel,
   PDF_ERROR_TEXTS,
   pdfFailure,
+  pdfOverflowText,
   pdfSavedLabel,
   pdfUnchangedText,
   presentationNameError,
   projectTabHelp,
+  refusedSize,
   SAVE_MESSAGES,
   saveFailure,
   saveLabel,
+  tooLargeMessage,
   type PdfState,
   type SaveState,
 } from './editor';
 import { canWritePresentations } from './list';
+import { PAGE_HELP, PageTab, READONLY_HELP, Select } from './PageTab';
+import {
+  BRAND_SIZE_OPTIONS,
+  COVER_COLOR_OPTIONS,
+  COVER_IMAGE_KEPT_TEXT,
+  COVER_LAYOUT_OPTIONS,
+  itemImage,
+  NEAR_LIMIT_TEXT,
+  PAGE_KIND_LABELS,
+  pageItems,
+  setItemField,
+  sizeLevel,
+} from './pageEditor';
+import { PagesTab, RemovePageDialog } from './PagesTab';
+import { addPage, canStep, currentAfterMove, currentAfterRemove, movePage, removePage, stepPage } from './pagesList';
 import { LinkProjectDialog } from './LinkProjectDialog';
 import { ExportPdfDialog } from './ExportPdfDialog';
 import '../budgets/budgets.css';
@@ -48,6 +79,9 @@ const RETRY_MS = 10_000;
 const PDF_SAVE_WAIT_MS = 15_000;
 
 type PanelTab = 'projeto' | 'paginas' | 'pagina';
+
+/** Id novo de página ou de item (até 40 caracteres, como a API aceita). */
+const newId = () => crypto.randomUUID();
 
 /**
  * Editor de apresentação (desenhos 6b-04, 6b-05 e 6b-12): painel à esquerda, visualização à direita.
@@ -71,6 +105,12 @@ export function PresentationEditorPage() {
   const [linking, setLinking] = useState(false);
   const [pdf, setPdf] = useState<PdfState>({ kind: 'idle' });
   const [exporting, setExporting] = useState(false);
+  /** Página mostrada na visualização e editada na aba Página (0 é a capa). */
+  const [current, setCurrent] = useState(0);
+  /** Item aberto na aba Página: o espaço de imagem dele usa a biblioteca. */
+  const [openItem, setOpenItem] = useState<string | null>(null);
+  /** Página à espera da confirmação de remover (P34). */
+  const [removingPage, setRemovingPage] = useState<number | null>(null);
 
   const dataRef = useRef<PresentationData | null>(null);
   const baseRef = useRef('');
@@ -108,9 +148,10 @@ export function PresentationEditorPage() {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
     if (inFlightRef.current || blockedRef.current || !dirtyRef.current || !dataRef.current) return;
-    // Acima de 512 KB nem envia: o aviso pede para encurtar, e a próxima alteração tenta de novo.
+    // Acima de 1 MB nem envia: o aviso pede para remover conteúdo, e a próxima alteração tenta de novo.
+    // O que foi escrito continua na tela e em dataRef.
     if (isTooLarge(dataRef.current)) {
-      setSave({ kind: 'too_large' });
+      setSave({ kind: 'too_large', size: presentationBytes(dataRef.current) });
       return;
     }
     inFlightRef.current = true;
@@ -137,7 +178,11 @@ export function PresentationEditorPage() {
         setSave({ kind: 'conflict' });
       } else if (failure === 'too_large') {
         tooLarge = true;
-        setSave({ kind: 'too_large' });
+        setSave({ kind: 'too_large', size: refusedSize(err) });
+      } else if (failure === 'invalid') {
+        // A API disse o motivo; tentar de novo daria no mesmo. Espera a próxima alteração.
+        tooLarge = true;
+        setSave({ kind: 'invalid', message: invalidMessage(err) });
       } else {
         setSave({ kind: 'error' });
         timerRef.current = setTimeout(() => flush(), RETRY_MS);
@@ -184,18 +229,98 @@ export function PresentationEditorPage() {
     [canWrite, isMobile, flush],
   );
 
-  const setCoverImage = useCallback(
-    (imagem: PresentationImageRef | null) =>
-      update((d) => ({ ...d, paginas: d.paginas.map((pg, i) => (i === 0 ? { ...pg, imagem } : pg)) as PresentationData['paginas'] })),
+  const pageCount = data?.paginas.length ?? 1;
+  const at = Math.min(current, pageCount - 1);
+  const currentPage = data?.paginas[at];
+
+  /** Altera a página `index` do documento. */
+  const updatePage = useCallback(
+    (index: number, change: (p: PresentationContentPage) => PresentationContentPage) =>
+      update((d) => {
+        const pg = d.paginas[index];
+        if (!pg || pg.tipo === 'capa') return d;
+        const next = change(pg);
+        if (next === pg) return d;
+        return { ...d, paginas: d.paginas.map((x, i) => (i === index ? next : x)) as PresentationData['paginas'] };
+      }),
     [update],
   );
+  /** Muda a página atual (visualização, aba Página e lista da aba Páginas). */
+  const goTo = useCallback((index: number) => {
+    setCurrent(index);
+    setOpenItem(null);
+  }, []);
+  /** Ações da aba Páginas: mudam só o documento e passam pelo salvamento automático. */
+  const addPageAfter = useCallback(
+    (tipo: AddablePageKind) => {
+      if (!dataRef.current) return;
+      const added = addPage(dataRef.current, tipo, at, newId);
+      if (added.data === dataRef.current) return;
+      update(() => added.data);
+      goTo(added.index);
+    },
+    [at, update, goTo],
+  );
+  const movePageBy = useCallback(
+    (index: number, dir: -1 | 1) => {
+      if (!dataRef.current) return;
+      const total = dataRef.current.paginas.length;
+      update((d) => movePage(d, index, dir));
+      setCurrent(currentAfterMove(at, index, dir, total));
+    },
+    [at, update],
+  );
+  const confirmRemovePage = useCallback(() => {
+    const index = removingPage;
+    setRemovingPage(null);
+    if (index === null || !dataRef.current) return;
+    const total = dataRef.current.paginas.length;
+    update((d) => removePage(d, index));
+    goTo(currentAfterRemove(at, index, total));
+  }, [removingPage, at, update, goTo]);
+  const updateCover = useCallback(
+    (change: Partial<PresentationCover>) =>
+      update((d) => ({ ...d, paginas: d.paginas.map((pg, i) => (i === 0 ? { ...pg, ...change } : pg)) as PresentationData['paginas'] })),
+    [update],
+  );
+
+  // Espaço de imagem ativo: o da capa na página 1; nas outras, o do item aberto.
+  const slotItem = currentPage && currentPage.tipo !== 'capa' && openItem ? openItem : null;
+  const slotImage =
+    currentPage?.tipo === 'capa' ? currentPage.imagem : slotItem && currentPage ? (itemImage(currentPage, slotItem) ?? null) : null;
+  const setSlotImage = useCallback(
+    (imagem: PresentationImageRef | null) => {
+      if (at === 0) updateCover({ imagem });
+      else if (slotItem) updatePage(at, (p) => setItemField(p, slotItem, 'imagem', imagem));
+    },
+    [at, slotItem, updateCover, updatePage],
+  );
+  // A mesma imagem em outro espaço desta apresentação: tirá-la deste não a manda para a lixeira.
+  const usedElsewhere = useMemo(() => {
+    if (!data || !slotImage) return false;
+    const others = {
+      ...data,
+      paginas: data.paginas.map((pg, i) => {
+        if (i !== at) return pg;
+        if (pg.tipo === 'capa') return { ...pg, imagem: null };
+        return slotItem ? setItemField(pg, slotItem, 'imagem', null) : pg;
+      }),
+    } as PresentationData;
+    return presentationImageIds(others).includes(slotImage.id);
+  }, [data, slotImage, at, slotItem]);
+  // Fotos diferentes da apresentação inteira, para o teto de fotos (decisão de 2026-11-15).
+  const photoIds = useMemo(() => (data ? presentationImageIds(data) : []), [data]);
   const cover = useCoverImage({
     presentationId: id,
     hasProject: !!presentation?.projectId,
-    imagem: data?.paginas[0]?.imagem ?? null,
-    setImagem: setCoverImage,
+    imagem: slotImage ?? null,
+    setImagem: setSlotImage,
     enabled: state === 'ready' && canWrite && !isMobile,
+    where: at === 0 ? 'capa' : 'item',
+    usedElsewhere,
+    photoIds,
   });
+  const size = useMemo(() => (data ? presentationBytes(data) : 0), [data]);
 
   // Fechar ou recarregar com alteração ainda não salva: o navegador pergunta antes.
   useEffect(() => {
@@ -270,7 +395,8 @@ export function PresentationEditorPage() {
     />
   );
   const pdfAlert = (pdf.kind === 'error' || pdf.kind === 'unchanged') && (
-    <PdfAlert pdf={pdf} onRetry={() => void exportPdf()} onClose={() => setPdf({ kind: 'idle' })} />
+    // No celular não há edição: o aviso não leva à página.
+    <PdfAlert pdf={pdf} onRetry={() => void exportPdf()} onClose={() => setPdf({ kind: 'idle' })} onGoTo={isMobile ? undefined : goTo} />
   );
 
   if (isMobile) {
@@ -390,12 +516,52 @@ export function PresentationEditorPage() {
                 onBlur={() => void flush()}
               />
             )}
-            {tab === 'paginas' && <PagesTab onOpen={() => setTab('pagina')} />}
-            {tab === 'pagina' && <CoverTab readOnly={readOnly} hasProject={hasProject} cover={cover} />}
+            {tab === 'paginas' && (
+              <PagesTab
+                data={data}
+                current={at}
+                readOnly={readOnly}
+                onSelect={goTo}
+                onMove={movePageBy}
+                onAskRemove={setRemovingPage}
+                onAdd={addPageAfter}
+              />
+            )}
+            {tab === 'pagina' &&
+              (currentPage && currentPage.tipo !== 'capa' ? (
+                <PageTab
+                  key={currentPage.id}
+                  page={currentPage}
+                  index={at}
+                  readOnly={readOnly}
+                  onChange={(change) => updatePage(at, change)}
+                  newId={newId}
+                  openItem={openItem && pageItems(currentPage).some((it) => it.id === openItem) ? openItem : null}
+                  onOpenItem={setOpenItem}
+                  image={readOnly ? null : cover}
+                  onBlur={() => void flush()}
+                />
+              ) : (
+                <CoverTab
+                  readOnly={readOnly}
+                  hasProject={hasProject}
+                  cover={cover}
+                  options={coverOptions(data.paginas[0])}
+                  onOptions={(change) => updateCover(change)}
+                />
+              ))}
           </div>
         </aside>
 
-        <Preview data={data} mode={mode} kind={readOnly ? 'readonly' : mode} cover={cover} tools={!readOnly && !preview} />
+        <Preview
+          data={data}
+          index={at}
+          onIndex={goTo}
+          mode={mode}
+          kind={readOnly ? 'readonly' : mode}
+          cover={cover}
+          tools={!readOnly && !preview && at === 0}
+        />
       </div>
 
       {!readOnly && <CoverImageLayers cover={cover} projectName={presentation.project?.name ?? null} />}
@@ -413,10 +579,19 @@ export function PresentationEditorPage() {
       )}
 
       {pdfDialog}
+      {!readOnly && removingPage !== null && data.paginas[removingPage] && (
+        <RemovePageDialog data={data} index={removingPage} onCancel={() => setRemovingPage(null)} onConfirm={confirmRemovePage} />
+      )}
 
-      {(save.kind === 'error' || save.kind === 'conflict' || save.kind === 'too_large' || pdfAlert) && (
+      {(save.kind === 'error' || save.kind === 'conflict' || save.kind === 'too_large' || save.kind === 'invalid' || pdfAlert || (!readOnly && sizeLevel(size) === 'near')) && (
         <div className="toast-slot beditor__toast">
           {pdfAlert}
+          {/* Perto do limite (80% de 1 MB): só avisa; o salvamento continua. */}
+          {!readOnly && sizeLevel(size) === 'near' && save.kind !== 'too_large' && (
+            <div className="save-alert save-alert--warning" role="status">
+              <p>{NEAR_LIMIT_TEXT}</p>
+            </div>
+          )}
           {save.kind === 'saved' || save.kind === 'saving' ? null : save.kind === 'conflict' ? (
             <div className="save-alert save-alert--warning" role="alert">
               <p>{SAVE_MESSAGES.conflict}</p>
@@ -426,7 +601,7 @@ export function PresentationEditorPage() {
             </div>
           ) : (
             <div className="save-alert save-alert--danger" role="alert">
-              <p>{SAVE_MESSAGES[save.kind]}</p>
+              <p>{save.kind === 'too_large' ? tooLargeMessage(save.size) : save.kind === 'invalid' ? save.message : SAVE_MESSAGES[save.kind]}</p>
               <button
                 type="button"
                 className="link-button"
@@ -446,7 +621,7 @@ export function PresentationEditorPage() {
 }
 
 /** Avisos do PDF (6b-11): sem alterações (ardósia) e erro (terracota), no canto, como os de 6b-05. */
-function PdfAlert({ pdf, onRetry, onClose }: { pdf: PdfState; onRetry: () => void; onClose: () => void }) {
+function PdfAlert({ pdf, onRetry, onClose, onGoTo }: { pdf: PdfState; onRetry: () => void; onClose: () => void; onGoTo?: (index: number) => void }) {
   if (pdf.kind === 'unchanged') {
     return (
       <div className="save-alert save-alert--info palert" role="status">
@@ -466,9 +641,17 @@ function PdfAlert({ pdf, onRetry, onClose }: { pdf: PdfState; onRetry: () => voi
   if (pdf.kind !== 'error') return null;
   return (
     <div className="save-alert save-alert--danger palert" role="alert">
-      <p>{PDF_ERROR_TEXTS[pdf.reason]}</p>
+      <p>{pdf.reason === 'overflow' ? pdfOverflowText(pdf.overflow) : PDF_ERROR_TEXTS[pdf.reason]}</p>
       <div className="palert__actions">
-        {/* Além do limite, tentar de novo daria no mesmo: só fecha. */}
+        {/* Além do limite, tentar de novo daria no mesmo: leva à primeira folha que passou, ou só fecha. */}
+        {pdf.reason === 'overflow' && pdf.overflow.length > 0 && onGoTo && (
+          <>
+            <button type="button" className="link-button" onClick={() => onGoTo(pdf.overflow[0].page)}>
+              {pdf.overflow[0].page === 0 ? 'Ver a capa' : `Ver a página ${String(pdf.overflow[0].page + 1).padStart(2, '0')}`}
+            </button>
+            <span aria-hidden>·</span>
+          </>
+        )}
         {pdf.reason !== 'overflow' && (
           <>
             <button type="button" className="link-button" onClick={onRetry}>
@@ -498,12 +681,17 @@ function SaveIndicator({ save }: { save: SaveState }) {
 /** Área da visualização: barra com página e zoom, e a folha reduzida para caber (zoom de ajuste em A4). */
 function Preview({
   data,
+  index,
+  onIndex,
   mode,
   kind,
   cover,
   tools,
 }: {
   data: PresentationData;
+  /** Página mostrada (0 é a capa). */
+  index: number;
+  onIndex: (index: number) => void;
   mode: CoverMode;
   kind: CoverMode | 'readonly';
   cover: CoverImage;
@@ -525,18 +713,21 @@ function Preview({
   }, []);
   const z = zoom ?? fit;
   const drag = useImageDrag(cover);
-  const showTools = tools && !!cover.src;
+  const page = data.paginas[index] ?? data.paginas[0];
+  const options = coverOptions(data.paginas[0]);
+  const showTools = tools && !!cover.src && page.tipo === 'capa' && coverLook(options).hasImageArea;
+  const total = data.paginas.length;
   return (
     <section className="ppreview" aria-label="Visualização">
       <div className="ppreview__bar">
-        <button type="button" className="ppreview__step" aria-label="Página anterior" disabled>
+        <button type="button" className="ppreview__step" aria-label="Página anterior" disabled={!canStep(index, -1, total)} onClick={() => onIndex(stepPage(index, -1, total))}>
           ‹
         </button>
-        <span className="ppreview__page">{pageNavLabel(0, data.paginas.length)}</span>
-        <button type="button" className="ppreview__step" aria-label="Próxima página" disabled>
+        <span className="ppreview__page">{pageNavLabel(index, total)}</span>
+        <button type="button" className="ppreview__step" aria-label="Próxima página" disabled={!canStep(index, 1, total)} onClick={() => onIndex(stepPage(index, 1, total))}>
           ›
         </button>
-        <span className="ppreview__kind">{pageKindLabel(kind, compact)}</span>
+        <span className="ppreview__kind">{pageKindLabel(kind, compact, page.tipo)}</span>
         <button type="button" className="ppreview__zoom" aria-label="Diminuir zoom" onClick={() => setZoom(zoomOut(z))}>
           −
         </button>
@@ -547,20 +738,30 @@ function Preview({
       </div>
       <div ref={ref} className="ppreview__area">
         <div className="ppreview__sheet" style={{ zoom: zoomCss(z) }}>
-          <CoverSheet
-            projeto={data.projeto}
-            mode={mode}
-            logoSrc={logo}
-            image={cover.src && cover.imagem ? { src: cover.src, ref: cover.imagem } : null}
-            onImageError={cover.imageFailed}
-            archProps={showTools ? drag : undefined}
-            overlay={
-              showTools ? (
-                // No canto de baixo do arco, no tamanho real, qualquer que seja o zoom da visualização.
-                <ImageTools cover={cover} className="pimgtools--sheet" style={{ zoom: 1 / z, right: 68 * z, bottom: 16 * z }} />
-              ) : undefined
-            }
-          />
+          {page.tipo === 'capa' ? (
+            <CoverSheet
+              projeto={data.projeto}
+              mode={mode}
+              logoSrc={logo}
+              logoDarkSrc={logoDark}
+              options={options}
+              image={coverImage(page, cover)}
+              onImageError={cover.imageFailed}
+              archProps={showTools ? drag : undefined}
+              overlay={
+                showTools ? (
+                  // No canto de baixo do espaço de imagem, no tamanho real, qualquer que seja o zoom da visualização.
+                  <ImageTools
+                    cover={cover}
+                    className="pimgtools--sheet"
+                    style={{ zoom: 1 / z, right: (options.composicao === 'arco' ? 68 : 16) * z, bottom: 16 * z }}
+                  />
+                ) : undefined
+              }
+            />
+          ) : (
+            <PageSheet page={page} projeto={data.projeto} mode={mode} index={index} total={total} imageSrc={cover.imageSrc} isotipoSrc={isotipo} />
+          )}
         </div>
       </div>
     </section>
@@ -651,57 +852,62 @@ function ProjectTab({
   );
 }
 
-function PagesTab({ onOpen }: { onOpen: () => void }) {
-  return (
-    <>
-      <div className="ppanel__section ppanel__section--row">
-        <h2 className="ppanel__section-title">Páginas</h2>
-        <span className="ppanel__count">1 página</span>
-      </div>
-      <button type="button" className="ppage is-active" onClick={onOpen}>
-        <span className="ppage__number">01</span>
-        <span className="ppage__text">
-          <span className="ppage__kind">Capa · Imagem em arco</span>
-          <span className="ppage__name">Capa</span>
-        </span>
-      </button>
-      <div className="ppanel__section">
-        <h2 className="ppanel__section-title">Outras páginas</h2>
-        <p className="ppanel__help">Nesta versão, a apresentação tem só a capa. A capa não pode ser movida, duplicada nem excluída.</p>
-      </div>
-    </>
-  );
+/** Opções da capa guardadas no documento. */
+function coverOptions(page: PresentationData['paginas'][0]): CoverOptions {
+  return { composicao: page.composicao, cor: page.cor, marca: page.marca };
 }
 
-/** Na E7 cada menu tem uma opção só: arco, vinho e marca pequena (as outras ainda não têm desenho aprovado). */
-function CoverTab({ readOnly, hasProject, cover }: { readOnly: boolean; hasProject: boolean; cover: CoverImage }) {
-  const select = (label: string, value: string) => (
-    <label className="pfield">
-      <span className="pfield__label">{label}</span>
-      <span className="pselect-wrap">
-        <select className="pselect" value={value} disabled={readOnly} onChange={() => {}}>
-          <option value={value}>{value}</option>
-        </select>
-        <AppIcon name="chevron-down" size={16} />
-      </span>
-    </label>
-  );
+/**
+ * Imagem da capa para a folha. O gancho de imagem segue o espaço ativo: na capa, é a imagem dela. Fora da capa
+ * (celular, leitor), a imagem guardada no documento, pelo endereço da biblioteca.
+ */
+function coverImage(page: PresentationCover, cover: CoverImage): { src: string; ref: PresentationImageRef } | null {
+  if (!page.imagem) return null;
+  if (cover.imagem?.id === page.imagem.id) return cover.src ? { src: cover.src, ref: page.imagem } : null;
+  return { src: cover.imageSrc(page.imagem.id), ref: page.imagem };
+}
+
+/** Seletores da capa (6c, E4): composição, cor e marca, como nos desenhos 6c-01 a 6c-11. */
+function CoverTab({
+  readOnly,
+  hasProject,
+  cover,
+  options,
+  onOptions,
+}: {
+  readOnly: boolean;
+  hasProject: boolean;
+  cover: CoverImage;
+  options: CoverOptions;
+  onOptions: (change: Partial<CoverOptions>) => void;
+}) {
+  const hasImage = coverLook(options).hasImageArea;
   return (
     <>
       <div className="ppanel__head">
         <span className="ppanel__kicker">Página 01 · Capa</span>
         <h2 className="ppanel__page-title">Capa</h2>
-        <p className="ppanel__help">
-          {readOnly
-            ? 'Somente leitura. Você pode ver a apresentação e abrir o PDF salvo, mas não pode alterar nem gerar um PDF novo.'
-            : 'Edite os campos aqui. Com a Prévia desligada, o que falta preencher aparece em cinza e não sai no PDF.'}
-        </p>
+        <p className="ppanel__help">{readOnly ? READONLY_HELP : PAGE_HELP}</p>
       </div>
       <p className="ppanel__notice">{readOnly ? 'Para editar, peça acesso de colaborador a quem administra o estúdio.' : coverNotice(hasProject)}</p>
-      {select('Composição', 'Imagem em arco')}
-      {select('Cor da capa', 'Vinho')}
-      {select('Tamanho da marca', 'Pequeno')}
+      <Select
+        label="Composição"
+        value={options.composicao}
+        options={COVER_LAYOUT_OPTIONS}
+        disabled={readOnly}
+        onChange={(v) => onOptions({ composicao: v as CoverOptions['composicao'] })}
+      />
+      <Select label="Cor da capa" value={options.cor} options={COVER_COLOR_OPTIONS} disabled={readOnly} onChange={(v) => onOptions({ cor: v as CoverOptions['cor'] })} />
+      <Select
+        label="Tamanho da marca"
+        value={options.marca}
+        options={BRAND_SIZE_OPTIONS}
+        disabled={readOnly}
+        onChange={(v) => onOptions({ marca: v as CoverOptions['marca'] })}
+      />
+      {/* Só tipografia (6c-06 a 6c-08): o campo continua, com o aviso de que a imagem não sai na folha (D3 da E7). */}
       {!readOnly && <CoverImageField cover={cover} />}
+      {!readOnly && !hasImage && <p className="ppanel__help">{COVER_IMAGE_KEPT_TEXT}</p>}
     </>
   );
 }
@@ -734,6 +940,10 @@ function MobileView({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [z, setZ] = useState(0.32);
+  const [index, setIndex] = useState(0);
+  const total = data.paginas.length;
+  const at = Math.min(index, total - 1);
+  const page = data.paginas[at];
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -761,16 +971,33 @@ function MobileView({
         <p className="pmobile__intro">Edição só no computador. Aqui você vê a apresentação como vai sair no PDF.</p>
         <div ref={ref} className="pmobile__sheet">
           <div className="ppreview__sheet" style={{ zoom: zoomCss(z) }}>
-            <CoverSheet
-              projeto={data.projeto}
-              mode="print"
-              logoSrc={logo}
-              image={cover.src && cover.imagem ? { src: cover.src, ref: cover.imagem } : null}
-              onImageError={cover.imageFailed}
-            />
+            {page.tipo === 'capa' ? (
+              <CoverSheet
+                projeto={data.projeto}
+                mode="print"
+                logoSrc={logo}
+                logoDarkSrc={logoDark}
+                options={coverOptions(page)}
+                image={coverImage(page, cover)}
+                onImageError={cover.imageFailed}
+              />
+            ) : (
+              <PageSheet page={page} projeto={data.projeto} mode="print" index={at} total={total} imageSrc={cover.imageSrc} isotipoSrc={isotipo} />
+            )}
           </div>
         </div>
-        <p className="pmobile__label">{pageNavLabel(0, data.paginas.length)} · Capa</p>
+        {/* Navega entre as páginas sem editar (E5). */}
+        <div className="pmobile__nav">
+          <button type="button" className="pmobile__step" aria-label="Página anterior" disabled={!canStep(at, -1, total)} onClick={() => setIndex(stepPage(at, -1, total))}>
+            ‹
+          </button>
+          <p className="pmobile__label">
+            {pageNavLabel(at, total)} · {PAGE_KIND_LABELS[page.tipo]}
+          </p>
+          <button type="button" className="pmobile__step" aria-label="Próxima página" disabled={!canStep(at, 1, total)} onClick={() => setIndex(stepPage(at, 1, total))}>
+            ›
+          </button>
+        </div>
       </div>
       {(presentation.pdf || canExport) && (
         <div className="pmobile__foot">

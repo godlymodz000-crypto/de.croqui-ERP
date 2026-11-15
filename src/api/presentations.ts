@@ -39,7 +39,7 @@ export const presentationsApi = {
     mutate(request<PresentationWithData>('POST', '/presentations', input), 'presentations'),
   /**
    * Salvamento automático do documento. `baseUpdatedAt` é a versão que a tela tem: outra mais nova
-   * responde 409; documento acima de 512 KB responde 413 `too_large`.
+   * responde 409; documento acima de 1 MiB responde 413 `too_large`.
    */
   /**
    * Vincula a apresentação avulsa a um projeto (E5): imagens e PDF mudam de pasta no Drive. Se o Drive falhar,

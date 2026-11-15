@@ -1,8 +1,9 @@
-import type { PresentationProject } from '../shared/presentation-data.js';
+import type { PresentationCover, PresentationProject } from '../shared/presentation-data.js';
 
 // Regras da capa (desenhos 6b-04, 6b-12 e 6b-13), sem React: o editor, a visualização no celular e,
-// na E9, o PDF usam as mesmas. Na E7 a capa tem só a composição "Imagem em arco", na cor vinho e com a
-// marca pequena (decisão de 2026-11-07); as outras opções entram quando houver desenho aprovado.
+// na E9, o PDF usam as mesmas. Na 6b a capa tinha só a composição "Imagem em arco", na cor vinho e com a
+// marca pequena. Na 6c (E3, desenhos 6c-01 a 6c-11) entram as composições Imagem lateral inteira e Só
+// tipografia, as cores Noite e Linho e as marcas Média e Grande.
 
 /** Prévia desligada: o que falta aparece em cinza. Ligada: a folha como sai no PDF. */
 export type CoverMode = 'edit' | 'print';
@@ -82,5 +83,20 @@ export function coverImageStyle(ref: { ajuste: 'fit' | 'fill'; zoom: number; x: 
     objectPosition: origin,
     transform: ref.zoom === 1 ? undefined : `scale(${ref.zoom})`,
     transformOrigin: origin,
+  };
+}
+
+/** Opções da capa. Sem elas, a capa da 6b: Imagem em arco, Vinho e marca Pequena. */
+export type CoverOptions = Pick<PresentationCover, 'composicao' | 'cor' | 'marca'>;
+export const DEFAULT_COVER_OPTIONS: CoverOptions = { composicao: 'arco', cor: 'vinho', marca: 'p' };
+
+/**
+ * Marca clara nas capas Vinho e Noite e escura na Linho (arquivo offline, AP_TEMAS). Na composição
+ * "Só tipografia" não há espaço de imagem: a imagem escolhida fica guardada e não aparece (P33).
+ */
+export function coverLook(options: CoverOptions) {
+  return {
+    logo: options.cor === 'linho' ? ('escuro' as const) : ('claro' as const),
+    hasImageArea: options.composicao !== 'tipo',
   };
 }
