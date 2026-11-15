@@ -39,6 +39,7 @@ export const PAGE_KIND_LABELS: Record<PresentationPageKind, string> = {
   tecnico: 'Desenho técnico',
   notas: 'Notas técnicas',
   direitos: 'Direitos autorais',
+  prancha: 'Prancha de detalhamento',
 };
 
 /** "Página 02 · Texto & conceito", no topo da aba. */
@@ -175,6 +176,8 @@ export const PAGE_FIELDS: Record<PresentationContentPage['tipo'], FieldDef[]> = 
     { key: 'restricoes', label: 'Restrições de reprodução e compartilhamento', placeholder: RIGHTS_MODELS.restricoes, long: true },
     { key: 'observacoes', label: 'Observações legais', placeholder: RIGHTS_MODELS.observacoes, long: true },
   ],
+  // O painel da prancha entra na E4 da 6d. Até lá, nenhum campo de texto é editável por aqui.
+  prancha: [],
 };
 
 /** Altera um campo de texto da página. Campos que o tipo não tem não mudam nada. */
@@ -210,6 +213,8 @@ export const PAGE_LISTS: Record<PresentationContentPage['tipo'], ListDef | null>
   tecnico: { key: 'desenhos', title: 'Desenhos', adds: [] },
   notas: { key: 'notas', title: 'Notas', adds: [{ kind: 'nota', label: '+ Nota' }] },
   direitos: null,
+  // A prancha não tem lista de itens. O painel dela entra na E4 da 6d.
+  prancha: null,
 };
 
 export const itemCountLabel = (n: number) => (n === 1 ? '1 item' : `${n} itens`);

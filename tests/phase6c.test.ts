@@ -216,7 +216,8 @@ describe('Fase 6c · E2 · cada tipo salvo e relido', () => {
     const cases: [unknown, Record<string, unknown>][] = [
       [{ ...doc, paginas: [doc.paginas[1], doc.paginas[0]] }, { reason: 'cover_first', pagina: 0 }],
       [{ ...doc, paginas: [doc.paginas[0], { ...doc.paginas[0], id: 'capa-2' }] }, { reason: 'second_cover', pagina: 1 }],
-      [{ ...doc, paginas: [doc.paginas[0], { id: 'pr', tipo: 'prancha' }] }, { reason: 'page_type', pagina: 1 }],
+      // Na 6d (E2) a prancha passou a ser validada: sem os campos dela, é recusada pelo campo que falta.
+      [{ ...doc, paginas: [doc.paginas[0], { id: 'pr', tipo: 'prancha' }] }, { reason: 'field', pagina: 1 }],
       [{ ...doc, paginas: [doc.paginas[0], ...Array.from({ length: 40 }, () => newPresentationPage('direitos', newId))] }, { reason: 'too_many_pages' }],
       [
         { ...doc, paginas: [doc.paginas[0], { ...newPresentationPage('notas', newId), notas: Array.from({ length: 13 }, (_, i) => ({ id: `n${i}`, categoria: '', titulo: '', texto: '' })) }] },

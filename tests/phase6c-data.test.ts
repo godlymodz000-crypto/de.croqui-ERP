@@ -199,10 +199,11 @@ describe('Fase 6c · E1 · capa única e em primeiro', () => {
     expect(refused({ ...base, paginas: [base.paginas[0], base.paginas[1], segunda] })).toMatchObject({ error: 'invalid', reason: 'second_cover', pagina: 2 });
   });
 
-  it('prancha, tipo desconhecido e página sem os campos do tipo são recusados', () => {
+  it('prancha incompleta, tipo desconhecido e página sem os campos do tipo são recusados', () => {
     const base = json(fullDoc());
     const prancha = { id: 'pr', tipo: 'prancha', title: '', fase: 'Executivo', imagem: null };
-    expect(refused({ ...base, paginas: [base.paginas[0], prancha] })).toMatchObject({ reason: 'page_type', pagina: 1 });
+    // Na 6d (E2) a prancha passou a ser validada: sem os campos dela, é recusada pelo campo que falta.
+    expect(refused({ ...base, paginas: [base.paginas[0], prancha] })).toMatchObject({ reason: 'field', pagina: 1 });
     expect(refused({ ...base, paginas: [base.paginas[0], { ...base.paginas[1], tipo: 'galeria' }] })).toMatchObject({ reason: 'page_type' });
     // Uma página "notas" com os campos da capa, como no teste da 6b.
     expect(refused({ ...base, paginas: [base.paginas[0], { ...base.paginas[0], id: 'p2', tipo: 'notas' }] })).toMatchObject({ reason: 'field', pagina: 1 });

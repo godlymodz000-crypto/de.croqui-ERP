@@ -296,7 +296,7 @@ describe('salvamento automático', () => {
       { data: { ...a.data, paginas: [capa, { ...capa, id: 'p2', tipo: 'notas' }] } },
       { data: { ...a.data, paginas: [{ ...capa, cor: 'verde' }] } },
       { data: { ...a.data, paginas: [{ ...capa, composicao: 'grade' }] } },
-      { data: { ...a.data, projeto: { ...a.data.projeto, formato: 'a3' } } },
+      { data: { ...a.data, projeto: { ...a.data.projeto, formato: 'a5' } } },
       { data: { ...a.data, projeto: { ...a.data.projeto, data: '07/11/2026' } } },
       { data: { ...a.data, projeto: { ...a.data.projeto, marca: 7 } } },
       { data: { ...a.data, paginas: [{ ...capa, imagem: { id: 'x', ajuste: 'fit', zoom: 1, x: 50, y: 50 } }] } },

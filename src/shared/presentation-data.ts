@@ -37,10 +37,15 @@ export const COVER_LAYOUTS = ['arco', 'foto', 'tipo'] as const;
 export const COVER_COLORS = ['vinho', 'noite', 'linho'] as const;
 export const BRAND_SIZES = ['p', 'm', 'g'] as const;
 export const IMAGE_FITS = ['fit', 'fill'] as const;
-export const PAGE_FORMATS = ['a4'] as const;
+/** Formato das páginas da apresentação: A4, A3 e Tela 16:9 (`AP_FORMATS` do arquivo offline; 6d, E2). */
+export const PAGE_FORMATS = ['a4', 'a3', 'wide'] as const;
+/** Folha da prancha: só A4 ou A3 paisagem, independente do formato da apresentação (6d, P38). */
+export const PRANCHA_SHEETS = ['a4', 'a3'] as const;
+/** Versão da moldura gravada na prancha quando a imagem é importada (M8). Só existe a v1. */
+export const PRANCHA_FRAME_VERSION = 1 as const;
 
 /** Tipos de página aceitos na 6c, na ordem do menu de adicionar (6c-21, P36), depois da capa. */
-export const PAGE_TYPES = ['capa', 'texto', 'moodboard', 'visual', 'tecnico', 'notas', 'direitos'] as const;
+export const PAGE_TYPES = ['capa', 'texto', 'moodboard', 'visual', 'tecnico', 'notas', 'direitos', 'prancha'] as const;
 /** Tipos que a aba Páginas adiciona: todos, menos a capa (6c-21, P36). */
 export const ADDABLE_PAGE_TYPES = ['texto', 'moodboard', 'visual', 'tecnico', 'notas', 'direitos'] as const;
 
@@ -221,17 +226,39 @@ export interface PresentationRightsPage extends NoPageImage {
   observacoes: string;
 }
 
+/**
+ * Prancha de detalhamento (6d): uma imagem exportada do LayOut que ocupa a folha inteira. Os valores do rodapé
+ * são escritos pela página por cima da imagem quando `rodape` está ligado (revisao-fase6d/planejamento.md, seção 2).
+ */
+export interface PresentationPranchaPage {
+  id: string;
+  tipo: 'prancha';
+  folha: (typeof PRANCHA_SHEETS)[number];
+  /** "Ambiente / título da prancha", vai para a célula AMBIENTE. */
+  titulo: string;
+  /** Célula FASE. A página nova começa com "Executivo". */
+  fase: string;
+  /** true: a página escreve os valores do rodapé; false: os dados já estão na imagem. */
+  rodape: boolean;
+  imagem: PresentationImageRef | null;
+  /** Versão da moldura, gravada quando a imagem é importada. Obrigatória com imagem; sem imagem, pode faltar. */
+  moldura?: typeof PRANCHA_FRAME_VERSION;
+}
+
 export type PresentationContentPage =
   | PresentationTextPage
   | PresentationMoodboardPage
   | PresentationVisualPage
   | PresentationTechnicalPage
   | PresentationNotesPage
-  | PresentationRightsPage;
+  | PresentationRightsPage
+  | PresentationPranchaPage;
 
 export type PresentationPage = PresentationCover | PresentationContentPage;
 export type PresentationPageKind = PresentationPage['tipo'];
-export type AddablePageKind = PresentationContentPage['tipo'];
+/** Tipos de página do menu de adicionar. A prancha entra no menu na E4 da 6d. */
+export type AddablePageKind = (typeof ADDABLE_PAGE_TYPES)[number];
+export type ContentPageKind = PresentationContentPage['tipo'];
 
 export interface PresentationData {
   v: 1;
@@ -283,8 +310,9 @@ export function newPresentationPage(tipo: 'visual', newId: () => string): Presen
 export function newPresentationPage(tipo: 'tecnico', newId: () => string): PresentationTechnicalPage;
 export function newPresentationPage(tipo: 'notas', newId: () => string): PresentationNotesPage;
 export function newPresentationPage(tipo: 'direitos', newId: () => string): PresentationRightsPage;
-export function newPresentationPage(tipo: AddablePageKind, newId: () => string): PresentationContentPage;
-export function newPresentationPage(tipo: AddablePageKind, newId: () => string): PresentationContentPage {
+export function newPresentationPage(tipo: 'prancha', newId: () => string): PresentationPranchaPage;
+export function newPresentationPage(tipo: ContentPageKind, newId: () => string): PresentationContentPage;
+export function newPresentationPage(tipo: ContentPageKind, newId: () => string): PresentationContentPage {
   const id = newId();
   switch (tipo) {
     case 'texto':
@@ -334,6 +362,9 @@ export function newPresentationPage(tipo: AddablePageKind, newId: () => string):
       };
     case 'direitos':
       return { id, tipo, sobretitulo: 'Propriedade intelectual', titulo: 'Direitos autorais', autoria: '', escritorio: '', uso: '', restricoes: '', observacoes: '' };
+    case 'prancha':
+      // P44: A4, "Executivo" e rodapé ligado. A moldura só é gravada quando a imagem é importada.
+      return { id, tipo, folha: 'a4', titulo: '', fase: 'Executivo', rodape: true, imagem: null };
   }
 }
 
@@ -473,6 +504,12 @@ function text(o: Record<string, unknown>, key: string, max: number): string {
 const short = (o: Record<string, unknown>, key: string) => text(o, key, PRESENTATION_MAX_SHORT);
 const long = (o: Record<string, unknown>, key: string) => text(o, key, PRESENTATION_MAX_TEXT);
 
+function bool(o: Record<string, unknown>, key: string): boolean {
+  const v = o[key];
+  if (typeof v !== 'boolean') throw new Refuse('field', key);
+  return v;
+}
+
 function pick<T extends string>(o: Record<string, unknown>, key: string, list: readonly T[]): T {
   const v = o[key];
   if (!oneOf(list, v)) throw new Refuse('field', key);
@@ -611,8 +648,23 @@ function parsePage(p: Record<string, unknown>, id: string): PresentationPage {
         restricoes: long(p, 'restricoes'),
         observacoes: long(p, 'observacoes'),
       };
+    case 'prancha': {
+      const imagem = parseImage(p.imagem, 'imagem');
+      const page: PresentationPranchaPage = {
+        id,
+        tipo: 'prancha',
+        folha: pick(p, 'folha', PRANCHA_SHEETS),
+        titulo: short(p, 'titulo'),
+        fase: short(p, 'fase'),
+        rodape: bool(p, 'rodape'),
+        imagem,
+      };
+      // Com imagem, a versão da moldura é obrigatória; sem imagem, pode faltar. Diferente de 1 é recusada.
+      if (p.moldura === undefined && imagem === null) return page;
+      if (p.moldura !== PRANCHA_FRAME_VERSION) throw new Refuse('field', 'moldura');
+      return { ...page, moldura: PRANCHA_FRAME_VERSION };
+    }
     default:
-      // Inclui "prancha", que fica para a 6d.
       throw new Refuse('page_type', 'tipo');
   }
 }
@@ -626,8 +678,8 @@ const fail = (reason: PresentationDataReason, extra: { pagina?: number; campo?: 
 /**
  * Confere e normaliza o documento recebido. Campos desconhecidos são descartados; nas páginas, todo campo do
  * tipo é obrigatório (o editor sempre envia a página inteira). Tipo errado, valor fora da lista, texto acima do
- * limite, lista fora dos limites, capa fora do primeiro lugar, segunda capa ou tipo de página que não existe na
- * 6c recusam o documento inteiro. O limite de tamanho e as referências de imagem são conferidos na API.
+ * limite, lista fora dos limites, capa fora do primeiro lugar, segunda capa ou tipo de página que não existe
+ * recusam o documento inteiro. O limite de tamanho e as referências de imagem são conferidos na API.
  */
 export function parsePresentationData(input: unknown): { data: PresentationData } | PresentationDataFailure {
   if (!isObj(input) || input.v !== 1) return fail('format');
@@ -643,7 +695,10 @@ export function parsePresentationData(input: unknown): { data: PresentationData 
     out.projeto[key] = v;
   }
   if (out.projeto.data && !DATE_RE.test(out.projeto.data)) return fail('project', { campo: 'data' });
-  if (projeto.formato !== undefined && !oneOf(PAGE_FORMATS, projeto.formato)) return fail('project', { campo: 'formato' });
+  if (projeto.formato !== undefined) {
+    if (!oneOf(PAGE_FORMATS, projeto.formato)) return fail('project', { campo: 'formato' });
+    out.projeto.formato = projeto.formato;
+  }
 
   // De 1 a 40 páginas, com a capa, e só ela, em primeiro.
   const paginas = input.paginas;
@@ -683,6 +738,9 @@ function pageImages(p: PresentationPage): (PresentationImageRef | null)[] {
       return p.imagens.map((i) => i.imagem);
     case 'tecnico':
       return p.desenhos.map((d) => d.imagem);
+    case 'prancha':
+      // P41: a imagem da prancha também vai para o PDF, então conta no teto de fotos.
+      return [p.imagem];
     default:
       return [];
   }

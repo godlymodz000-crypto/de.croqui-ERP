@@ -2,7 +2,7 @@
 
 Este documento é só planejamento. Nesta etapa não houve código de produção, teste, migração, push, merge, deploy nem acesso a produção.
 
-- **Situação:** E0 concluída. As perguntas P38 a P45 e os textos das recusas foram respondidos (seção 5), e os frames 6d-01 a 6d-06 foram aprovados por você no Figcraft em 15/11/2026. A cor do nome na D8 foi confirmada (seção 5). E1 concluída em 15/11/2026 (seção 3). A E2 começa com a sua autorização.
+- **Situação:** E0 concluída. As perguntas P38 a P45 e os textos das recusas foram respondidos (seção 5), e os frames 6d-01 a 6d-06 foram aprovados por você no Figcraft em 15/11/2026. A cor do nome na D8 foi confirmada (seção 5). E1 e E2 concluídas em 15/11/2026 (seção 3). A E3 começa com a sua autorização.
 - **Branch:** `feat/fase-6d-prancha`, criada da `origin/main` em `69a6d07` (6c em produção). Ela existe só neste computador, sem push e sem upstream, porque um push gera uma prévia na Vercel.
 - **Desenhos:** a referência aprovada será `design/moldura-erp.figcraft`, página "ERP · Telas", com 6d-01 a 6d-06 (seção 6). Os PNG em `revisao-fase6d/desenhos/` são só rascunho, fora do versionamento.
 - **Decisões usadas:**
@@ -157,6 +157,33 @@ Cada etapa depende de aprovação, uma de cada vez.
   - testes de validação: campos obrigatórios, `folha` fora da lista recusada, `moldura` diferente de 1 recusada;
   - documento da 6c abre e salva sem mudança;
   - limite de 1 MiB e teto de 50 fotos contando a prancha.
+- **Resultado (E2 concluída em 15/11/2026):**
+  - **Sem migração:** a prancha cabe em `presentations.data`.
+  - **Modelo, em `src/shared/presentation-data.ts`:**
+    - `PAGE_FORMATS` passou a ser `a4`, `a3` e `wide`. O valor lido agora é mantido; antes era sempre `a4`. Documento sem o campo continua `a4`.
+    - `PRANCHA_SHEETS` é `a4` e `a3`. `PRANCHA_FRAME_VERSION` é `1`.
+    - `PresentationPranchaPage` tem `folha`, `titulo`, `fase`, `rodape`, `imagem` e `moldura`.
+    - Página nova (P44): A4, fase "Executivo", rodapé ligado, sem imagem e sem moldura.
+  - **Validação da prancha:**
+    - `folha`, `titulo`, `fase` e `rodape` são obrigatórios;
+    - `folha` fora de `a4` e `a3` é recusada;
+    - `rodape` precisa ser verdadeiro ou falso;
+    - `moldura` diferente de 1 é recusada;
+    - com imagem, `moldura` é obrigatória (M8); sem imagem, pode faltar.
+    - Todas as recusas usam o motivo `field`, com a página e o campo.
+  - **Limites:** a imagem da prancha entra em `presentationImageIds`, então conta no teto de 50 fotos e no vínculo (P41). O documento inteiro, com a prancha, continua medido pelo limite de 1 MiB.
+  - **Menu e tela:**
+    - O menu de adicionar continua sem a prancha até a E4. `AddablePageKind` passou a vir de `ADDABLE_PAGE_TYPES`.
+    - Os mapas por tipo da tela ganharam uma entrada vazia para a prancha, sem tela nova: rótulo "Prancha de detalhamento", sem campos, sem lista e sem seção.
+  - **Testes novos:**
+    - `tests/phase6d-data.test.ts`: 19, de unidade;
+    - `tests/phase6d.test.ts`: 6, de API com PGlite;
+    - 25 de 25 passaram.
+  - **Testes antigos ajustados à regra nova** (3, só a expectativa, sem mudar a intenção):
+    - em `phase6b.test.ts`, o formato recusado passou de `a3` para `a5`;
+    - em `phase6c-data.test.ts` e `phase6c.test.ts`, a prancha incompleta continua recusada, agora pelo campo que falta (`field`) em vez de `page_type`.
+  - **`npm test`:** 47 arquivos, 869 testes passaram, que são os 844 de antes mais os 25 da E2.
+  - **`npm run build`:** passou, com o mesmo aviso de bloco JS acima de 500 kB.
 
 ### E3: importação da prancha
 

@@ -21,6 +21,8 @@ export const PAGE_SECTIONS: Record<PresentationContentPage['tipo'], string> = {
   tecnico: 'Documentação técnica',
   notas: 'Notas e diretrizes',
   direitos: 'Propriedade intelectual',
+  // A prancha não tem seção no topo: a imagem ocupa a folha inteira (6d).
+  prancha: '',
 };
 
 /** Textos mostrados em cinza no lugar do que falta, só com a Prévia desligada. Não saem no PDF. */
