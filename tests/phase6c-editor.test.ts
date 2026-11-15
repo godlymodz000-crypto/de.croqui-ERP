@@ -474,4 +474,23 @@ describe('teto de 50 fotos por apresentação', () => {
     expect(free).not.toContain(PHOTO_CAP_MESSAGE);
     expect(free).not.toMatch(/disabled=""[^>]*>Enviar nova imagem/);
   });
+
+  it('o título da biblioteca diz "para a capa" só quando aberta pela capa', async () => {
+    const { ImageLibraryDialog } = await import('../src/pages/presentations/ImageLibraryDialog');
+    const props = {
+      images: [],
+      selectedId: null,
+      hasProject: false,
+      projectName: null,
+      thumbSrc: () => '',
+      currentLastUse: false,
+      onClose: () => {},
+      onUse: () => {},
+      onUpload: () => {},
+    };
+    expect(renderToStaticMarkup(createElement(ImageLibraryDialog, props))).toContain('Escolher imagem para a capa');
+    const page = renderToStaticMarkup(createElement(ImageLibraryDialog, { ...props, forCover: false }));
+    expect(page).toContain('>Escolher imagem</h2>');
+    expect(page).not.toContain('para a capa');
+  });
 });

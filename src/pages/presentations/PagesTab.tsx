@@ -134,7 +134,7 @@ export function RemovePageDialog({
   }, [onCancel]);
   const d = removePageDialog(data, index);
   return (
-    <div className="pveil" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
+    <div className="pveil pveil--panel" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
       <div className="pconfirm" role="dialog" aria-modal="true" aria-labelledby="ppremove-title" aria-describedby="ppremove-text">
         <h2 id="ppremove-title" className="pconfirm__title">
           {d.title}

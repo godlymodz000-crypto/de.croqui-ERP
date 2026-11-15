@@ -14,11 +14,6 @@
   white-space: nowrap;
 }
 
-/* Nos desenhos 6c-15 a 6c-20 a folha interna não tem a moldura vinho da capa (6b-04), só a sombra. */
-.ppreview__sheet:has(> .psheet) {
-  outline: none;
-}
-
 /* ---------- Lista de itens ---------- */
 .pitems {
   display: flex;

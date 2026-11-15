@@ -185,6 +185,11 @@
 .pcover[data-cor='noite'] .pcover__photo {
   background: var(--noite-800);
 }
+/* Porta do desenho de capa sem imagem: o traço segue a cor da capa (vinho já fica como está). */
+.pcover[data-cor='noite'] .pcover__window {
+  color: var(--ardosia-300);
+  opacity: 0.3;
+}
 .pcover[data-cor='noite'] .pcover__type,
 .pcover[data-cor='noite'] .pcover__field dt,
 .pcover[data-cor='noite'] .pcover__contact {
@@ -209,8 +214,8 @@
   opacity: 0.3;
 }
 .pcover[data-cor='linho'] .pcover__window {
-  color: #fff;
-  opacity: 0.8;
+  color: var(--noite-900);
+  opacity: 0.16;
 }
 .pcover[data-cor='linho'] .pcover__dashed {
   border-color: var(--noite-900);
@@ -377,7 +382,7 @@
   border-radius: 2px;
 }
 .psheet__slot[data-tone='white'] {
-  background: #fff;
+  background: var(--linho-50);
   border: 1px solid rgba(20, 40, 65, 0.16);
 }
 .psheet__img {
@@ -523,6 +528,10 @@
 }
 .psheet__stack--blocks {
   gap: 8mm;
+}
+/* Imagens uma abaixo da outra (6c-13): os blocos se espalham ao longo da coluna, ao lado das imagens (D4 da E7). */
+.psheet__texto-coluna > .psheet__stack--blocks {
+  justify-content: space-between;
 }
 .psheet__stack--imgs {
   gap: 6mm;

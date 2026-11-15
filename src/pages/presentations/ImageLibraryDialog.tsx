@@ -18,6 +18,7 @@ export function ImageLibraryDialog({
   onUpload,
   canUse = () => true,
   uploadBlocked = null,
+  forCover = true,
 }: {
   images: LibraryImage[];
   selectedId: string | null;
@@ -33,6 +34,8 @@ export function ImageLibraryDialog({
   canUse?: (id: string) => boolean;
   /** Motivo de o envio estar desligado (teto de fotos), ou nulo. */
   uploadBlocked?: string | null;
+  /** Aberta pela capa; num espaço de página o título serve aos dois casos (D9 da E7). */
+  forCover?: boolean;
 }) {
   const [selected, setSelected] = useState<string | null>(selectedId);
   const chosen = images.find((i) => i.id === selected) ?? null;
@@ -52,7 +55,7 @@ export function ImageLibraryDialog({
               {hasProject ? `Biblioteca do projeto · ${projectName ?? ''}` : 'Biblioteca desta apresentação · Sem projeto'}
             </span>
             <h2 id="plibrary-title" className="plibrary__title">
-              Escolher imagem para a capa
+              {forCover ? 'Escolher imagem para a capa' : 'Escolher imagem'}
             </h2>
             <p className="plibrary__text">
               {hasProject

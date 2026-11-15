@@ -68,7 +68,7 @@ export const BRAND_SIZE_OPTIONS: [PresentationCover['marca'], string][] = [
   ['g', 'Grande'],
 ];
 /** Em "Só tipografia" a imagem escolhida fica guardada e não aparece (P33). */
-export const COVER_IMAGE_KEPT_TEXT = 'Nesta composição a capa não tem imagem. A imagem escolhida fica guardada e volta ao trocar a composição.';
+export const COVER_IMAGE_KEPT_TEXT = 'Nesta composição a imagem fica guardada e não sai na folha nem no PDF. Ela volta ao trocar a composição.';
 
 // ---------- Composição ----------
 

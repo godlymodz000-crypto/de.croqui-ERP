@@ -905,7 +905,9 @@ function CoverTab({
         disabled={readOnly}
         onChange={(v) => onOptions({ marca: v as CoverOptions['marca'] })}
       />
-      {!readOnly && (hasImage ? <CoverImageField cover={cover} /> : <p className="ppanel__help">{COVER_IMAGE_KEPT_TEXT}</p>)}
+      {/* Só tipografia (6c-06 a 6c-08): o campo continua, com o aviso de que a imagem não sai na folha (D3 da E7). */}
+      {!readOnly && <CoverImageField cover={cover} />}
+      {!readOnly && !hasImage && <p className="ppanel__help">{COVER_IMAGE_KEPT_TEXT}</p>}
     </>
   );
 }

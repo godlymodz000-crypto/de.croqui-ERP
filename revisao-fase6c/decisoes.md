@@ -6,6 +6,18 @@ Decisões aceitas pelo usuário em 2026-11-08. As decisões da 6a e da 6b contin
 - Desenhos 6c-01 a 6c-21 aprovados em 2026-11-08. 6c-22 (diálogo de remover página) desenhado na E6, com as escolhas aprovadas da E5.
 - E0 aprovada em 2026-11-08: o planejamento (`planejamento.md`) e as respostas às perguntas P29 a P37. O código começa na E1. Cada etapa seguinte depende de aprovação.
 - E6 fechada em 2026-11-15, no commit `54c7555` da branch `feat/fase-6c-apresentacao`, com as decisões da E6 ajustada (abaixo). 827 testes e o build passando. A E7 depende de aprovação.
+- E7 (conferência local) registrada em 2026-11-15, no commit `9c86d9b`. As correções das divergências D1 a D9 e a porta da capa sem imagem foram aprovadas e aplicadas no commit seguinte (abaixo).
+
+## Correções da conferência E7 (2026-11-15), aprovadas
+- D1: a folha atual da prévia do editor deixa de ter o contorno vinho de 2 px. Fica só a sombra, como nos desenhos 6c. O contorno não servia para mais nada: a folha não recebe foco e não sai no PDF.
+- D2 e porta da capa sem imagem: o traço da porta segue a cor da capa. Linho usa noite com 16% de opacidade, Noite usa ardósia com 30%, e Vinho fica como estava. A porta aparece na composição "Imagem em arco" sem foto, nas três cores, e sai no PDF.
+- D3: na capa "Só tipografia", o painel mostra o campo "Imagem da capa", como em 6c-06 a 6c-08. Abaixo dele fica o aviso "Nesta composição a imagem fica guardada e não sai na folha nem no PDF. Ela volta ao trocar a composição.". A regra continua: a imagem não entra na folha dessa composição.
+- D4: em Texto & conceito, "Imagens uma abaixo da outra", os blocos de texto se espalham ao longo da coluna, ao lado das imagens, como no 6c-13. Sai no PDF.
+- D5: o fundo do espaço de desenho técnico passa de branco puro para o branco quente do sistema (`--linho-50`), como no 6c-14. Sai no PDF quando o espaço está vazio ou a imagem não o cobre.
+- D6: vale o texto do app, aprovado na E5: "Duplicar está em proposta e ainda não foi aprovado.". Os PNG 6c-21 e 6c-22 não foram editados e estão desatualizados nesse ponto: o 6c-21 ainda diz que o que acontece com a página copiada "ainda não foi decidido".
+- D7: o diálogo de remover página abre sobre o painel, centrado na largura dele (480 px em 1440, 360 px em 1024), como no 6c-22. O véu continua cobrindo a tela inteira.
+- D8: o nome da apresentação no topo do editor fica na cor normal (azul-noite). O desenho, que o mostra em cinza, é que precisa ser ajustado.
+- D9: aberta a partir de um espaço de página, a biblioteca de imagens tem o título "Escolher imagem". Aberta pela capa, continua "Escolher imagem para a capa".
 
 ## Respostas às perguntas do planejamento (2026-11-08)
 - P29: duplicar página mantém a decisão P11 da 6b: a cópia cria um arquivo novo no Drive, para que apagar uma página não afete a outra.

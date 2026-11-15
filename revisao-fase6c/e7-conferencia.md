@@ -87,3 +87,35 @@ Nenhuma foi corrigida. Cada uma espera a sua decisão.
 - **D7. Diálogo de remover página.** Abre no centro da tela, e o 6c-22 o mostra sobre o painel.
 - **D8. Nome da apresentação no topo do editor.** Nos desenhos está em cinza, e no app está em azul-noite. Isso vem da 6b.
 - **D9. Título da biblioteca de imagens.** Aberta num espaço de página, ela ainda diz "Escolher imagem para a capa". Não há desenho da biblioteca na 6c, então a proposta é trocar para um título que sirva aos dois casos.
+
+## 6. Correções pós-E7 (2026-11-15)
+
+As correções foram aprovadas pelo usuário depois da E7 e entraram num único commit. A conferência foi refeita no mesmo servidor local (PGlite, Drive simulado e Edge do computador), com os mesmos dados fictícios. Capturas em `revisao-fase6c/capturas-e7b/`.
+
+### O que foi feito
+
+| Item | Correção | Conferência | Situação |
+|---|---|---|---|
+| D1 | Sai o contorno vinho de `.ppreview__sheet` (`editor.css`). A regra que o tirava só das páginas internas (`pageEditor.css`) ficou sem uso e saiu junto. O contorno não servia para mais nada: a folha não recebe foco e ele não saía no PDF. | Contorno `none` nas capas 6c-01 a 6c-08 e nas páginas internas, em 1440 e 1024. | OK |
+| D2 | Já estava na working tree e foi só conferido: na Linho, o traço da porta é `var(--noite-900)` com opacidade 0,16. | Captura `6c-02-capa-arco-linho-1440.png`: a porta fica discreta, como no desenho. | OK |
+| Porta da capa sem imagem | Já estava na working tree: na Noite, `var(--ardosia-300)` com opacidade 0,3. A Vinho não mudou. | A porta aparece na composição em arco sem foto nas três cores (`6c-01`, `6c-02` e `porta-capa-arco-vinho-1440.png`). A composição lateral não tem porta, só o espaço da foto. | OK |
+| D3 | O campo "Imagem da capa" aparece também em "Só tipografia". Abaixo dele fica o aviso "Nesta composição a imagem fica guardada e não sai na folha nem no PDF. Ela volta ao trocar a composição.". | O campo aparece nas três cores de 6c-06 a 6c-08, e o aviso só nessa composição. A folha continua sem imagem. | OK |
+| D4 | Na composição "Imagens uma abaixo da outra", os blocos de texto se espalham ao longo da coluna (`sheets.css`). | No editor, em 1440 e 1024, o primeiro bloco fica no alto e o último termina no pé da coluna. Na folha gerada (`folha-texto-coluna.png`) e no PDF (`pdf-folha-04-texto-coluna.png`), também. As outras quatro composições não mudaram. | OK |
+| D5 | O fundo do espaço de desenho técnico passa de `#fff` para `var(--linho-50)`, o branco quente do sistema. | Fundo `rgb(247, 243, 237)` no editor, em 1440 e 1024. Nas folhas `folha-tecnico-1` a `4` e no PDF, a folha 13 (`pdf-folha-13-tecnico-1.png`). | OK |
+| D7 | O diálogo de remover página abre sobre o painel, centrado na largura dele. O véu continua cobrindo a tela inteira. | Em 1440, o diálogo vai de 60 a 420 px, num painel de 480. Em 1024, vai de 24 a 336 px, num painel de 360. "Cancelar" fecha sem remover. | OK |
+| D9 | Aberta a partir de um espaço de página, a biblioteca tem o título "Escolher imagem". Aberta pela capa, continua "Escolher imagem para a capa". | Captura `biblioteca-espaco-de-pagina-1440.png` e um teste novo. | OK |
+
+### O que foi decidido e ficou como está
+
+- **D6:** vale o texto do app, "Duplicar está em proposta e ainda não foi aprovado.", aprovado na E5. Os PNG 6c-21 e 6c-22 não foram editados, porque são imagens, e estão desatualizados nesse ponto. A aba Páginas foi conferida de novo em 1440 e 1024 (`6c-21-paginas-*.png`).
+- **D8:** o nome da apresentação no topo do editor continua na cor normal, azul-noite. O desenho, que o mostra em cinza, é que precisa ser ajustado. Nada mudou no código.
+
+### Regras e PDF
+
+| Conferência | Situação | Observação |
+|---|---|---|
+| `npm test` | OK | 828 testes passaram em 44 arquivos: os 827 de antes e um novo para o título da biblioteca. |
+| `npm run build` | OK | O build passa. Só aparece o aviso de tamanho de bloco que já existia. |
+| PDF de conferência | OK | 18 folhas, nome `Apresentacao-4-Conferencia-do-PDF-2026-11-01.pdf`, 1.747.613 bytes (1,7 MB). Desta vez levou 16,6 s, porque o `npm test` rodava ao mesmo tempo. Gerar de novo sem mudança dá 409 `no_changes`. |
+| Folhas de texto e técnico | OK | Nenhuma parte passa da folha, nas cinco composições de texto e nas quatro técnicas. |
+| Migração, `package.json` e produção | OK | Nenhuma migração. `package.json` e `package-lock.json` não mudaram. Nada foi gravado fora do banco em memória. |

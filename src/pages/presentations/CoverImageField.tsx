@@ -453,6 +453,7 @@ export function CoverImageLayers({ cover, projectName }: { cover: CoverImage; pr
           onUse={cover.place}
           canUse={cover.canUse}
           uploadBlocked={cover.capReached ? PHOTO_CAP_MESSAGE : null}
+          forCover={cover.where === 'capa'}
           onUpload={() => {
             cover.closeLibrary();
             cover.pickFiles();
