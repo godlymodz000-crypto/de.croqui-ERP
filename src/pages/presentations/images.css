@@ -556,3 +556,10 @@
 .peditor .peditor__eyebrow {
   white-space: nowrap;
 }
+
+/* ---------- Teto de fotos da apresentação (decisão de 2026-11-15) ---------- */
+.pfield__cap {
+  margin: 0;
+  font: var(--weight-light) 12.5px / 1.5 var(--font-body);
+  color: var(--ardosia-700);
+}

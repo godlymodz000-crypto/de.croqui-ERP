@@ -14,6 +14,7 @@ import {
   emptyPresentation,
   parsePresentationData,
   PRESENTATION_MAX_BYTES,
+  PRESENTATION_MAX_PHOTOS,
   presentationBytes,
   presentationImageIds,
   type PresentationData,
@@ -256,6 +257,16 @@ export async function presentationsRoutes(
       if (Object.keys(fields).length) return reply.code(400).send({ error: 'validation', fields, ...(dataError ? { dataError } : {}) });
 
       if (data) {
+        // Teto de fotos (decisão de 2026-11-15): recusa só o que aumenta a conta acima do teto. Um documento que já
+        // passava dele continua salvando enquanto não ganha foto nova.
+        const count = presentationImageIds(data).length;
+        if (count > PRESENTATION_MAX_PHOTOS) {
+          const stored = parsePresentationData(current.data);
+          const before = 'data' in stored ? presentationImageIds(stored.data).length : 0;
+          if (count > before) {
+            return reply.code(400).send({ error: 'validation', fields: { data: 'too_many_photos' }, dataError: { reason: 'too_many_photos' }, count, limit: PRESENTATION_MAX_PHOTOS });
+          }
+        }
         const foreign = await foreignImages(current, presentationImageIds(data));
         if (foreign.length) return reply.code(400).send({ error: 'validation', fields: { data: 'image_not_in_library' }, images: foreign });
       }

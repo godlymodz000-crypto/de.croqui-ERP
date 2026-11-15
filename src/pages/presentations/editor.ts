@@ -1,6 +1,7 @@
 import { ApiError } from '../../api/http';
 import {
   PRESENTATION_MAX_BYTES,
+  PRESENTATION_MAX_PHOTOS,
   presentationBytes,
   presentationDataMessage,
   type PresentationData,
@@ -53,6 +54,19 @@ export function tooLargeMessage(size?: number): string {
 export function refusedSize(err: unknown): number | undefined {
   const size = err instanceof ApiError ? err.body.size : undefined;
   return typeof size === 'number' && size > 0 ? size : undefined;
+}
+
+/** Aviso do teto de fotos (decisão de 2026-11-15). */
+export const PHOTO_CAP_MESSAGE = `Esta apresentação já tem ${PRESENTATION_MAX_PHOTOS} fotos, o limite para gerar o PDF. Remova alguma foto para adicionar outra.`;
+
+/**
+ * O espaço de imagem chegou ao teto de fotos? `ids` são as fotos diferentes da apresentação inteira. A foto do
+ * próprio espaço conta como livre quando só ele a usa, porque trocá-la não aumenta a conta. Uma foto que já está
+ * na apresentação sempre pode ser usada de novo.
+ */
+export function photoCapReached(ids: readonly string[], current: string | null, usedElsewhere: boolean): boolean {
+  const freed = current && !usedElsewhere && ids.includes(current) ? 1 : 0;
+  return ids.length - freed >= PRESENTATION_MAX_PHOTOS;
 }
 
 /** Recusa 400 da API: o motivo em pt-BR, com a página quando há. */

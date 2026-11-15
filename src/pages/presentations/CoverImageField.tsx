@@ -12,6 +12,8 @@ import {
   imagePlacedLine,
   imageZoomIn,
   imageZoomOut,
+  PHOTO_CAP_MESSAGE,
+  photoCapReached,
   uploadProgressLine,
   uploadRefusal,
 } from './editor';
@@ -23,6 +25,7 @@ import './images.css';
 // espaço de imagem do item aberto numa página (`where: 'item'`); a biblioteca é a mesma.
 
 const ACCEPT = IMAGE_TYPES.join(',');
+const NO_IDS: readonly string[] = [];
 
 type Upload = { kind: 'idle' } | { kind: 'sending'; name: string; sent: number; total: number } | { kind: 'error'; name: string; file: File };
 type Notice = { tone: 'danger' | 'info'; message: string; action: 'pick' | 'close' };
@@ -46,6 +49,10 @@ export interface CoverImage {
   lastUse: boolean;
   /** Espaço da capa ou de um item de página: muda só os textos dos avisos. */
   where: 'capa' | 'item';
+  /** A apresentação chegou ao teto de fotos: o envio fica desligado e só fotos já usadas nela podem entrar. */
+  capReached: boolean;
+  /** A foto pode entrar neste espaço sem passar do teto. */
+  canUse: (id: string) => boolean;
   /** Endereço de qualquer imagem da biblioteca, para as folhas: a cópia local logo depois do envio, senão a de 1600 px. */
   imageSrc: (id: string) => string;
   pickFiles: () => void;
@@ -73,6 +80,7 @@ export function useCoverImage({
   enabled,
   where = 'capa',
   usedElsewhere = false,
+  photoIds = NO_IDS,
 }: {
   presentationId: string;
   hasProject: boolean;
@@ -83,6 +91,8 @@ export function useCoverImage({
   where?: 'capa' | 'item';
   /** A imagem colocada também está em outro espaço desta apresentação: não vai para a lixeira ao sair deste. */
   usedElsewhere?: boolean;
+  /** Fotos diferentes da apresentação inteira, para o teto de fotos. */
+  photoIds?: readonly string[];
 }): CoverImage {
   const [library, setLibrary] = useState<LibraryImage[] | null>(null);
   const [upload, setUpload] = useState<Upload>({ kind: 'idle' });
@@ -95,6 +105,10 @@ export function useCoverImage({
   const abortRef = useRef<AbortController | null>(null);
   const setImagemRef = useRef(setImagem);
   setImagemRef.current = setImagem;
+  const capReached = photoCapReached(photoIds, imagem?.id ?? null, usedElsewhere);
+  const capRef = useRef(capReached);
+  capRef.current = capReached;
+  const capNotice = useCallback(() => setNotice({ tone: 'danger', message: PHOTO_CAP_MESSAGE, action: 'close' }), []);
 
   const loadLibrary = useCallback(async () => {
     try {
@@ -154,6 +168,7 @@ export function useCoverImage({
   const handleFiles = useCallback(
     async (files: File[]) => {
       if (!files.length || upload.kind === 'sending') return;
+      if (capRef.current) return capNotice();
       setNotice(null);
       const refused = files.map((f) => uploadRefusal(f, IMAGE_TYPES, IMAGE_MAX_BYTES)).find((m) => m);
       const ok = files.filter((f) => !uploadRefusal(f, IMAGE_TYPES, IMAGE_MAX_BYTES));
@@ -167,13 +182,14 @@ export function useCoverImage({
       }
       if (ok.length > 1 && !refused) setNotice({ tone: 'info', message: extraFilesNotice(ok.length - 1, where), action: 'close' });
     },
-    [send, upload.kind, where],
+    [send, upload.kind, where, capNotice],
   );
 
   const pickFiles = useCallback(() => {
+    if (capRef.current) return capNotice();
     setNotice(null);
     inputRef.current?.click();
-  }, []);
+  }, [capNotice]);
 
   const placed = imagem && library ? (library.find((i) => i.id === imagem.id) ?? null) : null;
   const missing = !!imagem && (failedId === imagem.id || (library !== null && !placed && !local[imagem.id]));
@@ -208,6 +224,8 @@ export function useCoverImage({
     hasProject,
     lastUse,
     where,
+    capReached,
+    canUse: (id) => !capReached || photoIds.includes(id),
     imageSrc: (id) => local[id] ?? presentationImagesApi.imageUrl(id),
     pickFiles,
     handleFiles: (files) => void handleFiles(files),
@@ -217,7 +235,7 @@ export function useCoverImage({
     openLibrary: () => {
       setNotice(null);
       // Sem nada na biblioteca, "escolher" é escolher um arquivo.
-      if (library && library.length === 0) inputRef.current?.click();
+      if (library && library.length === 0) pickFiles();
       else {
         setLibraryOpen(true);
         // Usos e lixeira mudam a cada salvamento: a janela abre com a biblioteca atual.
@@ -228,6 +246,7 @@ export function useCoverImage({
     place: (img) => {
       setLibraryOpen(false);
       if (imagem?.id === img.id && failedId !== img.id) return;
+      if (capReached && !photoIds.includes(img.id)) return capNotice();
       setFailedId(null);
       setImagem({ id: img.id, ajuste: 'fill', zoom: 1, x: 50, y: 50 });
     },
@@ -402,6 +421,11 @@ export function CoverImageField({
     <div className="pfield">
       <span className="pfield__label">{label}</span>
       {body}
+      {cover.capReached && (
+        <p className="pfield__cap" role="status">
+          {PHOTO_CAP_MESSAGE}
+        </p>
+      )}
     </div>
   );
 }
@@ -427,6 +451,8 @@ export function CoverImageLayers({ cover, projectName }: { cover: CoverImage; pr
           currentLastUse={!!cover.imagem && cover.lastUse}
           onClose={cover.closeLibrary}
           onUse={cover.place}
+          canUse={cover.canUse}
+          uploadBlocked={cover.capReached ? PHOTO_CAP_MESSAGE : null}
           onUpload={() => {
             cover.closeLibrary();
             cover.pickFiles();

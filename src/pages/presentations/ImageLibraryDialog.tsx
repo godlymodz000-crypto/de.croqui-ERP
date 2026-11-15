@@ -16,6 +16,8 @@ export function ImageLibraryDialog({
   onClose,
   onUse,
   onUpload,
+  canUse = () => true,
+  uploadBlocked = null,
 }: {
   images: LibraryImage[];
   selectedId: string | null;
@@ -27,6 +29,10 @@ export function ImageLibraryDialog({
   onClose: () => void;
   onUse: (img: LibraryImage) => void;
   onUpload: () => void;
+  /** A imagem pode entrar sem passar do teto de fotos da apresentação. */
+  canUse?: (id: string) => boolean;
+  /** Motivo de o envio estar desligado (teto de fotos), ou nulo. */
+  uploadBlocked?: string | null;
 }) {
   const [selected, setSelected] = useState<string | null>(selectedId);
   const chosen = images.find((i) => i.id === selected) ?? null;
@@ -70,7 +76,7 @@ export function ImageLibraryDialog({
                 aria-selected={isSel}
                 className={`plibrary__item${isSel ? ' is-selected' : ''}`}
                 onClick={() => setSelected(img.id)}
-                onDoubleClick={() => onUse(img)}
+                onDoubleClick={() => canUse(img.id) && onUse(img)}
               >
                 <span className="plibrary__thumb">
                   <img src={thumbSrc(img.id)} alt="" loading="lazy" onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
@@ -88,15 +94,21 @@ export function ImageLibraryDialog({
           </p>
         )}
 
+        {uploadBlocked && (
+          <p className="plibrary__notice" role="status">
+            {uploadBlocked}
+          </p>
+        )}
+
         <div className="plibrary__footer">
-          <button type="button" className="pbtn pbtn--outline pbtn--lg" onClick={onUpload}>
+          <button type="button" className="pbtn pbtn--outline pbtn--lg" disabled={!!uploadBlocked} onClick={onUpload}>
             Enviar nova imagem
           </button>
           <div className="plibrary__actions">
             <button type="button" className="pbtn pbtn--text pbtn--lg" onClick={onClose}>
               Cancelar
             </button>
-            <button type="button" className="pbtn pbtn--solid pbtn--lg" disabled={!chosen} onClick={() => chosen && onUse(chosen)}>
+            <button type="button" className="pbtn pbtn--solid pbtn--lg" disabled={!chosen || !canUse(chosen.id)} onClick={() => chosen && canUse(chosen.id) && onUse(chosen)}>
               Usar esta imagem
             </button>
           </div>

@@ -9,7 +9,7 @@ Decisões aceitas pelo usuário em 2026-11-08. As decisões da 6a e da 6b contin
 ## Respostas às perguntas do planejamento (2026-11-08)
 - P29: duplicar página mantém a decisão P11 da 6b: a cópia cria um arquivo novo no Drive, para que apagar uma página não afete a outra.
 - P30: a página nova começa com os títulos e as categorias do arquivo offline, como nos desenhos, e os textos longos vazios.
-- P31: limites aprovados: 12 blocos de texto, 12 materiais, 12 notas, de 4 a 8 imagens em "Várias imagens do ambiente" e 40 páginas. Revisto na E6 (abaixo): blocos de texto baixam para 6.
+- P31: limites aprovados: 12 blocos de texto, 12 materiais, 12 notas, de 4 a 8 imagens em "Várias imagens do ambiente" e 40 páginas. Revisto na E6 (abaixo): blocos de texto, materiais e notas baixam para 6, e cada apresentação tem no máximo 50 fotos.
 - P32: imagens que sobram ao trocar para uma composição com menos imagens ficam guardadas e escondidas, como no arquivo offline.
 - P33: a imagem escolhida fica guardada na capa "Só tipografia", mas não aparece na folha nem no PDF.
 - P34: remover página pede confirmação; remover item não pede. O diálogo de página é desenhado junto da E5.
@@ -32,6 +32,14 @@ Decisões aceitas pelo usuário em 2026-11-08. As decisões da 6a e da 6b contin
 - "+ item" no limite: "Limite de 6 blocos nesta página, contando os de imagem. Com mais, os textos não cabem na folha do PDF."
 - Recusa da API com lista acima do limite: o editor diz a página e o limite da lista, por exemplo "A página 02 pode ter até 6 blocos, contando os de imagem.", "A página 03 pode ter até 12 materiais." e "A página 06 pode ter até 12 notas.". Sem a lista, continua o texto geral.
 - Documento salvo antes com mais de 6 blocos numa página continua abrindo no editor, mas o salvamento é recusado com essa mensagem e o PDF responde 422 `invalid_data`, até a página voltar a 6 blocos. Só existe em dados locais de teste: a 6c não foi para produção.
+
+## Decisões da E6 ajustada, segunda parte (2026-11-15)
+- A entrega de cada foto ao gerador do PDF num pedido próprio, sem sair para a rede, fica como está.
+- Materiais e notas baixam de 12 para 6 itens, como os blocos de texto. Vale no módulo de regras (`presentation-data.ts`), que a API usa para validar, e no "+ item" do editor: "Limite de 6 materiais nesta página. Com mais, os textos não cabem na folha do PDF." e "Limite de 6 notas nesta página. Com mais, os textos não cabem na folha do PDF.". A recusa da API diz o limite da lista: "A página 03 pode ter até 6 materiais." e "A página 06 pode ter até 6 notas.". A página de moodboard nova já começa com 6 materiais, então nela o "+ item" começa desligado. Medição: com 6 itens cabem 269 caracteres por material e 431 por nota (`planejamento.md`, seção 11.5).
+- Teto de 50 fotos por apresentação: contam as fotos diferentes da capa e de todas as páginas, inclusive as guardadas e escondidas (P32, P33), porque todas vão para o gerador do PDF. A mesma foto em vários espaços conta uma vez.
+- No editor, ao chegar a 50, o envio de imagens fica desligado: clicar, arrastar ou "Enviar nova imagem" mostra o aviso "Esta apresentação já tem 50 fotos, o limite para gerar o PDF. Remova alguma foto para adicionar outra.", que também fica escrito abaixo do espaço de imagem. Na biblioteca, "Enviar nova imagem" fica desligado e "Usar esta imagem" só fica ligado para fotos que já estão na apresentação. Trocar a foto de um espaço que só ele usa continua possível, porque a conta não aumenta. O salvamento não é bloqueado pelo teto.
+- Na API, o salvamento que leva a apresentação a mais de 50 fotos é recusado com 400 `too_many_photos`, a conta e o limite, e o editor mostra "A apresentação pode ter até 50 fotos, o limite para gerar o PDF. Remova alguma foto para adicionar outra.". Só é recusado o que aumenta a conta acima do teto: um documento que já passava dele continua salvando enquanto não ganha foto nova. Só existe em dados locais de teste.
+- Com o teto, o caso de 120 fotos da 11.4 não acontece mais. 50 fotos de 4000 px em 40 páginas geram em 53,5 s no Edge local, com 88,7 MB.
 
 ## Escolhas da E6 (2026-11-08), para conferir
 - O PDF desenha todas as folhas na ordem da lista, com os mesmos componentes da Prévia ligada: a capa com a composição, a cor e a marca escolhidas (marca escura na Linho) e as páginas internas com "NN / TT". A rota, o nome, as versões, a pasta, o hash e o 409 `no_changes` são os da 6b, sem mudança na API nem no banco: o hash já cobre o documento inteiro, então mudar só a ordem das páginas gera versão nova.

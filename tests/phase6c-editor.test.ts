@@ -11,6 +11,7 @@ import {
   presentationBytes,
   presentationImageIds,
   PRESENTATION_MAX_BYTES,
+  PRESENTATION_MAX_PHOTOS,
   PRESENTATION_MAX_TEXT,
   type AddablePageKind,
   type PresentationContentPage,
@@ -48,6 +49,8 @@ import {
   invalidMessage,
   isTooLarge,
   pageKindLabel,
+  PHOTO_CAP_MESSAGE,
+  photoCapReached,
   refusedSize,
   removeImageText,
   SAVE_MESSAGES,
@@ -205,11 +208,11 @@ describe('"+ item" no limite', () => {
     return page;
   };
 
-  it('texto para em 6 blocos; moodboard e notas em 12, com o motivo escrito', () => {
+  it('texto, moodboard e notas param em 6 itens, com o motivo escrito', () => {
     const cases = [
       ['texto', 'texto', 6, 'Limite de 6 blocos nesta página, contando os de imagem. Com mais, os textos não cabem na folha do PDF.'],
-      ['moodboard', 'material', 12, 'Limite de 12 materiais nesta página.'],
-      ['notas', 'nota', 12, 'Limite de 12 notas nesta página.'],
+      ['moodboard', 'material', 6, 'Limite de 6 materiais nesta página. Com mais, os textos não cabem na folha do PDF.'],
+      ['notas', 'nota', 6, 'Limite de 6 notas nesta página. Com mais, os textos não cabem na folha do PDF.'],
     ] as const;
     for (const [tipo, kind, max, reason] of cases) {
       const page = fill(newPresentationPage(tipo, newId), kind);
@@ -369,7 +372,12 @@ describe('tamanho do documento', () => {
     const err = new ApiError(400, 'invalid_data', {}, { error: 'invalid_data', dataError: { reason: 'too_many_items', pagina: 2, campo: 'notas' } });
     expect(saveFailure(err)).toBe('invalid');
     const msg = invalidMessage(err);
-    expect(msg).toBe('A última alteração não foi salva. A página 03 pode ter até 12 notas. O que você escreveu continua aqui.');
+    expect(msg).toBe('A última alteração não foi salva. A página 03 pode ter até 6 notas. O que você escreveu continua aqui.');
+    const fotos = new ApiError(400, 'validation', {}, { error: 'validation', fields: { data: 'too_many_photos' }, dataError: { reason: 'too_many_photos' } });
+    expect(saveFailure(fotos)).toBe('invalid');
+    expect(invalidMessage(fotos)).toBe(
+      'A última alteração não foi salva. A apresentação pode ter até 50 fotos, o limite para gerar o PDF. Remova alguma foto para adicionar outra. O que você escreveu continua aqui.',
+    );
     const blocos = new ApiError(400, 'invalid_data', {}, { error: 'invalid_data', dataError: { reason: 'too_many_items', pagina: 1, campo: 'blocos' } });
     expect(invalidMessage(blocos)).toContain('A página 02 pode ter até 6 blocos, contando os de imagem.');
     expect(msg).not.toContain('!');
@@ -397,14 +405,73 @@ describe('imagem dos itens', () => {
   });
 });
 
-/** Página de notas com 12 notas cheias: cerca de 30 KB. */
+/**
+ * Página de notas com 6 notas cheias, em letras acentuadas (2 bytes cada): cerca de 28 KB. Com 6 itens por lista,
+ * só texto acentuado leva um documento de até 40 páginas perto de 1 MB.
+ */
 function fullNotes(): PresentationContentPage {
   let page: PresentationContentPage = newPresentationPage('notas', newId);
-  while (pageItems(page).length < 12) page = addItem(page, 'nota', newId);
+  while (pageItems(page).length < 6) page = addItem(page, 'nota', newId);
+  page = setPageField(page, 'introducao', 'ã'.repeat(PRESENTATION_MAX_TEXT));
   for (const it of pageItems(page)) {
-    page = setItemField(page, it.id, 'texto', 'x'.repeat(PRESENTATION_MAX_TEXT));
+    page = setItemField(page, it.id, 'texto', 'ã'.repeat(PRESENTATION_MAX_TEXT));
     page = setItemField(page, it.id, 'titulo', 't'.repeat(200));
     page = setItemField(page, it.id, 'categoria', 'c'.repeat(200));
   }
   return page;
 }
+
+describe('teto de 50 fotos por apresentação', () => {
+  const ids = (n: number) => Array.from({ length: n }, (_, i) => `foto-${i}`);
+
+  it('conta as fotos da apresentação inteira, sem repetir a mesma foto', () => {
+    expect(PRESENTATION_MAX_PHOTOS).toBe(50);
+    const d = emptyPresentation('capa');
+    d.paginas[0] = { ...d.paginas[0], imagem: ref(IMG(1)) } as PresentationData['paginas'][0];
+    const mood = newPresentationPage('moodboard', newId);
+    let page: PresentationContentPage = mood;
+    for (const it of pageItems(mood).slice(0, 3)) page = setItemField(page, it.id, 'imagem', ref(IMG(it === pageItems(mood)[0] ? 1 : 2)));
+    d.paginas.push(page as PresentationData['paginas'][number]);
+    expect(presentationImageIds(d)).toEqual([IMG(1), IMG(2)]);
+  });
+
+  it('ao chegar a 50, o envio e as fotos novas ficam desligados; as já usadas continuam', () => {
+    expect(PHOTO_CAP_MESSAGE).toBe('Esta apresentação já tem 50 fotos, o limite para gerar o PDF. Remova alguma foto para adicionar outra.');
+    expect(PHOTO_CAP_MESSAGE).not.toMatch(/!/);
+    // 49 fotos e espaço vazio: ainda cabe uma.
+    expect(photoCapReached(ids(49), null, false)).toBe(false);
+    // 50 fotos e espaço vazio: chegou ao teto.
+    expect(photoCapReached(ids(50), null, false)).toBe(true);
+    // 50 fotos e o espaço tem uma foto que só ele usa: trocá-la não aumenta a conta.
+    expect(photoCapReached(ids(50), 'foto-3', false)).toBe(false);
+    // A foto do espaço também está em outro: trocá-la levaria a 51.
+    expect(photoCapReached(ids(50), 'foto-3', true)).toBe(true);
+    expect(photoCapReached(ids(51), 'foto-3', false)).toBe(true);
+  });
+
+  it('a biblioteca no teto desliga o envio e a foto nova, com o aviso', async () => {
+    const { ImageLibraryDialog } = await import('../src/pages/presentations/ImageLibraryDialog');
+    const lib = (id: string) => ({ id, fileName: `${id}.jpg`, sizeBytes: 1, usedBy: [] }) as never;
+    const props = {
+      images: [lib('nova'), lib('usada')],
+      hasProject: false,
+      projectName: null,
+      thumbSrc: () => '',
+      currentLastUse: false,
+      onClose: () => {},
+      onUse: () => {},
+      onUpload: () => {},
+      canUse: (id: string) => id === 'usada',
+      uploadBlocked: PHOTO_CAP_MESSAGE,
+    };
+    const blocked = renderToStaticMarkup(createElement(ImageLibraryDialog, { ...props, selectedId: 'nova' }));
+    expect(blocked).toContain(PHOTO_CAP_MESSAGE);
+    expect(blocked).toMatch(/disabled=""[^>]*>Enviar nova imagem/);
+    expect(blocked).toMatch(/disabled=""[^>]*>Usar esta imagem/);
+    const reuse = renderToStaticMarkup(createElement(ImageLibraryDialog, { ...props, selectedId: 'usada' }));
+    expect(reuse).not.toMatch(/disabled=""[^>]*>Usar esta imagem/);
+    const free = renderToStaticMarkup(createElement(ImageLibraryDialog, { ...props, selectedId: 'nova', canUse: () => true, uploadBlocked: null }));
+    expect(free).not.toContain(PHOTO_CAP_MESSAGE);
+    expect(free).not.toMatch(/disabled=""[^>]*>Enviar nova imagem/);
+  });
+});

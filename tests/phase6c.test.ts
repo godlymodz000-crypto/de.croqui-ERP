@@ -18,6 +18,7 @@ import {
   newPresentationPage,
   newVisualImage,
   PRESENTATION_MAX_BYTES,
+  PRESENTATION_MAX_PHOTOS,
   type PresentationData,
   type PresentationImageRef,
 } from '../src/shared/presentation-data.js';
@@ -449,5 +450,59 @@ describe('Fase 6c · E2 · permissões e conflito', () => {
     const stored = await row(a.id);
     expect(stored.data).toEqual(first);
     expect(stored.pageCount).toBe(7);
+  });
+});
+
+describe('Fase 6c · E6 · teto de 50 fotos por apresentação', () => {
+  /** Capa e páginas "Várias imagens do ambiente" com as fotos dadas, 8 por página. */
+  const withPhotos = (base: PresentationData, ids: string[]): PresentationData => {
+    const d = structuredClone(base);
+    d.paginas[0].imagem = ids[0] ? ref(ids[0]) : null;
+    const rest = ids.slice(1);
+    const pages = [];
+    for (let i = 0; i < rest.length; i += 8) {
+      const page = newPresentationPage('visual', newId);
+      page.composicao = 'grade';
+      const chunk = rest.slice(i, i + 8);
+      while (chunk.length < 4) chunk.push('');
+      page.imagens = chunk.map((id) => ({ ...newVisualImage(newId), imagem: id ? ref(id) : null }));
+      pages.push(page);
+    }
+    return { ...d, paginas: [d.paginas[0], ...pages] };
+  };
+
+  it('50 fotos gravam; a 51ª é recusada com o motivo, e nada muda', async () => {
+    expect(PRESENTATION_MAX_PHOTOS).toBe(50);
+    const a = await presentation('Muitas fotos');
+    const imgs: string[] = [];
+    for (let i = 0; i < 51; i++) imgs.push((await upload(a.id)).id);
+
+    // A mesma foto em dois espaços conta uma vez só.
+    const fifty = withPhotos(a.data, [...imgs.slice(0, 50), imgs[0]]);
+    let res = await patch(a.id, { data: fifty });
+    expect(res.statusCode).toBe(200);
+    expect(await usesOf(a.id)).toHaveLength(50);
+    const savedAt = res.json().updatedAt;
+
+    res = await patch(a.id, { data: withPhotos(a.data, imgs), baseUpdatedAt: savedAt });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: 'validation', fields: { data: 'too_many_photos' }, dataError: { reason: 'too_many_photos' }, count: 51, limit: 50 });
+    expect(await usesOf(a.id)).toHaveLength(50);
+    expect((await read(a.id)).updatedAt).toBe(savedAt);
+  });
+
+  it('documento que já passava do teto continua salvando enquanto não ganha foto nova', async () => {
+    const a = await presentation('Documento antigo');
+    const imgs: string[] = [];
+    for (let i = 0; i < 51; i++) imgs.push((await upload(a.id)).id);
+    // Simula um documento gravado antes do teto, direto no banco em memória.
+    const old = withPhotos(a.data, imgs);
+    await db.update(schema.presentations).set({ data: old as unknown as Record<string, unknown> }).where(eq(schema.presentations.id, a.id));
+
+    const next = structuredClone(old);
+    next.projeto.cliente = 'Cliente Avulso';
+    const res = await patch(a.id, { data: next });
+    expect(res.statusCode).toBe(200);
+    expect(await usesOf(a.id)).toHaveLength(51);
   });
 });

@@ -17,13 +17,18 @@ export const PRESENTATION_MAX_SHORT = 200;
 /** Páginas por apresentação, com a capa (P31). */
 export const PRESENTATION_MAX_PAGES = 40;
 /**
- * Itens por lista (P31). Blocos de texto: 6 desde a E6 da 6c (decisão de 2026-11-08), porque com 12 só cabia
- * uma linha em cada bloco e, na composição Coluna, 12 blocos não cabiam nem vazios. Materiais e notas
- * continuam 12, até a medição com 12 itens cheios.
+ * Itens por lista (P31). Desde a E6 da 6c, 6 em cada lista: blocos de texto (decisão de 2026-11-08), porque com
+ * 12 só cabia uma linha em cada bloco e, na composição Coluna, 12 blocos não cabiam nem vazios; materiais e
+ * notas (decisão de 2026-11-15), pelo mesmo motivo e para seguir o limite dos blocos.
  */
 export const PRESENTATION_MAX_BLOCKS = 6;
-export const PRESENTATION_MAX_MATERIALS = 12;
-export const PRESENTATION_MAX_NOTES = 12;
+export const PRESENTATION_MAX_MATERIALS = 6;
+export const PRESENTATION_MAX_NOTES = 6;
+/**
+ * Fotos diferentes numa apresentação, contando a capa e as guardadas e escondidas (decisão de 2026-11-15). Com
+ * mais, o PDF pode não ser gerado: 50 fotos geram em cerca de 40 s no Edge local e 120 passam do prazo.
+ */
+export const PRESENTATION_MAX_PHOTOS = 50;
 /** "Várias imagens do ambiente": de 4 a 8 imagens (P31). É também o máximo guardado em qualquer composição. */
 export const PRESENTATION_GRID_MIN = 4;
 export const PRESENTATION_MAX_VISUAL_IMAGES = 8;
@@ -380,7 +385,8 @@ export type PresentationDataReason =
   | 'text_too_long'
   | 'image'
   | 'too_many_items'
-  | 'too_few_items';
+  | 'too_few_items'
+  | 'too_many_photos';
 
 export interface PresentationDataFailure {
   error: PresentationDataError;
@@ -424,6 +430,8 @@ export function presentationDataMessage(f: Pick<PresentationDataFailure, 'reason
       if (limit && f.pagina !== undefined) return `A página ${pad2(f.pagina + 1)} pode ter até ${limit}.`;
       return `A lista${onde} passou do limite de itens.`;
     }
+    case 'too_many_photos':
+      return `A apresentação pode ter até ${PRESENTATION_MAX_PHOTOS} fotos, o limite para gerar o PDF. Remova alguma foto para adicionar outra.`;
     case 'too_few_items':
       return `A composição${onde} tem menos espaços de imagem do que precisa.`;
     case 'image':

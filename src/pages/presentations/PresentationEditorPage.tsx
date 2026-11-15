@@ -308,6 +308,8 @@ export function PresentationEditorPage() {
     } as PresentationData;
     return presentationImageIds(others).includes(slotImage.id);
   }, [data, slotImage, at, slotItem]);
+  // Fotos diferentes da apresentação inteira, para o teto de fotos (decisão de 2026-11-15).
+  const photoIds = useMemo(() => (data ? presentationImageIds(data) : []), [data]);
   const cover = useCoverImage({
     presentationId: id,
     hasProject: !!presentation?.projectId,
@@ -316,6 +318,7 @@ export function PresentationEditorPage() {
     enabled: state === 'ready' && canWrite && !isMobile,
     where: at === 0 ? 'capa' : 'item',
     usedElsewhere,
+    photoIds,
   });
   const size = useMemo(() => (data ? presentationBytes(data) : 0), [data]);
 

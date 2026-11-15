@@ -280,9 +280,9 @@ export function addState(page: PresentationContentPage): { enabled: boolean; rea
     case 'texto':
       return full(PRESENTATION_MAX_BLOCKS, `Limite de ${PRESENTATION_MAX_BLOCKS} blocos nesta página, contando os de imagem. Com mais, os textos não cabem na folha do PDF.`);
     case 'moodboard':
-      return full(PRESENTATION_MAX_MATERIALS, `Limite de ${PRESENTATION_MAX_MATERIALS} materiais nesta página.`);
+      return full(PRESENTATION_MAX_MATERIALS, `Limite de ${PRESENTATION_MAX_MATERIALS} materiais nesta página. Com mais, os textos não cabem na folha do PDF.`);
     case 'notas':
-      return full(PRESENTATION_MAX_NOTES, `Limite de ${PRESENTATION_MAX_NOTES} notas nesta página.`);
+      return full(PRESENTATION_MAX_NOTES, `Limite de ${PRESENTATION_MAX_NOTES} notas nesta página. Com mais, os textos não cabem na folha do PDF.`);
     case 'visual': {
       if (page.composicao === 'grade') return full(PRESENTATION_MAX_VISUAL_IMAGES, `Limite de ${PRESENTATION_MAX_VISUAL_IMAGES} imagens nesta página.`);
       const shown = VISUAL_COUNT[page.composicao];

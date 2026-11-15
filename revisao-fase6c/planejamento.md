@@ -436,4 +436,26 @@ Com 6 blocos, todas as composições cabem com os blocos vazios (com 12, a Colun
 
 **Outros tipos de página cheia** (sem mudança de limite): os resultados são os mesmos de 11.1 e 11.2. Moodboard: 128 caracteres por material com 12 materiais, 182 KB. Notas: 58 por nota com 12 notas, 153 KB. Direitos: 444 por campo, 113 KB. Visual: de 400 a 1215 caracteres, de 0,8 a 5,3 MB. Técnico: de 1215 a 1944 caracteres, de 0,8 a 2,7 MB. Com tudo no máximo, todos passam do limite e o PDF recusa. Os tamanhos das folhas visuais e técnicas são com fotos de 1600 px, abaixo de 3000, que entram sem redução.
 
-**O que fica em aberto.** Materiais e notas continuam com 12. Com 12 itens só cabe uma linha em cada um (58 caracteres por nota e 128 por material), e com 300 caracteres cabem de 4 a 6 itens. Mudar esses limites é decisão sua, depois da medição com 12 itens cheios. Documentos com mais de cerca de 50 fotos de 4000 px também podem não gerar, como mostra o caso de 120 fotos.
+**O que fica em aberto.** Materiais e notas continuam com 12. Com 12 itens só cabe uma linha em cada um (58 caracteres por nota e 128 por material), e com 300 caracteres cabem de 4 a 6 itens. Mudar esses limites é decisão sua, depois da medição com 12 itens cheios. Documentos com mais de cerca de 50 fotos de 4000 px também podem não gerar, como mostra o caso de 120 fotos. Resolvido na 11.5: materiais e notas baixaram para 6, e cada apresentação tem no máximo 50 fotos.
+
+### 11.5 E6 ajustada: 6 materiais, 6 notas e teto de 50 fotos (2026-11-15)
+
+Decisões aprovadas: a entrega de cada foto em pedido próprio fica como está; materiais e notas baixam de 12 para 6, como os blocos; cada apresentação tem no máximo 50 fotos diferentes. Medido no mesmo Edge local e com o mesmo roteiro da 11.4.
+
+**Moodboard e notas com 6 itens.**
+
+| Tipo | 6 itens com 2000 caracteres cada | Maior texto por item que cabe com 6 itens | Itens que cabem com 300 caracteres | PDF da folha cheia que cabe | Tempo |
+|---|---|---|---|---|---|
+| Moodboard (6 materiais) | Passa: materiais. O PDF recusa | 269 caracteres (com 12 eram 128) | 4 de 6 | 166 KB | 1,2 s |
+| Notas (6 notas) | Passa: introdução e notas. O PDF recusa | 431 caracteres (com 12 eram 58) | 6 de 6 | 149 KB | 1,1 s |
+
+**Teto de 50 fotos.**
+
+| Caso | Fotos (originais) | PDF | Tempo | Resultado |
+|---|---|---|---|---|
+| 40 páginas, capa com foto e uma foto em cada espaço das visuais e técnicas | 50 (192 MB) | 88,7 MB | 53,5 s | Gera, 40 folhas |
+| A mesma apresentação com a 51ª foto | 51 | — | — | Recusada ao salvar, antes do PDF: 400 `too_many_photos` com o motivo. Nada é gravado (teste da API em `tests/phase6c.test.ts`) |
+
+Os 53,5 s são mais que os 37,8 s da 11.4 porque a capa passou a ter foto e as páginas têm outra mistura de tipos; a conta de fotos é a mesma. Na Vercel deve ser mais lento, dentro do limite de 300 s da função.
+
+**Efeito no limite de 1 MiB.** Com 6 itens por lista, a página mais pesada (moodboard cheio) tem cerca de 22 KB, e 40 páginas cheias com texto sem acento ficam abaixo de 1 MiB. O aviso de 80% e a recusa acima de 1 MiB só aparecem com muito texto acentuado (cada letra acentuada ocupa 2 bytes). As duas regras continuam valendo.
